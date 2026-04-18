@@ -1,0 +1,539 @@
+:root {
+  color-scheme: dark;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(230, 138, 38, 0.16), transparent 36%),
+    linear-gradient(180deg, #07130f 0%, #06100c 56%, #030705 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.shell-frame {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 184, 56, 0.08), transparent 42%),
+    radial-gradient(circle at 20% 15%, rgba(125, 171, 91, 0.2), transparent 24%),
+    linear-gradient(180deg, rgba(6, 11, 9, 0.92), rgba(3, 7, 5, 0.98));
+}
+
+.shell-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.02) 50%, transparent 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.015) 0,
+      rgba(255, 255, 255, 0.015) 10px,
+      transparent 10px,
+      transparent 34px
+    );
+  pointer-events: none;
+}
+
+.game-root {
+  position: absolute;
+  inset: 0;
+}
+
+.chrome-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.chrome-root > * {
+  pointer-events: auto;
+}
+
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(20px, 4vw, 40px);
+  overflow: hidden;
+}
+
+.menu-panel,
+.hud-card,
+.hud-sidebar-card,
+.hud-bar,
+.hud-modal-card,
+.hud-result-card {
+  border: 1px solid rgba(205, 214, 154, 0.22);
+  background:
+    linear-gradient(180deg, rgba(16, 54, 38, 0.94), rgba(9, 29, 21, 0.94)),
+    var(--panel-base);
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.menu-panel {
+  position: relative;
+  width: min(920px, 100%);
+  padding: 32px;
+  overflow: hidden;
+  clip-path: polygon(0 18px, 18px 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%);
+}
+
+.menu-header {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.menu-title {
+  margin: 0;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: clamp(3rem, 7vw, 5.4rem);
+  line-height: 0.88;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow:
+    0 4px 0 rgba(79, 40, 0, 0.9),
+    0 18px 36px rgba(0, 0, 0, 0.4);
+}
+
+.menu-subtitle {
+  max-width: 42ch;
+  margin: 18px 0 0;
+  color: var(--text-primary);
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+
+.menu-subtitle-wide {
+  max-width: 52ch;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  border: 1px solid rgba(248, 198, 83, 0.22);
+  border-radius: 999px;
+  background: rgba(248, 198, 83, 0.1);
+  color: var(--text-strong);
+  font-size: 0.9rem;
+}
+
+.feature-grid,
+.hud-kpis {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 28px;
+}
+
+.feature-card,
+.hud-kpi,
+.hud-bar-kpi {
+  border: 1px solid rgba(202, 218, 168, 0.14);
+  background: rgba(7, 20, 15, 0.48);
+  padding: 14px 16px;
+}
+
+.feature-card-title,
+.hud-card-title,
+.hud-sidebar-title {
+  margin: 0 0 6px;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.feature-card-body,
+.hud-copy {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.action-row,
+.hud-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.action-row {
+  margin-top: 28px;
+  justify-content: center;
+}
+
+.chrome-button {
+  border: none;
+  padding: 13px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.chrome-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.chrome-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.chrome-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chrome-button-primary {
+  background: linear-gradient(180deg, #f8c653, #d98c23);
+  color: #2f1800;
+  box-shadow: 0 10px 28px rgba(217, 140, 35, 0.28);
+}
+
+.chrome-button-secondary {
+  background: rgba(89, 132, 87, 0.26);
+  color: var(--text-strong);
+  border: 1px solid rgba(207, 223, 168, 0.16);
+}
+
+.chrome-button-danger {
+  background: rgba(181, 76, 33, 0.22);
+  color: #ffd5b8;
+  border: 1px solid rgba(232, 121, 58, 0.18);
+}
+
+.hud-bar-screen,
+.hud-result-screen {
+  position: absolute;
+  inset: 0;
+}
+
+.hud-bar-screen {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 18px;
+  pointer-events: none;
+}
+
+.hud-bar {
+  width: min(760px, calc(100vw - 36px));
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 26px;
+  pointer-events: auto;
+}
+
+.hud-bar-kpis {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hud-bar-kpi {
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 18px;
+}
+
+.hud-bar-kpi-metered {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hud-bar-kpi-label {
+  display: block;
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hud-bar-kpi-value {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.55rem;
+  letter-spacing: 0.04em;
+}
+
+.hud-bar-kpi-meter {
+  display: block;
+  margin-top: 10px;
+}
+
+.hud-bar-kpi-meter-track {
+  display: block;
+  width: 100%;
+  height: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(214, 224, 168, 0.2);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(5, 14, 10, 0.88), rgba(7, 22, 15, 0.9)),
+    rgba(4, 10, 7, 0.84);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.04),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.28);
+}
+
+.hud-bar-kpi-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #c85f2a 0%, #e08b2d 52%, #f8c653 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 230, 0.24),
+    0 0 20px rgba(240, 153, 49, 0.22);
+  transition: width 100ms linear;
+}
+
+.hud-help-button {
+  width: 58px;
+  min-width: 58px;
+  min-height: 58px;
+  padding: 0;
+  border-radius: 999px;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.hud-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: rgba(2, 8, 6, 0.56);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.hud-modal-card {
+  width: min(460px, 100%);
+  padding: 22px 24px;
+  border-radius: 24px;
+}
+
+.hud-modal-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.hud-modal-actions .chrome-button {
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.hud-result-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.hud-result-card {
+  width: min(380px, 100%);
+  padding: 18px 20px;
+  pointer-events: auto;
+  border-radius: 20px;
+}
+
+.hud-card {
+  padding: 14px 16px;
+}
+
+.hud-card-main {
+  max-width: 320px;
+}
+
+.hud-sidebar-card {
+  padding: 14px 16px;
+}
+
+.hud-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.hud-kpi {
+  min-height: 74px;
+}
+
+.hud-kpi-value {
+  display: block;
+  margin-top: 4px;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+}
+
+.hud-sidebar-list {
+  display: grid;
+  gap: 10px;
+  padding-left: 18px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.hidden {
+  display: none;
+}
+
+canvas {
+  display: block;
+}
+
+@media (max-width: 980px) {
+  .hud-bar {
+    width: min(620px, calc(100vw - 28px));
+  }
+
+  .hud-bar-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .menu-panel,
+  .hud-card,
+  .hud-sidebar-card,
+  .hud-result-card {
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell-frame {
+    overflow-y: auto;
+  }
+
+  .chrome-root {
+    overflow: auto;
+  }
+
+  .menu-screen {
+    position: absolute;
+    align-items: flex-start;
+    min-height: 100%;
+    padding: 16px;
+    overflow: auto;
+  }
+
+  .hud-bar-screen {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .hud-bar {
+    width: calc(100vw - 24px);
+    gap: 10px;
+    padding: 10px;
+    border-radius: 22px;
+  }
+
+  .hud-bar-kpis {
+    gap: 8px;
+  }
+
+  .hud-bar-kpi {
+    padding: 9px 10px;
+  }
+
+  .hud-bar-kpi-value {
+    font-size: 1.2rem;
+  }
+
+  .hud-help-button {
+    width: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 1.4rem;
+  }
+
+  .hud-result-screen {
+    padding: 16px;
+  }
+
+  .hud-modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .menu-panel {
+    padding: 24px 20px;
+    overflow: visible;
+  }
+
+  .menu-title {
+    font-size: 2.8rem;
+  }
+}
