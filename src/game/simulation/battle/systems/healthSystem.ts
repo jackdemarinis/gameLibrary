@@ -10,7 +10,13 @@ export function damageTank(
     return [];
   }
 
+  const appliedDamage = Math.min(target.health, amount);
   target.health = Math.max(0, target.health - amount);
+  target.recentDamageMs = battleConfig.destructible.healthBarVisibleMs;
+
+  if (target.faction === "player") {
+    state.damageTaken += appliedDamage;
+  }
 
   if (target.health > 0) {
     return [];
@@ -25,6 +31,17 @@ export function damageTank(
       y: target.position.y,
       color: target.faction === "player" ? 0xf27f48 : 0xf1c24c,
       size: 42,
+      shakeDurationMs: 110,
+      shakeIntensity: target.faction === "player" ? 0.0034 : 0.0026,
+    },
+    {
+      type: "debris",
+      x: target.position.x,
+      y: target.position.y,
+      color: target.faction === "player" ? 0x8aa95a : 0xb38a62,
+      size: 16,
+      count: 9,
+      lifetimeMs: 340,
     },
   ];
 

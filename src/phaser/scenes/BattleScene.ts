@@ -12,6 +12,11 @@ import type {
 } from "../../game/simulation/battle/types";
 import { SceneBridge } from "../adapters/sceneBridge";
 import { createCameraRig } from "../view/createCameraRig";
+import {
+  createBreakableObstacleLayer,
+  type BreakableObstacleLayer,
+} from "../view/createBreakableObstacleLayer";
+import { createFogOfWarLayer, type FogOfWarLayer } from "../view/createFogOfWarLayer";
 import { createTankSprite, type TankSprite } from "../view/drawTank";
 import { spawnSimulationEffect } from "../view/spawnSimulationEffect";
 
@@ -22,11 +27,14 @@ export class BattleScene extends Phaser.Scene {
   private readonly enemySprites = new Map<string, TankSprite>();
   private readonly projectileSprites = new Map<string, Phaser.GameObjects.Arc>();
   private readonly pickupSprites = new Map<string, Phaser.GameObjects.Arc>();
+  private breakableObstacleLayer!: BreakableObstacleLayer;
+  private fogLayer!: FogOfWarLayer;
   private lastHudSignature = "";
   private lastSavedCredits = -1;
   private currentSnapshot!: BattleSnapshot;
   private currentHud!: BattleHudSnapshot;
   private helpModalOpen = false;
+  private resultsQueued = false;
 
   constructor(bridge: SceneBridge) {
     super("battle");
@@ -36,6 +44,9 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     const save = this.bridge.loadOrCreateSave();
     this.simulation = new BattleSimulation(this.bridge.getBattleLevel(), save);
+    this.resultsQueued = false;
+    this.helpModalOpen = false;
+    this.lastHudSignature = "";
 
     const snapshot = this.simulation.getSnapshot();
     const hud = this.simulation.getHudSnapshot();
@@ -44,9 +55,10 @@ export class BattleScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawGround();
-    this.drawWalls(snapshot.walls);
-    this.drawCrates(snapshot.crates);
+    this.drawIndestructibleWalls(snapshot.indestructibleWalls);
     this.createSprites(snapshot);
+    this.breakableObstacleLayer = createBreakableObstacleLayer(this);
+    this.fogLayer = createFogOfWarLayer(this);
     this.syncSnapshot(snapshot);
     createCameraRig(this.cameras.main, this.playerSprite.container);
 
@@ -67,7 +79,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.helpModalOpen && this.currentHud.status === "active") {
+    if (this.helpModalOpen) {
       this.renderHud(this.currentHud);
       return;
     }
@@ -88,6 +100,11 @@ export class BattleScene extends Phaser.Scene {
       this.lastSavedCredits = result.snapshot.credits;
     }
 
+    if (result.snapshot.status !== "active") {
+      this.queueResults();
+      return;
+    }
+
     this.renderHud(result.hud);
   }
 
@@ -106,21 +123,18 @@ export class BattleScene extends Phaser.Scene {
 
       this.enemySprites.set(
         enemy.id,
-        createTankSprite(this, enemy.x, enemy.y, {
-          hull: worldTheme.enemyHull,
-          turret: worldTheme.accentSoft,
-          shadowAlpha: 0.22,
-          scale: 0.92,
-        }),
+        createTankSprite(this, enemy.x, enemy.y, getEnemyPalette(enemy)),
       );
     });
   }
 
   private syncSnapshot(snapshot: BattleSnapshot): void {
+    this.breakableObstacleLayer.sync(snapshot.breakableObstacles);
     this.syncTankSprite(this.playerSprite, snapshot.player);
     this.syncEnemySprites(snapshot.enemies);
     this.syncProjectiles(snapshot.projectiles);
     this.syncPickups(snapshot.pickups);
+    this.fogLayer.sync(snapshot.visibility);
   }
 
   private syncEnemySprites(enemies: TankSnapshot[]): void {
@@ -138,12 +152,7 @@ export class BattleScene extends Phaser.Scene {
       if (!existing) {
         this.enemySprites.set(
           enemy.id,
-          createTankSprite(this, enemy.x, enemy.y, {
-            hull: worldTheme.enemyHull,
-            turret: worldTheme.accentSoft,
-            shadowAlpha: 0.22,
-            scale: 0.92,
-          }),
+          createTankSprite(this, enemy.x, enemy.y, getEnemyPalette(enemy)),
         );
       }
 
@@ -226,8 +235,10 @@ export class BattleScene extends Phaser.Scene {
   private syncTankSprite(sprite: TankSprite, tank: TankSnapshot): void {
     sprite.container.setPosition(tank.x, tank.y);
     sprite.container.setRotation(tank.hullRotation);
+    sprite.artContainer.setY(-tank.recoilOffset);
     sprite.turret.setRotation(tank.turretRotation - tank.hullRotation);
     sprite.container.setAlpha(tank.alive ? 1 : 0.28);
+    this.renderEnemyHealthBar(sprite, tank);
   }
 
   private readInput(): BattleInput {
@@ -263,66 +274,37 @@ export class BattleScene extends Phaser.Scene {
       { label: "Enemies", value: `${hud.enemiesRemaining}` },
       { label: "Time", value: formatTime(this.currentSnapshot.elapsedMs) },
     ];
-    const resultKpis = [
-      { label: "Health", value: `${Math.max(0, Math.ceil(hud.health))}/${hud.maxHealth}` },
-      { label: "Credits", value: `$${hud.credits}` },
-      { label: "Enemies", value: `${hud.enemiesRemaining}` },
-      { label: "Time", value: formatTime(this.currentSnapshot.elapsedMs) },
-    ];
-
-    const viewModel =
-      hud.status === "active"
-        ? {
-            layout: "active" as const,
-            title: hud.title,
-            copy: hud.summary,
-            objective: hud.objective,
-            kpis: activeKpis,
-            notes: hud.controls,
-            helpOpen: this.helpModalOpen,
-            helpAction: {
-              label: "?",
-              tone: "secondary" as const,
-              onPress: () => this.setHelpModalOpen(true),
-            },
-            helpBackAction: {
-              label: "Back",
-              tone: "primary" as const,
-              onPress: () => this.setHelpModalOpen(false),
-            },
-            actions: [
-              {
-                label: "Restart Encounter",
-                tone: "secondary" as const,
-                onPress: () => this.scene.restart(),
-              },
-              {
-                label: "Back To Menu",
-                tone: "danger" as const,
-                onPress: () => this.scene.start("menu"),
-              },
-            ],
-          }
-        : {
-            layout: "result" as const,
-            title: hud.title,
-            copy: hud.summary,
-            objective: hud.objective,
-            kpis: resultKpis,
-            notes: hud.controls,
-            actions: [
-              {
-                label: "Restart Encounter",
-                tone: "primary" as const,
-                onPress: () => this.scene.restart(),
-              },
-              {
-                label: "Back To Menu",
-                tone: "secondary" as const,
-                onPress: () => this.scene.start("menu"),
-              },
-            ],
-          };
+    const viewModel = {
+      layout: "active" as const,
+      title: hud.title,
+      copy: hud.summary,
+      objective: hud.objective,
+      kpis: activeKpis,
+      notes: hud.controls,
+      helpOpen: this.helpModalOpen,
+      helpAction: {
+        label: "?",
+        tone: "secondary" as const,
+        onPress: () => this.setHelpModalOpen(true),
+      },
+      helpBackAction: {
+        label: "Back",
+        tone: "primary" as const,
+        onPress: () => this.setHelpModalOpen(false),
+      },
+      actions: [
+        {
+          label: "Restart Encounter",
+          tone: "secondary" as const,
+          onPress: () => this.scene.restart(),
+        },
+        {
+          label: "Back To Menu",
+          tone: "danger" as const,
+          onPress: () => this.scene.start("menu"),
+        },
+      ],
+    };
 
     const signature = JSON.stringify(viewModel);
 
@@ -335,7 +317,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setHelpModalOpen(open: boolean): void {
-    if (this.currentHud.status !== "active" || this.helpModalOpen === open) {
+    if (this.resultsQueued || this.helpModalOpen === open) {
       return;
     }
 
@@ -350,6 +332,28 @@ export class BattleScene extends Phaser.Scene {
     this.renderHud(this.currentHud);
   }
 
+  private queueResults(): void {
+    if (this.resultsQueued) {
+      return;
+    }
+
+    this.resultsQueued = true;
+
+    if (this.helpModalOpen) {
+      this.setHelpModalOpen(false);
+    }
+
+    const summary = this.simulation.getResultSummary();
+    const flow = this.bridge.finalizeBattle(summary);
+
+    this.time.delayedCall(220, () => {
+      this.scene.start("results", {
+        result: summary,
+        flow,
+      });
+    });
+  }
+
   private handleShutdown(): void {
     this.tweens.resumeAll();
     this.enemySprites.forEach((sprite) => sprite.container.destroy(true));
@@ -358,6 +362,8 @@ export class BattleScene extends Phaser.Scene {
     this.projectileSprites.clear();
     this.pickupSprites.forEach((sprite) => sprite.destroy());
     this.pickupSprites.clear();
+    this.breakableObstacleLayer.destroy();
+    this.fogLayer.destroy();
     this.bridge.clearChrome();
   }
 
@@ -386,8 +392,9 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private drawWalls(walls: readonly { x: number; y: number; width: number; height: number }[]): void {
+  private drawIndestructibleWalls(walls: readonly { x: number; y: number; width: number; height: number }[]): void {
     const graphics = this.add.graphics();
+    graphics.setDepth(1);
 
     walls.forEach((wall) => {
       graphics.fillStyle(worldTheme.wallFill, 1);
@@ -397,17 +404,22 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private drawCrates(crates: readonly { x: number; y: number; width: number; height: number }[]): void {
-    const graphics = this.add.graphics();
+  private renderEnemyHealthBar(sprite: TankSprite, tank: TankSnapshot): void {
+    const width = 56;
+    const height = 8;
 
-    crates.forEach((crate) => {
-      graphics.fillStyle(worldTheme.crateFill, 0.95);
-      graphics.lineStyle(4, worldTheme.crateStroke, 1);
-      graphics.fillRoundedRect(crate.x, crate.y, crate.width, crate.height, 8);
-      graphics.strokeRoundedRect(crate.x, crate.y, crate.width, crate.height, 8);
-      graphics.lineBetween(crate.x + 10, crate.y + 10, crate.x + crate.width - 10, crate.y + crate.height - 10);
-      graphics.lineBetween(crate.x + crate.width - 10, crate.y + 10, crate.x + 10, crate.y + crate.height - 10);
-    });
+    sprite.healthBar.clear();
+
+    if (tank.faction !== "enemy" || !tank.showHealthBar || !tank.alive) {
+      return;
+    }
+
+    const fillWidth = Math.max(0, Math.min(width, (tank.health / tank.maxHealth) * width));
+
+    sprite.healthBar.fillStyle(worldTheme.enemyHealthBarBack, 0.92);
+    sprite.healthBar.fillRoundedRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4, 5);
+    sprite.healthBar.fillStyle(worldTheme.enemyHealthBarFill, 1);
+    sprite.healthBar.fillRoundedRect(-width / 2, -height / 2, fillWidth, height, 4);
   }
 }
 
@@ -416,4 +428,31 @@ function formatTime(elapsedMs: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function getEnemyPalette(enemy: TankSnapshot) {
+  switch (enemy.archetype) {
+    case "heavy":
+      return {
+        hull: 0x6f6d60,
+        turret: 0xf0d58a,
+        shadowAlpha: 0.26,
+        scale: 1,
+      };
+    case "flanker":
+      return {
+        hull: 0x4c6f82,
+        turret: 0xc8e0ef,
+        shadowAlpha: 0.2,
+        scale: 0.88,
+      };
+    case "chaser":
+    default:
+      return {
+        hull: worldTheme.enemyHull,
+        turret: worldTheme.accentSoft,
+        shadowAlpha: 0.22,
+        scale: 0.92,
+      };
+  }
 }

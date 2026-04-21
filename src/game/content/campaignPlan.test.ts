@@ -17,8 +17,8 @@ describe("campaign plan", () => {
     expect(foundationFeatureCards).toHaveLength(3);
     expect(foundationFeatureCards.map((card) => card.title)).toEqual([
       "WASD Drive",
-      "Mouse Turret",
-      "Clear The Yard",
+      "Break Open Cover",
+      "Hidden Cache",
     ]);
   });
 });

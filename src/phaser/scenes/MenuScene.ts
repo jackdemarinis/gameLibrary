@@ -24,7 +24,7 @@ export class MenuScene extends Phaser.Scene {
       eyebrow: "MVP Combat",
       title: gameConfig.title,
       subtitle:
-        "Original top-down tank shooter MVP with live movement, cursor aiming, enemy fire, coin pickups, and a single training-yard combat test level.",
+        "Level-based tank combat with destructible cover, enemy archetypes, hidden credits, and a between-mission motor pool.",
       status: hasSave
         ? "Local save ready."
         : "First launch will create a local save.",

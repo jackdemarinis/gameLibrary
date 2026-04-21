@@ -14,6 +14,8 @@ export const worldTheme = {
   accentSoft: 0xf1c24c,
   wallFill: 0x798168,
   wallStroke: 0x454a3a,
+  weakWallFill: 0x7f7258,
+  weakWallStroke: 0x4b4337,
   crateFill: 0x9d6a2f,
   crateStroke: 0x5b3511,
   enemyGlow: 0xe97d31,
@@ -21,6 +23,13 @@ export const worldTheme = {
   playerTurret: 0xc7d57a,
   enemyHull: 0x7e5f8d,
   floorDust: 0xe7a64a,
+  muzzleFlash: 0xffe18a,
+  muzzleFlashOuter: 0xffa63f,
+  enemyHealthBarFill: 0xffb347,
+  enemyHealthBarBack: 0x281f17,
+  fogVisibleAlpha: 0,
+  fogExploredAlpha: 0,
+  fogUnexploredAlpha: 1,
 } as const;
 
 export function applyThemeVariables(root: HTMLElement): void {

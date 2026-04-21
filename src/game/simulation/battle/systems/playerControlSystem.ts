@@ -8,9 +8,10 @@ export function runPlayerControlSystem(
   deltaSeconds: number,
 ): SimulationEffect[] {
   const player = state.player;
+  const effects: SimulationEffect[] = [];
 
   if (!player.alive) {
-    return [];
+    return effects;
   }
 
   const movement = normalizeVector({
@@ -38,8 +39,8 @@ export function runPlayerControlSystem(
   }
 
   if (state.status === "active" && input.firing && player.fireCooldownRemainingMs <= 0) {
-    spawnProjectile(state, player);
+    effects.push(...spawnProjectile(state, player));
   }
 
-  return [];
+  return effects;
 }

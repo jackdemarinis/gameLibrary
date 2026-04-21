@@ -9,7 +9,9 @@ export interface TankPalette {
 
 export interface TankSprite {
   container: Phaser.GameObjects.Container;
+  artContainer: Phaser.GameObjects.Container;
   turret: Phaser.GameObjects.Graphics;
+  healthBar: Phaser.GameObjects.Graphics;
 }
 
 export function createTankSprite(
@@ -43,11 +45,18 @@ export function createTankSprite(
   turret.strokeRoundedRect(-5, -12, 14, 62, 7);
   turret.setPosition(0, -10);
 
-  const container = scene.add.container(x, y, [shadow, hull, turret]);
+  const artContainer = scene.add.container(0, 0, [shadow, hull, turret]);
+  const healthBar = scene.add.graphics();
+  healthBar.setPosition(0, -58);
+
+  const container = scene.add.container(x, y, [artContainer, healthBar]);
   container.setScale(palette.scale);
+  container.setDepth(3);
 
   return {
     container,
+    artContainer,
     turret,
+    healthBar,
   };
 }

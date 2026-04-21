@@ -5,6 +5,8 @@ import { SceneBridge } from "../adapters/sceneBridge";
 import { BattleScene } from "../scenes/BattleScene";
 import { BootScene } from "../scenes/BootScene";
 import { MenuScene } from "../scenes/MenuScene";
+import { ResultsScene } from "../scenes/ResultsScene";
+import { ShopScene } from "../scenes/ShopScene";
 
 export function createGame(parent: HTMLElement, bridge: SceneBridge): Phaser.Game {
   return new Phaser.Game({
@@ -22,6 +24,12 @@ export function createGame(parent: HTMLElement, bridge: SceneBridge): Phaser.Gam
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [new BootScene(bridge), new MenuScene(bridge), new BattleScene(bridge)],
+    scene: [
+      new BootScene(bridge),
+      new MenuScene(bridge),
+      new BattleScene(bridge),
+      new ResultsScene(bridge),
+      new ShopScene(bridge),
+    ],
   });
 }

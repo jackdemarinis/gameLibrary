@@ -1,0 +1,112 @@
+import { gameConfig } from "../config/gameConfig";
+import type { BattleLevelData } from "./levelTypes";
+
+export const relayStationLevel: BattleLevelData = {
+  id: "relay-station",
+  name: "Relay Station",
+  briefing: "Advance through the relay corridors, break the barricades, and clear the staging pad.",
+  playerSpawn: { x: 228, y: 520 },
+  enemySpawns: [
+    {
+      id: "relay-chaser-1",
+      x: 956,
+      y: 292,
+      archetype: "chaser",
+      patrol: [
+        { x: 956, y: 292 },
+        { x: 1280, y: 292 },
+      ],
+    },
+    {
+      id: "relay-heavy-1",
+      x: 1200,
+      y: 552,
+      archetype: "heavy",
+    },
+    {
+      id: "relay-flanker-1",
+      x: 1448,
+      y: 792,
+      archetype: "flanker",
+      patrol: [
+        { x: 1448, y: 792 },
+        { x: 1188, y: 840 },
+      ],
+    },
+    {
+      id: "relay-chaser-2",
+      x: 932,
+      y: 820,
+      archetype: "chaser",
+      patrol: [
+        { x: 932, y: 820 },
+        { x: 1260, y: 820 },
+      ],
+    },
+  ],
+  indestructibleWalls: [
+    { x: 96, y: 96, width: 1568, height: 48 },
+    { x: 96, y: 936, width: 1568, height: 48 },
+    { x: 96, y: 96, width: 48, height: 888 },
+    { x: 1616, y: 96, width: 48, height: 888 },
+    { x: 448, y: 96, width: 48, height: 240 },
+    { x: 448, y: 432, width: 48, height: 552 },
+    { x: 816, y: 180, width: 48, height: 240 },
+    { x: 816, y: 664, width: 48, height: 272 },
+    { x: 1120, y: 96, width: 48, height: 176 },
+    { x: 1120, y: 808, width: 48, height: 176 },
+    { x: 1248, y: 260, width: 320, height: 48 },
+    { x: 1248, y: 772, width: 320, height: 48 },
+    { x: 1248, y: 468, width: 192, height: 48 },
+    { x: 1248, y: 564, width: 192, height: 48 },
+  ],
+  weakWalls: [
+    { id: "relay-door-1", x: 448, y: 336, width: 48, height: 96, maxHealth: 68 },
+    { id: "relay-door-2", x: 816, y: 420, width: 48, height: 160, maxHealth: 68 },
+    { id: "relay-door-3", x: 1120, y: 632, width: 48, height: 176, maxHealth: 68 },
+  ],
+  crates: [
+    {
+      id: "relay-crate-1",
+      x: 620,
+      y: 444,
+      width: gameConfig.gridSize,
+      height: gameConfig.gridSize,
+      maxHealth: 34,
+    },
+    {
+      id: "relay-crate-2",
+      x: 620,
+      y: 528,
+      width: gameConfig.gridSize,
+      height: gameConfig.gridSize,
+      maxHealth: 34,
+    },
+    {
+      id: "relay-crate-3",
+      x: 964,
+      y: 504,
+      width: gameConfig.gridSize,
+      height: gameConfig.gridSize,
+      maxHealth: 34,
+    },
+    {
+      id: "relay-crate-4",
+      x: 1380,
+      y: 368,
+      width: gameConfig.gridSize,
+      height: gameConfig.gridSize,
+      maxHealth: 34,
+    },
+    {
+      id: "relay-crate-5",
+      x: 1380,
+      y: 656,
+      width: gameConfig.gridSize,
+      height: gameConfig.gridSize,
+      maxHealth: 34,
+      rewardCredits: 70,
+    },
+  ],
+  pickups: [{ id: "relay-cache", kind: "coin", x: 320, y: 248, value: 110 }],
+};

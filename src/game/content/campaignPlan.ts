@@ -16,12 +16,12 @@ export const foundationFeatureCards: FeatureCard[] = [
     body: "Push through the training yard with tight tank movement and smooth camera follow.",
   },
   {
-    title: "Mouse Turret",
-    body: "Aim independently with the cursor and fire straight down the lane with left click.",
+    title: "Break Open Cover",
+    body: "Blast crates and weak walls to create fresh firing lanes or carve a flank route.",
   },
   {
-    title: "Clear The Yard",
-    body: "Destroy the enemy scout, collect the dropped credits, and survive the return fire.",
+    title: "Hidden Cache",
+    body: "Punch through the side path, collect the extra credits, and survive the crossfire.",
   },
 ];
 

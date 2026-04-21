@@ -18,6 +18,7 @@ export function runPickupSystem(state: BattleState): SimulationEffect[] {
     }
 
     state.credits += pickup.value;
+    state.creditsEarned += pickup.value;
     effects.push({
       type: "pickup",
       x: pickup.position.x,

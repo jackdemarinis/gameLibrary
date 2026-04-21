@@ -38,6 +38,29 @@ export interface HudViewModel {
   helpOpen?: boolean;
 }
 
+export interface ShopOfferViewModel {
+  iconLabel: string;
+  title: string;
+  summary: string;
+  nextBonus: string;
+  level: number;
+  maxLevel: number;
+  priceValue: number | null;
+  action: UiAction;
+}
+
+export interface ShopViewModel {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  status: string;
+  credits: number;
+  nextMissionTitle: string;
+  nextMissionBriefing: string;
+  offers: ShopOfferViewModel[];
+  actions: UiAction[];
+}
+
 export class AppChrome {
   private readonly root: HTMLDivElement;
 
@@ -202,6 +225,7 @@ export class AppChrome {
             <p class="eyebrow">${model.title}</p>
             <h2 class="hud-card-title">Briefing</h2>
             <p class="hud-copy">${model.copy}</p>
+            ${model.objective ? `<p class="hud-copy hud-copy-secondary">${model.objective}</p>` : ""}
             <div class="hud-kpis">
               ${model.kpis
                 .map(
@@ -221,6 +245,110 @@ export class AppChrome {
         </section>
       `;
     }
+
+    this.bindActionMap(actionMap);
+  }
+
+  renderShop(model: ShopViewModel): void {
+    const actionMap = new Map<string, UiAction>();
+    const registerAction = (id: string, action: UiAction, className = ""): string => {
+      actionMap.set(id, action);
+      const classes = [`chrome-button`, `chrome-button-${action.tone}`, className]
+        .filter(Boolean)
+        .join(" ");
+      return `
+        <button
+          class="${classes}"
+          data-action-id="${id}"
+          ${action.disabled ? "disabled" : ""}
+        >
+          ${action.label}
+        </button>
+      `;
+    };
+    const renderOffer = (offer: ShopOfferViewModel, index: number): string => {
+      const progress = offer.maxLevel > 0 ? Math.min(100, (offer.level / offer.maxLevel) * 100) : 0;
+      const priceLabel = offer.priceValue === null ? "MAX" : `$${offer.priceValue}`;
+
+      return `
+        <article class="shop-upgrade-tile${offer.priceValue === null ? " shop-upgrade-tile-maxed" : ""}">
+          <div class="shop-upgrade-gauge" style="--shop-progress: ${progress}%;">
+            <span class="shop-upgrade-gauge-core">${offer.iconLabel}</span>
+          </div>
+          <div class="shop-upgrade-copy">
+            <span class="shop-upgrade-level">LV ${offer.level}/${offer.maxLevel}</span>
+            <h2 class="shop-upgrade-title">${offer.title}</h2>
+            <p class="shop-upgrade-price">${priceLabel}</p>
+            <p class="shop-upgrade-bonus">${offer.nextBonus}</p>
+            <p class="shop-upgrade-summary">${offer.summary}</p>
+          </div>
+          ${registerAction(`shop-offer-${index}`, offer.action, "shop-upgrade-button")}
+        </article>
+      `;
+    };
+
+    this.root.innerHTML = `
+      <section class="menu-screen shop-screen">
+        <article class="menu-panel shop-panel">
+          <div class="shop-shell">
+            <div class="shop-header">
+              <div class="shop-hero">
+                <div class="shop-mascot" aria-hidden="true">
+                  <span class="shop-mascot-sun"></span>
+                  <span class="shop-mascot-smoke"></span>
+                  <span class="shop-mascot-track shop-mascot-track-left"></span>
+                  <span class="shop-mascot-track shop-mascot-track-right"></span>
+                  <span class="shop-mascot-hull"></span>
+                  <span class="shop-mascot-turret"></span>
+                  <span class="shop-mascot-barrel"></span>
+                </div>
+                <div class="shop-heading">
+                  <p class="eyebrow shop-eyebrow">${model.eyebrow}</p>
+                  <h1 class="menu-title shop-title">${model.title}</h1>
+                  <p class="shop-subtitle">${model.subtitle}</p>
+                  <p class="shop-status">${model.status}</p>
+                </div>
+              </div>
+              <div class="shop-credit-pill">
+                <span class="shop-credit-label">Credits</span>
+                <strong class="shop-credit-value">$${model.credits}</strong>
+              </div>
+            </div>
+            <div class="shop-tab-row" aria-hidden="true">
+              <span class="shop-tab shop-tab-active">Performance</span>
+              <span class="shop-tab shop-tab-idle">Weapons Bay Offline</span>
+            </div>
+            <div class="shop-main">
+              <section class="shop-board">
+                <div class="shop-grid">
+                  ${model.offers.map((offer, index) => renderOffer(offer, index)).join("")}
+                </div>
+              </section>
+              <aside class="shop-sidebar">
+                <article class="shop-side-card">
+                  <p class="shop-side-label">Next Contract</p>
+                  <h2 class="shop-side-title">${model.nextMissionTitle}</h2>
+                  <p class="shop-next-mission">${model.nextMissionBriefing}</p>
+                </article>
+                <article class="shop-side-card">
+                  <p class="shop-side-label">Service Note</p>
+                  <p class="shop-side-copy">
+                    Performance upgrades are permanent. Spend now, then roll straight into the next engagement.
+                  </p>
+                </article>
+              </aside>
+            </div>
+            <div class="shop-footer">
+              <div class="action-row shop-action-row">
+                ${model.actions
+                  .map((action, index) => registerAction(`shop-action-${index}`, action, "shop-footer-button"))
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    `;
 
     this.bindActionMap(actionMap);
   }
