@@ -30,6 +30,8 @@ export interface BattleResultSummary {
   levelId: string;
   levelName: string;
   creditsEarned: number;
+  pointsEarned: number;
+  totalScore: number;
   damageTaken: number;
   completionTimeMs: number;
 }
@@ -60,6 +62,7 @@ export interface TankState {
   health: number;
   maxHealth: number;
   moveSpeed: number;
+  turretTurnSpeed: number;
   fireCooldownMs: number;
   fireCooldownRemainingMs: number;
   projectileSpeed: number;
@@ -70,6 +73,7 @@ export interface TankState {
   recoilOffset: number;
   recentDamageMs: number;
   rewardCredits: number;
+  rewardScore: number;
   sightRange: number;
   nearbyRange: number;
   preferredRange: number;
@@ -93,6 +97,7 @@ export interface BreakableObstacleState {
   health: number;
   maxHealth: number;
   rewardCredits: number;
+  rewardScore: number;
   alive: boolean;
 }
 
@@ -113,6 +118,7 @@ export interface PickupState {
   position: Vector2;
   radius: number;
   value: number;
+  scoreValue: number;
 }
 
 export interface SimulationEffect {
@@ -147,6 +153,9 @@ export interface BattleState {
   credits: number;
   startingCredits: number;
   creditsEarned: number;
+  totalScore: number;
+  startingTotalScore: number;
+  pointsEarned: number;
   damageTaken: number;
   elapsedMs: number;
   status: BattleStatus;
@@ -203,6 +212,7 @@ export interface BattleSnapshot {
   indestructibleWalls: readonly Rect[];
   breakableObstacles: readonly BreakableObstacleSnapshot[];
   credits: number;
+  totalScore: number;
   elapsedMs: number;
 }
 
@@ -213,6 +223,7 @@ export interface BattleHudSnapshot {
   health: number;
   maxHealth: number;
   credits: number;
+  totalScore: number;
   enemiesRemaining: number;
   controls: string[];
 }

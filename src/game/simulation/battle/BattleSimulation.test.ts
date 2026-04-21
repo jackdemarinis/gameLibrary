@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { battleConfig } from "../../config/battleConfig";
 import type { BattleLevelData } from "../../content/levelTypes";
 import { createInitialSave } from "../state";
 import { battleVisibilityTileState } from "./types";
@@ -131,6 +132,7 @@ describe("BattleSimulation", () => {
     let snapshot = simulation.getSnapshot();
     expect(snapshot.status).toBe("won");
     expect(snapshot.pickups).toHaveLength(1);
+    expect(snapshot.totalScore).toBe(140);
 
     advanceFor(simulation, 800, {
       movementX: 0,
@@ -141,12 +143,15 @@ describe("BattleSimulation", () => {
 
     snapshot = simulation.getSnapshot();
     expect(snapshot.credits).toBe(35);
+    expect(snapshot.totalScore).toBe(175);
     expect(snapshot.pickups).toHaveLength(0);
     expect(simulation.getResultSummary()).toMatchObject({
       status: "won",
       levelId: openTestLevel.id,
       levelName: openTestLevel.name,
       creditsEarned: 35,
+      pointsEarned: 175,
+      totalScore: 175,
       damageTaken: 0,
     });
   });
@@ -165,6 +170,7 @@ describe("BattleSimulation", () => {
 
     const snapshot = simulation.getSnapshot();
     expect(snapshot.credits).toBe(25);
+    expect(snapshot.totalScore).toBe(25);
     expect(snapshot.pickups).toHaveLength(0);
   });
 
@@ -190,6 +196,7 @@ describe("BattleSimulation", () => {
 
     snapshot = simulation.getSnapshot();
     expect(snapshot.breakableObstacles.some((obstacle) => obstacle.id === "crate-1")).toBe(false);
+    expect(snapshot.totalScore).toBe(55);
     expect(snapshot.pickups.some((pickup) => pickup.x === 320 && pickup.y === 120)).toBe(true);
   });
 
@@ -243,6 +250,68 @@ describe("BattleSimulation", () => {
     expect(nextEnemies["heavy-1"].aiState).toBe("engage");
     expect(nextEnemies["flanker-1"].aiState).not.toBe("idle");
     expect(flankerTravel).toBeGreaterThan(heavyTravel);
+  });
+
+  it("applies saved upgrades and difficulty to the very next level", () => {
+    const baseline = new BattleSimulation(openTestLevel, createInitialSave());
+    const upgradedSave = createInitialSave({
+      difficulty: "ace",
+    });
+
+    upgradedSave.upgrades.maxHealth = 1;
+    upgradedSave.upgrades.movementSpeed = 1;
+    upgradedSave.upgrades.weaponDamage = 1;
+    upgradedSave.upgrades.visibilityRadius = 1;
+    upgradedSave.upgrades.fireRate = 1;
+    upgradedSave.upgrades.turretRotationSpeed = 1;
+
+    const upgraded = new BattleSimulation(openTestLevel, upgradedSave);
+    const baselineStart = baseline.getSnapshot();
+    const upgradedStart = upgraded.getSnapshot();
+    const farVisibilityPoint = {
+      x: openTestLevel.playerSpawn.x,
+      y: openTestLevel.playerSpawn.y + battleConfig.visibility.tileSize * 3.75,
+    };
+
+    expect(upgradedStart.player.maxHealth).toBeGreaterThan(baselineStart.player.maxHealth);
+    expect(
+      getVisibilityTileStateAtWorldPoint(baselineStart.visibility, farVisibilityPoint),
+    ).toBe(battleVisibilityTileState.unexplored);
+    expect(
+      getVisibilityTileStateAtWorldPoint(upgradedStart.visibility, farVisibilityPoint),
+    ).toBe(battleVisibilityTileState.visible);
+
+    advanceFor(baseline, 250, {
+      movementX: 1,
+      movementY: 0,
+      aim: { x: 240, y: 120 },
+      firing: false,
+    });
+    advanceFor(upgraded, 250, {
+      movementX: 1,
+      movementY: 0,
+      aim: { x: 240, y: 120 },
+      firing: false,
+    });
+
+    expect(upgraded.getSnapshot().player.x).toBeGreaterThan(baseline.getSnapshot().player.x);
+
+    advanceFor(baseline, 40, {
+      movementX: 0,
+      movementY: 0,
+      aim: { x: 0, y: 120 },
+      firing: false,
+    });
+    advanceFor(upgraded, 40, {
+      movementX: 0,
+      movementY: 0,
+      aim: { x: 0, y: 120 },
+      firing: false,
+    });
+
+    expect(upgraded.getSnapshot().player.turretRotation).toBeGreaterThan(
+      baseline.getSnapshot().player.turretRotation,
+    );
   });
 });
 

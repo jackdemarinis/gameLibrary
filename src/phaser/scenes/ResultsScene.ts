@@ -26,15 +26,22 @@ export class ResultsScene extends Phaser.Scene {
 
   private renderChrome(data: ResultsSceneData): void {
     if (data.result.status === "won") {
+      const unlockCopy =
+        data.flow.newWeaponUnlocks.length > 0
+          ? ` New weapon unlocked: ${data.flow.newWeaponUnlocks.join(", ")}.`
+          : "";
+
       this.bridge.showHud({
         layout: "result",
         title: "Level Complete",
-        copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector.`,
+        copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector.${unlockCopy}`,
         objective: data.flow.loopedCampaign
           ? "Campaign loop complete. The motor pool has cycled back to the opening yard."
           : `Next contract staged: ${data.flow.nextLevel.name}.`,
         kpis: [
+          { label: "Points Earned", value: `${data.result.pointsEarned}` },
           { label: "Coins Earned", value: `$${data.result.creditsEarned}` },
+          { label: "Total Score", value: `${data.result.totalScore}` },
           { label: "Damage Taken", value: `${data.result.damageTaken}` },
           { label: "Completion Time", value: formatTime(data.result.completionTimeMs) },
         ],
@@ -61,7 +68,9 @@ export class ResultsScene extends Phaser.Scene {
       copy: `${data.result.levelName} was not secured. The tank needs another pass before the route can open.`,
       objective: "Re-arm, restart the encounter, or return to the main menu.",
       kpis: [
+        { label: "Points Earned", value: `${data.result.pointsEarned}` },
         { label: "Coins Earned", value: `$${data.result.creditsEarned}` },
+        { label: "Total Score", value: `${data.result.totalScore}` },
         { label: "Damage Taken", value: `${data.result.damageTaken}` },
         { label: "Time Survived", value: formatTime(data.result.completionTimeMs) },
       ],

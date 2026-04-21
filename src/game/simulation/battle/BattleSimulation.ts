@@ -98,8 +98,10 @@ export class BattleSimulation {
 function createBattleState(level: BattleLevelData, save: SaveData): BattleState {
   const breakableObstacles = createBreakableObstacles(level);
   const playerUpgrades = save.upgrades;
+  const difficultyTuning = battleConfig.difficulty[save.difficulty];
   const playerMaxHealth =
-    battleConfig.player.maxHealth + playerUpgrades.armor * battleConfig.upgrades.armorHealthPerLevel;
+    battleConfig.player.maxHealth +
+    playerUpgrades.maxHealth * battleConfig.upgrades.maxHealthPerLevel;
   const player: TankState = {
     id: "player",
     faction: "player",
@@ -112,21 +114,27 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     maxHealth: playerMaxHealth,
     moveSpeed:
       battleConfig.player.moveSpeed +
-      playerUpgrades.movement * battleConfig.upgrades.movementSpeedPerLevel,
-    fireCooldownMs:
+      playerUpgrades.movementSpeed * battleConfig.upgrades.movementSpeedPerLevel,
+    turretTurnSpeed:
+      battleConfig.player.turretTurnSpeedRadiansPerSecond +
+      playerUpgrades.turretRotationSpeed * battleConfig.upgrades.turretRotationSpeedPerLevel,
+    fireCooldownMs: Math.max(
+      battleConfig.player.minFireCooldownMs,
       battleConfig.player.fireCooldownMs -
-      playerUpgrades.turret * battleConfig.upgrades.turretCooldownReductionMsPerLevel,
+        playerUpgrades.fireRate * battleConfig.upgrades.fireRateReductionMsPerLevel,
+    ),
     fireCooldownRemainingMs: 0,
     projectileSpeed: battleConfig.player.projectileSpeed,
     projectileDamage:
       battleConfig.player.projectileDamage +
-      playerUpgrades.turret * battleConfig.upgrades.turretDamagePerLevel,
+      playerUpgrades.weaponDamage * battleConfig.upgrades.weaponDamagePerLevel,
     muzzleOffset: battleConfig.player.muzzleOffset,
     recoilKick: battleConfig.player.recoilKick,
     recoilRecoveryPerSecond: battleConfig.player.recoilRecoveryPerSecond,
     recoilOffset: 0,
     recentDamageMs: 0,
     rewardCredits: 0,
+    rewardScore: 0,
     sightRange: 0,
     nearbyRange: 0,
     preferredRange: 0,
@@ -150,15 +158,27 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     visibility: createBattleVisibilityState(player.position, [], {
       radiusTiles:
         battleConfig.visibility.radiusTiles +
-        playerUpgrades.optics * battleConfig.upgrades.opticsRadiusTilesPerLevel,
+        playerUpgrades.visibilityRadius * battleConfig.upgrades.visibilityRadiusTilesPerLevel,
     }),
     player,
-    enemies: level.enemySpawns.map((spawn) => createEnemyTank(spawn.id, spawn.x, spawn.y, spawn.archetype, spawn.patrol ?? [])),
+    enemies: level.enemySpawns.map((spawn) =>
+      createEnemyTank(
+        spawn.id,
+        spawn.x,
+        spawn.y,
+        spawn.archetype,
+        spawn.patrol ?? [],
+        difficultyTuning,
+      ),
+    ),
     projectiles: [],
     pickups: createInitialPickups(level),
     credits: save.credits,
     startingCredits: save.credits,
     creditsEarned: 0,
+    totalScore: save.totalScore,
+    startingTotalScore: save.totalScore,
+    pointsEarned: 0,
     damageTaken: 0,
     elapsedMs: 0,
     status: "active",
@@ -170,7 +190,7 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
   state.visibility = createBattleVisibilityState(player.position, state.obstacles, {
     radiusTiles:
       battleConfig.visibility.radiusTiles +
-      playerUpgrades.optics * battleConfig.upgrades.opticsRadiusTilesPerLevel,
+      playerUpgrades.visibilityRadius * battleConfig.upgrades.visibilityRadiusTilesPerLevel,
   });
   return state;
 }
@@ -224,6 +244,7 @@ function createBattleSnapshot(state: BattleState): BattleSnapshot {
       .filter((obstacle) => obstacle.alive)
       .map(createBreakableObstacleSnapshot),
     credits: state.credits,
+    totalScore: state.totalScore,
     elapsedMs: state.elapsedMs,
   };
 }
@@ -269,6 +290,7 @@ function createInitialPickups(level: BattleLevelData): PickupState[] {
     },
     radius: pickup.radius ?? battleConfig.pickup.radius,
     value: pickup.value,
+    scoreValue: pickup.value,
   }));
 }
 
@@ -278,8 +300,14 @@ function createEnemyTank(
   y: number,
   archetype: EnemyArchetype,
   patrolPoints: readonly { x: number; y: number }[],
+  difficultyTuning: (typeof battleConfig.difficulty)[keyof typeof battleConfig.difficulty],
 ): TankState {
   const profile = battleConfig.enemy.archetypes[archetype];
+  const maxHealth = Math.round(profile.maxHealth * difficultyTuning.enemyHealthMultiplier);
+  const projectileDamage = Math.round(profile.projectileDamage * difficultyTuning.enemyDamageMultiplier);
+  const fireCooldownMs = Math.round(
+    profile.fireCooldownMs * difficultyTuning.enemyFireCooldownMultiplier,
+  );
 
   return {
     id,
@@ -289,19 +317,21 @@ function createEnemyTank(
     hullRotation: Math.PI,
     turretRotation: Math.PI,
     radius: battleConfig.enemy.radius,
-    health: profile.maxHealth,
-    maxHealth: profile.maxHealth,
+    health: maxHealth,
+    maxHealth,
     moveSpeed: profile.moveSpeed,
-    fireCooldownMs: profile.fireCooldownMs,
+    turretTurnSpeed: 0,
+    fireCooldownMs,
     fireCooldownRemainingMs: 220 + (hashString(id) % 360),
     projectileSpeed: profile.projectileSpeed,
-    projectileDamage: profile.projectileDamage,
+    projectileDamage,
     muzzleOffset: battleConfig.enemy.muzzleOffset,
     recoilKick: profile.recoilKick,
     recoilRecoveryPerSecond: profile.recoilRecoveryPerSecond,
     recoilOffset: 0,
     recentDamageMs: 0,
     rewardCredits: profile.rewardCredits,
+    rewardScore: profile.rewardScore,
     sightRange: profile.sightRange,
     nearbyRange: battleConfig.enemy.nearbyDetectionRange,
     preferredRange: profile.preferredRange,
@@ -325,6 +355,8 @@ function createBattleResultSummary(state: BattleState): BattleResultSummary {
     levelId: state.level.id,
     levelName: state.level.name,
     creditsEarned: state.creditsEarned,
+    pointsEarned: state.pointsEarned,
+    totalScore: state.totalScore,
     damageTaken: state.damageTaken,
     completionTimeMs: state.elapsedMs,
   };

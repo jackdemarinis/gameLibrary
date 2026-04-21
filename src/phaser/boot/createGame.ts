@@ -4,6 +4,8 @@ import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
 import { BattleScene } from "../scenes/BattleScene";
 import { BootScene } from "../scenes/BootScene";
+import { LevelIntroScene } from "../scenes/LevelIntroScene";
+import { LevelSelectScene } from "../scenes/LevelSelectScene";
 import { MenuScene } from "../scenes/MenuScene";
 import { ResultsScene } from "../scenes/ResultsScene";
 import { ShopScene } from "../scenes/ShopScene";
@@ -27,6 +29,8 @@ export function createGame(parent: HTMLElement, bridge: SceneBridge): Phaser.Gam
     scene: [
       new BootScene(bridge),
       new MenuScene(bridge),
+      new LevelSelectScene(bridge),
+      new LevelIntroScene(bridge),
       new BattleScene(bridge),
       new ResultsScene(bridge),
       new ShopScene(bridge),

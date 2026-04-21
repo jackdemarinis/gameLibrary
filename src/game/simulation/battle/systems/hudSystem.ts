@@ -10,6 +10,7 @@ export function buildBattleHudSnapshot(state: BattleState): BattleHudSnapshot {
     health: state.player.health,
     maxHealth: state.player.maxHealth,
     credits: state.credits,
+    totalScore: state.totalScore,
     enemiesRemaining,
     controls: [
       "WASD to move",

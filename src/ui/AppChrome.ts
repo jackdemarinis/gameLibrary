@@ -1,5 +1,3 @@
-import type { FeatureCard } from "../game/content/campaignPlan";
-
 export interface UiAction {
   label: string;
   tone: "primary" | "secondary" | "danger";
@@ -7,12 +5,69 @@ export interface UiAction {
   disabled?: boolean;
 }
 
-export interface MenuViewModel {
-  eyebrow: string;
+export interface DifficultyChoiceViewModel {
+  label: string;
+  stars: string;
+  caption: string;
+  active?: boolean;
+  onPress: () => void;
+}
+
+export interface StartViewModel {
   title: string;
   subtitle: string;
-  status: string;
-  featureCards: FeatureCard[];
+  saveStatus: string;
+  playAction: UiAction;
+}
+
+export interface ShopOfferViewModel {
+  iconLabel: string;
+  category: "Core" | "Bonus";
+  title: string;
+  summary: string;
+  nextBonus: string;
+  level: number;
+  maxLevel: number;
+  priceValue: number | null;
+  action: UiAction;
+}
+
+export interface ShopViewModel {
+  title: string;
+  subtitle: string;
+  credits: number;
+  totalScore: number;
+  difficultyLabel: string;
+  difficultyLocked: boolean;
+  difficultyOptions: DifficultyChoiceViewModel[];
+  unlockedWeapons: string[];
+  offers: ShopOfferViewModel[];
+  actions: UiAction[];
+}
+
+export interface LevelChoiceViewModel {
+  number: number;
+  label: string;
+  unlocked: boolean;
+  active: boolean;
+  onPress: () => void;
+}
+
+export interface LevelSelectViewModel {
+  title: string;
+  difficultyLabel: string;
+  totalScore: number;
+  levels: LevelChoiceViewModel[];
+  actions: UiAction[];
+}
+
+export interface LevelIntroViewModel {
+  eyebrow: string;
+  title: string;
+  briefing: string;
+  difficultyLabel: string;
+  totalScore: number;
+  credits: number;
   actions: UiAction[];
 }
 
@@ -38,29 +93,6 @@ export interface HudViewModel {
   helpOpen?: boolean;
 }
 
-export interface ShopOfferViewModel {
-  iconLabel: string;
-  title: string;
-  summary: string;
-  nextBonus: string;
-  level: number;
-  maxLevel: number;
-  priceValue: number | null;
-  action: UiAction;
-}
-
-export interface ShopViewModel {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  status: string;
-  credits: number;
-  nextMissionTitle: string;
-  nextMissionBriefing: string;
-  offers: ShopOfferViewModel[];
-  actions: UiAction[];
-}
-
 export class AppChrome {
   private readonly root: HTMLDivElement;
 
@@ -72,47 +104,237 @@ export class AppChrome {
     this.root.innerHTML = "";
   }
 
-  renderMenu(model: MenuViewModel): void {
+  renderStart(model: StartViewModel): void {
     const actionMap = new Map<string, UiAction>();
-    const renderActions = model.actions
-      .map((action, index) => {
-        const id = `menu-${index}`;
-        actionMap.set(id, action);
-        return `
-          <button
-            class="chrome-button chrome-button-${action.tone}"
-            data-action-id="${id}"
-            ${action.disabled ? "disabled" : ""}
-          >
-            ${action.label}
-          </button>
-        `;
-      })
-      .join("");
+    const playButton = this.renderActionButton("start-play", model.playAction, actionMap, "start-play-button");
 
     this.root.innerHTML = `
-      <section class="menu-screen">
-        <article class="menu-panel">
-          <div class="menu-header">
-            <p class="eyebrow">${model.eyebrow}</p>
-            <h1 class="menu-title">${model.title}</h1>
-            <p class="menu-subtitle menu-subtitle-wide">${model.subtitle}</p>
-            <div class="status-pill">${model.status}</div>
+      <section class="start-screen">
+        <article class="start-panel">
+          <div class="start-art">
+            <div class="start-logo">
+              <p class="eyebrow start-eyebrow">Arcade Campaign</p>
+              <h1 class="start-title">${model.title}</h1>
+              <p class="start-subtitle">${model.subtitle}</p>
+            </div>
+            <div class="start-tank-illustration" aria-hidden="true">
+              <span class="start-shell start-shell-a"></span>
+              <span class="start-shell start-shell-b"></span>
+              <span class="start-smoke start-smoke-a"></span>
+              <span class="start-smoke start-smoke-b"></span>
+              <div class="start-tank-shadow"></div>
+              <div class="start-tank-body">
+                <span class="start-tank-track start-tank-track-left"></span>
+                <span class="start-tank-track start-tank-track-right"></span>
+                <span class="start-tank-hull"></span>
+                <span class="start-tank-turret"></span>
+                <span class="start-tank-barrel"></span>
+              </div>
+            </div>
           </div>
-          <div class="feature-grid">
-            ${model.featureCards
-              .map(
-                (card) => `
-                  <article class="feature-card">
-                    <h2 class="feature-card-title">${card.title}</h2>
-                    <p class="feature-card-body">${card.body}</p>
-                  </article>
-                `,
+          <div class="start-footer">
+            <p class="start-save-status">${model.saveStatus}</p>
+            ${playButton}
+          </div>
+        </article>
+      </section>
+    `;
+
+    this.bindActionMap(actionMap);
+  }
+
+  renderShop(model: ShopViewModel): void {
+    const actionMap = new Map<string, UiAction | DifficultyChoiceViewModel>();
+    const registerChoice = (id: string, action: DifficultyChoiceViewModel, className = ""): string => {
+      actionMap.set(id, action);
+      return `
+        <button class="${className}" data-action-id="${id}">
+          <span>${action.label}</span>
+          <strong>${action.stars}</strong>
+          <small>${action.caption}</small>
+        </button>
+      `;
+    };
+    const renderOffer = (offer: ShopOfferViewModel, index: number): string => {
+      const progress = offer.maxLevel > 0 ? Math.min(100, (offer.level / offer.maxLevel) * 100) : 0;
+      const priceLabel = offer.priceValue === null ? "MAX" : `$${offer.priceValue}`;
+
+      return `
+        <article class="shop-upgrade-card${offer.priceValue === null ? " shop-upgrade-card-maxed" : ""}">
+          <div class="shop-upgrade-head">
+            <div class="shop-upgrade-badge">${offer.iconLabel}</div>
+            <div class="shop-upgrade-heading">
+              <span class="shop-upgrade-tag">${offer.category}</span>
+              <h2 class="shop-upgrade-title">${offer.title}</h2>
+            </div>
+            <span class="shop-upgrade-price">${priceLabel}</span>
+          </div>
+          <p class="shop-upgrade-bonus">${offer.nextBonus}</p>
+          <div class="shop-upgrade-track"><span class="shop-upgrade-track-fill" style="width: ${progress}%"></span></div>
+          <div class="shop-upgrade-pips">
+            ${Array.from({ length: offer.maxLevel }, (_, pipIndex) => `
+              <span class="shop-upgrade-pip${pipIndex < offer.level ? " shop-upgrade-pip-active" : ""}"></span>
+            `).join("")}
+          </div>
+          <p class="shop-upgrade-summary">${offer.summary}</p>
+          ${this.renderActionButton(`shop-offer-${index}`, offer.action, actionMap, "shop-upgrade-button")}
+        </article>
+      `;
+    };
+
+    this.root.innerHTML = `
+      <section class="shop-screen">
+        <article class="shop-panel">
+          <div class="shop-shell">
+            <header class="shop-header shop-header-arcade">
+              <div class="shop-header-tank" aria-hidden="true">
+                <span class="shop-header-track shop-header-track-left"></span>
+                <span class="shop-header-track shop-header-track-right"></span>
+                <span class="shop-header-hull"></span>
+                <span class="shop-header-turret"></span>
+                <span class="shop-header-barrel"></span>
+              </div>
+              <div class="shop-credit-pill">
+                <span class="shop-credit-label">Coins</span>
+                <strong class="shop-credit-value">$${model.credits}</strong>
+                <span class="shop-credit-subvalue">Total score: ${model.totalScore}</span>
+              </div>
+            </header>
+            <div class="shop-stage">
+              <section class="shop-board arcade-card">
+                <div class="shop-board-header">
+                  <div>
+                    <h1 class="shop-board-title">${model.title}</h1>
+                    <p class="shop-board-copy">${model.subtitle}</p>
+                  </div>
+                  <div class="shop-board-status">
+                    <span class="shop-board-status-label">Difficulty</span>
+                    <strong>${model.difficultyLabel}</strong>
+                  </div>
+                </div>
+                <div class="shop-grid">
+                  ${model.offers.map((offer, index) => renderOffer(offer, index)).join("")}
+                </div>
+              </section>
+              <aside class="shop-sidebar">
+                <article class="shop-side-card arcade-card">
+                  <p class="shop-side-label">Unlocked Weapons</p>
+                  <div class="shop-weapon-stack">
+                    ${model.unlockedWeapons
+                      .map((weapon) => `<span class="shop-weapon-pill">${weapon}</span>`)
+                      .join("")}
+                  </div>
+                </article>
+                <div class="shop-side-actions">
+                  ${model.actions
+                    .map((action, index) =>
+                      this.renderActionButton(`shop-action-${index}`, action, actionMap, "shop-footer-button"),
+                    )
+                    .join("")}
+                </div>
+              </aside>
+            </div>
+            ${
+              model.difficultyLocked
+                ? `
+                  <div class="difficulty-modal-backdrop">
+                    <article class="difficulty-modal arcade-card">
+                      <p class="difficulty-modal-title">Select Difficulty</p>
+                      <div class="difficulty-choice-stack">
+                        ${model.difficultyOptions
+                          .map((choice, index) =>
+                            registerChoice(
+                              `difficulty-choice-${index}`,
+                              choice,
+                              `difficulty-choice${choice.active ? " difficulty-choice-active" : ""}`,
+                            ),
+                          )
+                          .join("")}
+                      </div>
+                    </article>
+                  </div>
+                `
+                : ""
+            }
+          </div>
+        </article>
+      </section>
+    `;
+
+    this.bindActionMap(actionMap);
+  }
+
+  renderLevelSelect(model: LevelSelectViewModel): void {
+    const actionMap = new Map<string, UiAction | LevelChoiceViewModel>();
+    const registerLevel = (id: string, level: LevelChoiceViewModel): string => {
+      actionMap.set(id, level);
+      return `
+        <button
+          class="level-tile${level.unlocked ? "" : " level-tile-locked"}${level.active ? " level-tile-active" : ""}"
+          data-action-id="${id}"
+          ${level.unlocked ? "" : "disabled"}
+        >
+          <span class="level-tile-number">${level.number}</span>
+          <span class="level-tile-label">${level.label}</span>
+        </button>
+      `;
+    };
+
+    this.root.innerHTML = `
+      <section class="level-screen">
+        <article class="level-panel arcade-card">
+          <div class="level-header">
+            <p class="eyebrow">Level Select</p>
+            <h1 class="level-title">${model.title}</h1>
+            <p class="level-meta">Difficulty: ${model.difficultyLabel}</p>
+          </div>
+          <div class="level-grid">
+            ${model.levels.map((level, index) => registerLevel(`level-choice-${index}`, level)).join("")}
+          </div>
+          <p class="level-score">Total score: ${model.totalScore} Pts.</p>
+          <div class="level-actions">
+            ${model.actions
+              .map((action, index) =>
+                this.renderActionButton(`level-action-${index}`, action, actionMap, "chrome-button"),
               )
               .join("")}
           </div>
-          <div class="action-row">
-            ${renderActions}
+        </article>
+      </section>
+    `;
+
+    this.bindActionMap(actionMap);
+  }
+
+  renderLevelIntro(model: LevelIntroViewModel): void {
+    const actionMap = new Map<string, UiAction>();
+
+    this.root.innerHTML = `
+      <section class="brief-screen">
+        <article class="brief-panel arcade-card">
+          <p class="eyebrow">${model.eyebrow}</p>
+          <h1 class="brief-title">${model.title}</h1>
+          <p class="brief-copy">${model.briefing}</p>
+          <div class="brief-stat-row">
+            <article class="brief-stat-card">
+              <span class="brief-stat-label">Difficulty</span>
+              <strong class="brief-stat-value">${model.difficultyLabel}</strong>
+            </article>
+            <article class="brief-stat-card">
+              <span class="brief-stat-label">Coins</span>
+              <strong class="brief-stat-value">$${model.credits}</strong>
+            </article>
+            <article class="brief-stat-card">
+              <span class="brief-stat-label">Total Score</span>
+              <strong class="brief-stat-value">${model.totalScore}</strong>
+            </article>
+          </div>
+          <div class="brief-actions">
+            ${model.actions
+              .map((action, index) =>
+                this.renderActionButton(`brief-action-${index}`, action, actionMap, "chrome-button"),
+              )
+              .join("")}
           </div>
         </article>
       </section>
@@ -153,30 +375,6 @@ export class AppChrome {
         </div>
       `;
     };
-    const registerAction = (
-      id: string,
-      action: UiAction,
-      className = "",
-    ): string => {
-      actionMap.set(id, action);
-      const classes = [`chrome-button`, `chrome-button-${action.tone}`, className]
-        .filter(Boolean)
-        .join(" ");
-      return `
-        <button
-          class="${classes}"
-          data-action-id="${id}"
-          ${action.disabled ? "disabled" : ""}
-        >
-          ${action.label}
-        </button>
-      `;
-    };
-
-    const renderActionGroup = (prefix: string, actions: UiAction[], className = ""): string =>
-      actions
-        .map((action, index) => registerAction(`${prefix}-${index}`, action, className))
-        .join("");
 
     if (model.layout === "active") {
       this.root.innerHTML = `
@@ -187,7 +385,7 @@ export class AppChrome {
             </div>
             ${
               model.helpAction
-                ? registerAction("hud-help", model.helpAction, "hud-help-button")
+                ? this.renderActionButton("hud-help", model.helpAction, actionMap, "hud-help-button chrome-button chrome-button-secondary")
                 : ""
             }
           </article>
@@ -206,10 +404,14 @@ export class AppChrome {
                     <div class="hud-modal-actions">
                       ${
                         model.helpBackAction
-                          ? registerAction("hud-help-back", model.helpBackAction)
+                          ? this.renderActionButton("hud-help-back", model.helpBackAction, actionMap, "chrome-button")
                           : ""
                       }
-                      ${renderActionGroup("hud-modal", model.actions)}
+                      ${model.actions
+                        .map((action, index) =>
+                          this.renderActionButton(`hud-modal-${index}`, action, actionMap, "chrome-button"),
+                        )
+                        .join("")}
                     </div>
                   </article>
                 </div>
@@ -239,7 +441,11 @@ export class AppChrome {
                 .join("")}
             </div>
             <div class="hud-action-row">
-              ${renderActionGroup("hud-result", model.actions)}
+              ${model.actions
+                .map((action, index) =>
+                  this.renderActionButton(`hud-result-${index}`, action, actionMap, "chrome-button"),
+                )
+                .join("")}
             </div>
           </article>
         </section>
@@ -249,111 +455,31 @@ export class AppChrome {
     this.bindActionMap(actionMap);
   }
 
-  renderShop(model: ShopViewModel): void {
-    const actionMap = new Map<string, UiAction>();
-    const registerAction = (id: string, action: UiAction, className = ""): string => {
-      actionMap.set(id, action);
-      const classes = [`chrome-button`, `chrome-button-${action.tone}`, className]
-        .filter(Boolean)
-        .join(" ");
-      return `
-        <button
-          class="${classes}"
-          data-action-id="${id}"
-          ${action.disabled ? "disabled" : ""}
-        >
-          ${action.label}
-        </button>
-      `;
-    };
-    const renderOffer = (offer: ShopOfferViewModel, index: number): string => {
-      const progress = offer.maxLevel > 0 ? Math.min(100, (offer.level / offer.maxLevel) * 100) : 0;
-      const priceLabel = offer.priceValue === null ? "MAX" : `$${offer.priceValue}`;
+  private renderActionButton(
+    id: string,
+    action: UiAction,
+    actionMap: Map<string, { onPress: () => void; disabled?: boolean }>,
+    className = "",
+  ): string {
+    actionMap.set(id, action);
+    const classes = [`chrome-button`, `chrome-button-${action.tone}`, className]
+      .filter(Boolean)
+      .join(" ");
 
-      return `
-        <article class="shop-upgrade-tile${offer.priceValue === null ? " shop-upgrade-tile-maxed" : ""}">
-          <div class="shop-upgrade-gauge" style="--shop-progress: ${progress}%;">
-            <span class="shop-upgrade-gauge-core">${offer.iconLabel}</span>
-          </div>
-          <div class="shop-upgrade-copy">
-            <span class="shop-upgrade-level">LV ${offer.level}/${offer.maxLevel}</span>
-            <h2 class="shop-upgrade-title">${offer.title}</h2>
-            <p class="shop-upgrade-price">${priceLabel}</p>
-            <p class="shop-upgrade-bonus">${offer.nextBonus}</p>
-            <p class="shop-upgrade-summary">${offer.summary}</p>
-          </div>
-          ${registerAction(`shop-offer-${index}`, offer.action, "shop-upgrade-button")}
-        </article>
-      `;
-    };
-
-    this.root.innerHTML = `
-      <section class="menu-screen shop-screen">
-        <article class="menu-panel shop-panel">
-          <div class="shop-shell">
-            <div class="shop-header">
-              <div class="shop-hero">
-                <div class="shop-mascot" aria-hidden="true">
-                  <span class="shop-mascot-sun"></span>
-                  <span class="shop-mascot-smoke"></span>
-                  <span class="shop-mascot-track shop-mascot-track-left"></span>
-                  <span class="shop-mascot-track shop-mascot-track-right"></span>
-                  <span class="shop-mascot-hull"></span>
-                  <span class="shop-mascot-turret"></span>
-                  <span class="shop-mascot-barrel"></span>
-                </div>
-                <div class="shop-heading">
-                  <p class="eyebrow shop-eyebrow">${model.eyebrow}</p>
-                  <h1 class="menu-title shop-title">${model.title}</h1>
-                  <p class="shop-subtitle">${model.subtitle}</p>
-                  <p class="shop-status">${model.status}</p>
-                </div>
-              </div>
-              <div class="shop-credit-pill">
-                <span class="shop-credit-label">Credits</span>
-                <strong class="shop-credit-value">$${model.credits}</strong>
-              </div>
-            </div>
-            <div class="shop-tab-row" aria-hidden="true">
-              <span class="shop-tab shop-tab-active">Performance</span>
-              <span class="shop-tab shop-tab-idle">Weapons Bay Offline</span>
-            </div>
-            <div class="shop-main">
-              <section class="shop-board">
-                <div class="shop-grid">
-                  ${model.offers.map((offer, index) => renderOffer(offer, index)).join("")}
-                </div>
-              </section>
-              <aside class="shop-sidebar">
-                <article class="shop-side-card">
-                  <p class="shop-side-label">Next Contract</p>
-                  <h2 class="shop-side-title">${model.nextMissionTitle}</h2>
-                  <p class="shop-next-mission">${model.nextMissionBriefing}</p>
-                </article>
-                <article class="shop-side-card">
-                  <p class="shop-side-label">Service Note</p>
-                  <p class="shop-side-copy">
-                    Performance upgrades are permanent. Spend now, then roll straight into the next engagement.
-                  </p>
-                </article>
-              </aside>
-            </div>
-            <div class="shop-footer">
-              <div class="action-row shop-action-row">
-                ${model.actions
-                  .map((action, index) => registerAction(`shop-action-${index}`, action, "shop-footer-button"))
-                  .join("")}
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
+    return `
+      <button
+        class="${classes}"
+        data-action-id="${id}"
+        ${action.disabled ? "disabled" : ""}
+      >
+        ${action.label}
+      </button>
     `;
-
-    this.bindActionMap(actionMap);
   }
 
-  private bindActionMap(actions: Map<string, UiAction>): void {
+  private bindActionMap(
+    actions: Map<string, { onPress: () => void; disabled?: boolean }>,
+  ): void {
     const buttons = this.root.querySelectorAll<HTMLButtonElement>("[data-action-id]");
 
     buttons.forEach((button) => {

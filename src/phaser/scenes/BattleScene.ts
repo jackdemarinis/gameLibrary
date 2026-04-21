@@ -31,6 +31,7 @@ export class BattleScene extends Phaser.Scene {
   private fogLayer!: FogOfWarLayer;
   private lastHudSignature = "";
   private lastSavedCredits = -1;
+  private lastSavedTotalScore = -1;
   private currentSnapshot!: BattleSnapshot;
   private currentHud!: BattleHudSnapshot;
   private helpModalOpen = false;
@@ -63,7 +64,11 @@ export class BattleScene extends Phaser.Scene {
     createCameraRig(this.cameras.main, this.playerSprite.container);
 
     this.lastSavedCredits = snapshot.credits;
-    this.bridge.persistCredits(snapshot.credits);
+    this.lastSavedTotalScore = snapshot.totalScore;
+    this.bridge.persistRunProgress({
+      credits: snapshot.credits,
+      totalScore: snapshot.totalScore,
+    });
     this.renderHud(hud);
 
     this.input.mouse?.disableContextMenu();
@@ -95,9 +100,16 @@ export class BattleScene extends Phaser.Scene {
 
     this.syncSnapshot(result.snapshot);
 
-    if (result.snapshot.credits !== this.lastSavedCredits) {
-      this.bridge.persistCredits(result.snapshot.credits);
+    if (
+      result.snapshot.credits !== this.lastSavedCredits ||
+      result.snapshot.totalScore !== this.lastSavedTotalScore
+    ) {
+      this.bridge.persistRunProgress({
+        credits: result.snapshot.credits,
+        totalScore: result.snapshot.totalScore,
+      });
       this.lastSavedCredits = result.snapshot.credits;
+      this.lastSavedTotalScore = result.snapshot.totalScore;
     }
 
     if (result.snapshot.status !== "active") {
@@ -270,6 +282,7 @@ export class BattleScene extends Phaser.Scene {
           max: hud.maxHealth,
         },
       },
+      { label: "Score", value: `${hud.totalScore}` },
       { label: "Credits", value: `$${hud.credits}` },
       { label: "Enemies", value: `${hud.enemiesRemaining}` },
       { label: "Time", value: formatTime(this.currentSnapshot.elapsedMs) },

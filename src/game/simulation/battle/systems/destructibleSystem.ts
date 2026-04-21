@@ -85,9 +85,13 @@ export function damageBreakableObstacle(
       position: center,
       radius: battleConfig.pickup.radius,
       value: obstacle.rewardCredits,
+      scoreValue: obstacle.rewardCredits,
     });
     state.nextPickupId += 1;
   }
+
+  state.pointsEarned += obstacle.rewardScore;
+  state.totalScore += obstacle.rewardScore;
 
   return effects;
 }
@@ -115,6 +119,10 @@ function createBreakableObstacle(
     health: layout.maxHealth,
     maxHealth: layout.maxHealth,
     rewardCredits: layout.rewardCredits ?? 0,
+    rewardScore:
+      kind === "crate"
+        ? battleConfig.destructible.crateScore
+        : battleConfig.destructible.weakWallScore,
     alive: true,
   };
 }

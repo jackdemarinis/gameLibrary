@@ -40,6 +40,20 @@ export function forwardFromRotation(rotation: number): Vector2 {
   };
 }
 
+export function rotateAngleTowards(current: number, target: number, maxStep: number): number {
+  const delta = wrapAngle(target - current);
+
+  if (Math.abs(delta) <= maxStep) {
+    return target;
+  }
+
+  return current + Math.sign(delta) * maxStep;
+}
+
+export function wrapAngle(angle: number): number {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
 export function circleIntersectsCircle(
   a: Vector2,
   aRadius: number,

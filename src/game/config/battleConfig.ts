@@ -7,11 +7,13 @@ export const battleConfig = {
     maxHealth: 100,
     moveSpeed: 228,
     fireCooldownMs: 180,
+    minFireCooldownMs: 78,
     projectileSpeed: 900,
     projectileDamage: 34,
     muzzleOffset: 42,
     recoilKick: 7,
     recoilRecoveryPerSecond: 42,
+    turretTurnSpeedRadiansPerSecond: 10.2,
   },
   enemy: {
     radius: 28,
@@ -37,6 +39,7 @@ export const battleConfig = {
         aimInaccuracyRadians: 0.08,
         repositionDistance: 112,
         rewardCredits: 35,
+        rewardScore: 140,
       },
       heavy: {
         maxHealth: 140,
@@ -52,6 +55,7 @@ export const battleConfig = {
         aimInaccuracyRadians: 0.045,
         repositionDistance: 84,
         rewardCredits: 60,
+        rewardScore: 240,
       },
       flanker: {
         maxHealth: 52,
@@ -67,6 +71,7 @@ export const battleConfig = {
         aimInaccuracyRadians: 0.13,
         repositionDistance: 168,
         rewardCredits: 45,
+        rewardScore: 180,
       },
     },
   },
@@ -81,21 +86,35 @@ export const battleConfig = {
   },
   destructible: {
     healthBarVisibleMs: 1100,
+    weakWallScore: 35,
+    crateScore: 20,
   },
   upgrades: {
-    armorHealthPerLevel: 18,
+    maxHealthPerLevel: 20,
     movementSpeedPerLevel: 18,
-    opticsRadiusTilesPerLevel: 0.45,
-    turretDamagePerLevel: 4,
-    turretCooldownReductionMsPerLevel: 18,
+    weaponDamagePerLevel: 5,
+    visibilityRadiusTilesPerLevel: 0.55,
+    fireRateReductionMsPerLevel: 22,
+    turretRotationSpeedPerLevel: 1.45,
   },
   shop: {
-    maxUpgradeLevel: 3,
-    prices: {
-      armor: [65, 105, 155],
-      optics: [55, 95, 145],
-      movement: [60, 100, 150],
-      turret: [70, 120, 180],
+    maxUpgradeLevel: 4,
+  },
+  difficulty: {
+    rookie: {
+      enemyHealthMultiplier: 0.84,
+      enemyDamageMultiplier: 0.82,
+      enemyFireCooldownMultiplier: 1.08,
+    },
+    normal: {
+      enemyHealthMultiplier: 1,
+      enemyDamageMultiplier: 1,
+      enemyFireCooldownMultiplier: 1,
+    },
+    ace: {
+      enemyHealthMultiplier: 1.18,
+      enemyDamageMultiplier: 1.16,
+      enemyFireCooldownMultiplier: 0.92,
     },
   },
   world: {

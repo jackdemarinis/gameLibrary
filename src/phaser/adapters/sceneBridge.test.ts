@@ -20,6 +20,8 @@ describe("SceneBridge", () => {
       levelId: "training-yard",
       levelName: "Training Yard",
       creditsEarned: 120,
+      pointsEarned: 275,
+      totalScore: 275,
       damageTaken: 18,
       completionTimeMs: 48000,
     });
@@ -27,8 +29,14 @@ describe("SceneBridge", () => {
     expect(flow.currentLevel.id).toBe("training-yard");
     expect(flow.nextLevel.id).toBe("relay-station");
     expect(flow.shopUnlocked).toBe(true);
+    expect(flow.newWeaponUnlocks).toEqual(["Burst Cannon"]);
     expect(bridge.loadOrCreateSave().currentLevelId).toBe("relay-station");
-    expect(bridge.loadOrCreateSave().completedPrompts).toContain(4);
+    expect(bridge.loadOrCreateSave().unlockedLevelIds).toEqual([
+      "training-yard",
+      "relay-station",
+    ]);
+    expect(bridge.loadOrCreateSave().completedLevelIds).toEqual(["training-yard"]);
+    expect(bridge.loadOrCreateSave().unlockedWeapons).toContain("burst-cannon");
   });
 });
 
@@ -36,8 +44,10 @@ function createChromeStub(): AppChrome {
   return {
     clear() {},
     renderHud() {},
-    renderMenu() {},
+    renderStart() {},
     renderShop() {},
+    renderLevelSelect() {},
+    renderLevelIntro() {},
   } as unknown as AppChrome;
 }
 

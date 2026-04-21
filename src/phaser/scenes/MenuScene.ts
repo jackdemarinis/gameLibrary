@@ -18,100 +18,46 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private renderChrome(): void {
-    const hasSave = Boolean(this.bridge.loadSave());
+    const save = this.bridge.loadSave();
 
-    this.bridge.showMenu({
-      eyebrow: "MVP Combat",
+    this.bridge.showStart({
       title: gameConfig.title,
-      subtitle:
-        "Level-based tank combat with destructible cover, enemy archetypes, hidden credits, and a between-mission motor pool.",
-      status: hasSave
-        ? "Local save ready."
-        : "First launch will create a local save.",
-      featureCards: this.bridge.getFeatureCards(),
-      actions: [
-        {
-          label: hasSave ? "Continue" : "Enter Training Yard",
-          tone: "primary",
-          onPress: () => {
-            this.bridge.loadOrCreateSave();
-            this.scene.start("battle");
-          },
+      subtitle: "Fast tank battles, chunky upgrades, and level-by-level arcade progression.",
+      saveStatus: save
+        ? `Continue your run with $${save.credits} and ${save.totalScore} total points.`
+        : "Start a new run and build your tank between levels.",
+      playAction: {
+        label: "Play",
+        tone: "primary",
+        onPress: () => {
+          this.bridge.loadOrCreateSave();
+          this.scene.start("shop");
         },
-        {
-          label: "New Run",
-          tone: "secondary",
-          onPress: () => {
-            this.bridge.startFreshCampaign();
-            this.scene.start("battle");
-          },
-        },
-        {
-          label: "Clear Save",
-          tone: "danger",
-          disabled: !hasSave,
-          onPress: () => {
-            this.bridge.clearSave();
-            this.renderChrome();
-          },
-        },
-      ],
+      },
     });
   }
 
   private drawBackdrop(): void {
     const graphics = this.add.graphics();
-    const accent = this.add.graphics();
+    const highlight = this.add.graphics();
 
     graphics.fillGradientStyle(
-      worldTheme.ground,
-      worldTheme.ground,
+      0x10361f,
+      0x0f4d27,
       worldTheme.background,
-      worldTheme.background,
-      0.95,
+      worldTheme.ground,
+      0.98,
     );
     graphics.fillRect(0, 0, gameConfig.width, gameConfig.height);
 
-    for (let x = -120; x < gameConfig.width + 160; x += 180) {
-      graphics.fillStyle(worldTheme.groundStripe, 0.24);
-      graphics.fillRect(x, 0, 96, gameConfig.height);
+    for (let x = -160; x < gameConfig.width + 180; x += 180) {
+      graphics.fillStyle(0x0a2515, 0.25);
+      graphics.fillRect(x, 0, 88, gameConfig.height);
     }
 
-    for (let i = 0; i < 4; i += 1) {
-      const width = 240 + i * 80;
-      const height = 140 + i * 40;
-      const alpha = 0.1 + i * 0.04;
-
-      graphics.fillStyle(worldTheme.wallFill, alpha);
-      graphics.fillRoundedRect(
-        140 + i * 180,
-        120 + i * 70,
-        width,
-        height,
-        34,
-      );
-    }
-
-    accent.fillStyle(worldTheme.enemyGlow, 0.18);
-    accent.fillTriangle(980, 120, 1230, 260, 1060, 430);
-    accent.fillTriangle(220, 510, 460, 620, 180, 760);
-
-    this.add
-      .text(70, 560, "TACTICAL", {
-        color: "#f1c24c",
-        fontFamily: "Impact, Haettenschweiler, sans-serif",
-        fontSize: "40px",
-        letterSpacing: 5,
-      })
-      .setAlpha(0.4);
-
-    this.add
-      .text(70, 605, "MOVE / AIM / SHOOT", {
-        color: "#cdd29c",
-        fontFamily: "Trebuchet MS, Verdana, sans-serif",
-        fontSize: "20px",
-        letterSpacing: 2,
-      })
-      .setAlpha(0.48);
+    highlight.fillStyle(0xf2c544, 0.08);
+    highlight.fillTriangle(920, 90, 1240, 220, 990, 480);
+    highlight.fillStyle(0x8dc764, 0.1);
+    highlight.fillTriangle(120, 420, 440, 700, 90, 760);
   }
 }

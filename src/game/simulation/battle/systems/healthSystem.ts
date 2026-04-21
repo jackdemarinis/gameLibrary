@@ -46,12 +46,15 @@ export function damageTank(
   ];
 
   if (target.faction === "enemy") {
+    state.pointsEarned += target.rewardScore;
+    state.totalScore += target.rewardScore;
     state.pickups.push({
       id: `pickup-${state.nextPickupId}`,
       kind: "coin",
       position: { ...target.position },
       radius: battleConfig.pickup.radius,
       value: target.rewardCredits,
+      scoreValue: target.rewardCredits,
     });
     state.nextPickupId += 1;
   }

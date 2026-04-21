@@ -77,7 +77,7 @@ select {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: clamp(20px, 4vw, 40px);
+  padding: clamp(12px, 2vh, 24px) clamp(18px, 3vw, 32px);
   overflow: hidden;
 }
 
@@ -123,7 +123,7 @@ select {
   margin: 0;
   color: var(--accent-strong);
   font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
-  font-size: clamp(3rem, 7vw, 5.4rem);
+  font-size: clamp(2.8rem, 6vw, 5rem);
   line-height: 0.88;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -134,10 +134,10 @@ select {
 
 .menu-subtitle {
   max-width: 42ch;
-  margin: 18px 0 0;
+  margin: 14px 0 0;
   color: var(--text-primary);
-  font-size: 1.02rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.42;
 }
 
 .menu-subtitle-wide {
@@ -148,13 +148,203 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-top: 20px;
-  padding: 10px 14px;
+  margin-top: 16px;
+  padding: 9px 14px;
   border: 1px solid rgba(248, 198, 83, 0.22);
   border-radius: 999px;
   background: rgba(248, 198, 83, 0.1);
   color: var(--text-strong);
   font-size: 0.9rem;
+}
+
+.menu-panel-wide {
+  width: min(1120px, 100%);
+  max-height: calc(100vh - 32px);
+  padding: 22px 24px;
+  border-radius: 28px;
+  clip-path: none;
+}
+
+.menu-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.menu-hero-column,
+.menu-board {
+  display: grid;
+  gap: 12px;
+}
+
+.menu-header-left {
+  justify-items: start;
+  text-align: left;
+}
+
+.menu-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.menu-stat-card {
+  border: 1px solid rgba(202, 218, 168, 0.14);
+  background: rgba(7, 20, 15, 0.48);
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.menu-stat-label,
+.menu-level-state {
+  display: inline-flex;
+  margin: 0;
+  color: rgba(226, 236, 180, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.menu-stat-value {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.8rem;
+  line-height: 0.94;
+  letter-spacing: 0.04em;
+}
+
+.menu-stat-detail,
+.menu-section-copy {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.3;
+  font-size: 0.88rem;
+}
+
+.menu-action-row {
+  margin-top: 0;
+  justify-content: flex-start;
+}
+
+.menu-board-section {
+  border: 1px solid rgba(205, 214, 154, 0.14);
+  border-radius: 20px;
+  background: rgba(7, 20, 15, 0.44);
+  padding: 14px;
+}
+
+.menu-board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.menu-section-eyebrow {
+  margin: 0;
+}
+
+.menu-chip-row,
+.menu-level-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.menu-chip-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.menu-level-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.menu-chip,
+.menu-level-card {
+  width: 100%;
+  border: 1px solid rgba(207, 223, 168, 0.15);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(25, 74, 53, 0.82), rgba(11, 35, 25, 0.9));
+  color: var(--text-strong);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease;
+}
+
+.menu-chip {
+  min-height: 76px;
+  padding: 11px 13px;
+}
+
+.menu-level-card {
+  min-height: 94px;
+  padding: 12px 13px;
+}
+
+.menu-chip:hover:not(:disabled),
+.menu-level-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.menu-chip:disabled,
+.menu-level-card:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.menu-chip-active,
+.menu-level-card-active {
+  border-color: rgba(248, 198, 83, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(248, 198, 83, 0.16);
+}
+
+.menu-chip span,
+.menu-level-card span {
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.menu-chip small,
+.menu-level-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  line-height: 1.28;
+  font-size: 0.88rem;
+}
+
+.menu-level-card .menu-level-state {
+  margin-bottom: 8px;
+}
+
+.menu-weapon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.menu-weapon-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 198, 83, 0.18);
+  background: rgba(248, 198, 83, 0.08);
+  color: var(--text-strong);
+  font-size: 0.88rem;
 }
 
 .feature-grid,
@@ -207,13 +397,13 @@ select {
 }
 
 .action-row {
-  margin-top: 28px;
+  margin-top: 20px;
   justify-content: center;
 }
 
 .chrome-button {
   border: none;
-  padding: 13px 20px;
+  padding: 12px 18px;
   border-radius: 14px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -469,35 +659,40 @@ select {
 }
 
 .shop-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  padding: 16px;
-  overflow: auto;
+  padding: 8px;
+  overflow: hidden;
 }
 
 .shop-panel {
-  width: min(1040px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  width: min(1180px, calc(100vw - 16px));
+  height: min(704px, calc(100vh - 16px));
   padding: 0;
-  overflow: auto;
+  overflow: hidden;
   clip-path: none;
   border: 4px solid rgba(12, 32, 21, 0.95);
-  border-radius: 28px;
+  border-radius: 30px;
   background:
-    radial-gradient(circle at 12% 14%, rgba(118, 177, 71, 0.16), transparent 16%),
+    radial-gradient(circle at 12% 14%, rgba(118, 177, 71, 0.14), transparent 18%),
     radial-gradient(circle at 82% 24%, rgba(116, 193, 92, 0.1), transparent 18%),
-    radial-gradient(circle at 62% 78%, rgba(71, 154, 72, 0.12), transparent 22%),
-    linear-gradient(180deg, #1f9650 0%, #168144 42%, #116536 100%);
+    linear-gradient(180deg, #1a8a46 0%, #146f3a 42%, #0c4c28 100%);
   box-shadow:
     0 28px 80px rgba(0, 0, 0, 0.45),
     inset 0 0 0 4px rgba(35, 88, 49, 0.78),
     inset 0 1px 0 rgba(226, 255, 196, 0.08);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(243, 190, 65, 0.55) rgba(5, 28, 13, 0.35);
 }
 
 .shop-shell {
   position: relative;
-  padding: clamp(18px, 3vw, 28px);
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  padding: 14px;
 }
 
 .shop-shell::before {
@@ -509,130 +704,15 @@ select {
   pointer-events: none;
 }
 
-.shop-header {
+.shop-header,
+.shop-header-compact {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 18px;
+  gap: 12px;
 }
 
-.shop-hero {
-  display: grid;
-  grid-template-columns: 168px minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
-}
-
-.shop-mascot {
-  position: relative;
-  width: 168px;
-  height: 118px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 28px 28px, rgba(255, 184, 54, 0.9) 0 12px, transparent 13px),
-    linear-gradient(180deg, rgba(24, 113, 58, 0.95), rgba(15, 96, 48, 0.95));
-  border: 3px solid rgba(12, 53, 24, 0.55);
-  box-shadow:
-    inset 0 -10px 24px rgba(5, 36, 16, 0.28),
-    0 8px 24px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
-}
-
-.shop-mascot-sun,
-.shop-mascot-smoke,
-.shop-mascot-track,
-.shop-mascot-hull,
-.shop-mascot-turret,
-.shop-mascot-barrel {
-  position: absolute;
-  display: block;
-}
-
-.shop-mascot-smoke {
-  top: 22px;
-  left: 88px;
-  width: 34px;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(197, 223, 173, 0.35);
-  box-shadow:
-    14px -8px 0 -2px rgba(197, 223, 173, 0.22),
-    30px 0 0 -3px rgba(197, 223, 173, 0.16);
-}
-
-.shop-mascot-track {
-  bottom: 18px;
-  width: 42px;
-  height: 18px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #1a2918, #0b120d);
-}
-
-.shop-mascot-track-left {
-  left: 34px;
-}
-
-.shop-mascot-track-right {
-  right: 34px;
-}
-
-.shop-mascot-hull {
-  left: 34px;
-  bottom: 28px;
-  width: 100px;
-  height: 50px;
-  border-radius: 42px 42px 28px 28px;
-  background:
-    linear-gradient(180deg, #89ce63 0%, #5ba246 55%, #427c32 100%);
-  border: 3px solid rgba(18, 54, 18, 0.72);
-  box-shadow:
-    inset 0 4px 0 rgba(228, 255, 201, 0.2),
-    inset 0 -8px 14px rgba(12, 59, 21, 0.28);
-}
-
-.shop-mascot-hull::before,
-.shop-mascot-hull::after {
-  content: "";
-  position: absolute;
-  bottom: 4px;
-  width: 20px;
-  height: 14px;
-  border-radius: 0 0 10px 10px;
-  background: linear-gradient(180deg, #78bb56, #4d8b39);
-  border: 3px solid rgba(18, 54, 18, 0.62);
-}
-
-.shop-mascot-hull::before {
-  left: -12px;
-  transform: skewX(-18deg);
-}
-
-.shop-mascot-hull::after {
-  right: -12px;
-  transform: skewX(18deg);
-}
-
-.shop-mascot-turret {
-  left: 72px;
-  bottom: 58px;
-  width: 42px;
-  height: 28px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #8fd665, #5ea847);
-  border: 3px solid rgba(18, 54, 18, 0.72);
-}
-
-.shop-mascot-barrel {
-  left: 89px;
-  bottom: 78px;
-  width: 12px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #d8f1b8, #6ba94b);
-  border: 3px solid rgba(18, 54, 18, 0.72);
-}
-
-.shop-heading {
+.shop-marquee {
   min-width: 0;
 }
 
@@ -641,7 +721,7 @@ select {
 }
 
 .shop-title {
-  font-size: clamp(2.6rem, 6vw, 4.8rem);
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
   color: #ff9d2b;
   text-shadow:
     0 4px 0 rgba(108, 52, 0, 0.8),
@@ -658,21 +738,22 @@ select {
 }
 
 .shop-subtitle {
-  max-width: 34ch;
-  margin-top: 10px;
-  font-size: 1rem;
+  max-width: 52ch;
+  margin-top: 8px;
+  font-size: 0.96rem;
 }
 
 .shop-status {
-  margin-top: 14px;
+  margin-top: 10px;
   font-weight: 700;
   color: #eff2c6;
+  font-size: 0.92rem;
 }
 
 .shop-credit-pill {
   position: relative;
-  min-width: 194px;
-  padding: 14px 20px 16px;
+  min-width: 188px;
+  padding: 14px 18px 16px;
   border-radius: 18px;
   background:
     linear-gradient(180deg, #7d3613 0%, #602108 100%);
@@ -722,39 +803,11 @@ select {
   text-shadow: 0 2px 0 rgba(81, 35, 0, 0.72);
 }
 
-.shop-tab-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.shop-tab {
-  display: inline-flex;
-  align-items: center;
-  min-height: 58px;
-  padding: 14px 24px 10px;
-  border-radius: 24px 24px 0 0;
-  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
-  font-size: clamp(1.2rem, 2vw, 2rem);
-  letter-spacing: 0.04em;
-}
-
-.shop-tab-active {
-  color: #d6c329;
-  background: linear-gradient(180deg, rgba(15, 92, 48, 0.96), rgba(15, 113, 55, 0.9));
-  box-shadow: inset 0 1px 0 rgba(226, 255, 196, 0.08);
-}
-
-.shop-tab-idle {
-  color: rgba(195, 213, 110, 0.6);
-  background: rgba(8, 53, 27, 0.36);
-}
-
 .shop-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 270px;
-  gap: 18px;
-  margin-top: -2px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .shop-board,
@@ -769,87 +822,77 @@ select {
 }
 
 .shop-board {
-  padding: 22px 20px;
+  padding: 14px;
+  overflow: hidden;
 }
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 10px;
+  height: 100%;
 }
 
-.shop-upgrade-tile {
+.shop-upgrade-card {
   display: grid;
-  justify-items: center;
-  gap: 12px;
-  padding: 16px 14px 18px;
+  grid-template-rows: auto auto auto auto 1fr auto;
+  gap: 8px;
+  padding: 12px;
   border-radius: 22px;
   border: 2px solid rgba(18, 81, 37, 0.72);
   background:
     linear-gradient(180deg, rgba(20, 126, 60, 0.68), rgba(15, 96, 47, 0.72));
-  text-align: center;
+  min-height: 0;
 }
 
-.shop-upgrade-tile-maxed {
+.shop-upgrade-card-maxed {
   background:
     linear-gradient(180deg, rgba(28, 110, 54, 0.6), rgba(14, 77, 37, 0.72));
 }
 
-.shop-upgrade-gauge {
-  --shop-progress: 0%;
-  position: relative;
-  width: 108px;
-  aspect-ratio: 1;
+.shop-upgrade-head {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.shop-upgrade-badge {
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background:
-    conic-gradient(from -90deg, #f4c637 0 var(--shop-progress), #305f37 var(--shop-progress) 100%);
-  box-shadow:
-    0 10px 18px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 253, 214, 0.16);
-}
-
-.shop-upgrade-gauge::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 28%, rgba(203, 255, 170, 0.22), transparent 22%),
-    linear-gradient(180deg, #156a36, #0e4d28);
-  border: 3px solid rgba(13, 66, 28, 0.78);
-}
-
-.shop-upgrade-gauge-core {
-  position: relative;
-  z-index: 1;
-  color: #ffd34e;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  border: 2px solid rgba(15, 70, 29, 0.7);
+  background: linear-gradient(180deg, rgba(35, 122, 58, 0.92), rgba(12, 68, 30, 0.96));
+  color: #ffe268;
   font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
-  font-size: 1.05rem;
+  font-size: 1rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.shop-upgrade-copy {
-  display: grid;
-  gap: 4px;
+.shop-upgrade-heading {
+  min-width: 0;
 }
 
-.shop-upgrade-level {
-  color: rgba(227, 238, 163, 0.84);
-  font-size: 0.76rem;
+.shop-upgrade-tag {
+  display: block;
+  color: rgba(227, 238, 163, 0.78);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .shop-upgrade-title {
-  margin: 0;
+  margin: 4px 0 0;
   color: #f0d85d;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  line-height: 1.05;
   text-transform: uppercase;
 }
 
@@ -857,39 +900,75 @@ select {
   margin: 0;
   color: #ffb62f;
   font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
-  font-size: 2rem;
+  font-size: 1.65rem;
   line-height: 0.95;
   letter-spacing: 0.03em;
 }
 
 .shop-upgrade-bonus {
-  margin: 2px 0 0;
+  margin: 0;
   color: #f4f0bc;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
+.shop-upgrade-track {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 228, 170, 0.15);
+  background: rgba(9, 40, 20, 0.55);
+}
+
+.shop-upgrade-track-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c66c23, #ecac32 52%, #ffe268 100%);
+}
+
+.shop-upgrade-pips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.shop-upgrade-pip {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(8, 42, 20, 0.72);
+  border: 1px solid rgba(218, 228, 170, 0.14);
+}
+
+.shop-upgrade-pip-active {
+  background: linear-gradient(180deg, #ffd84c, #e79a2d);
+  border-color: rgba(255, 216, 76, 0.3);
+}
+
 .shop-upgrade-summary {
-  margin: 2px 0 0;
+  margin: 0;
   color: rgba(227, 238, 163, 0.74);
-  font-size: 0.85rem;
-  line-height: 1.35;
+  font-size: 0.8rem;
+  line-height: 1.28;
 }
 
 .shop-upgrade-button {
   width: 100%;
-  min-height: 48px;
-  padding: 11px 18px;
-  border-radius: 16px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 14px;
 }
 
 .shop-sidebar {
   display: grid;
-  gap: 16px;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  min-height: 0;
 }
 
 .shop-side-card {
-  padding: 18px 18px 20px;
+  padding: 14px;
 }
 
 .shop-side-label {
@@ -902,35 +981,732 @@ select {
 }
 
 .shop-side-title {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: #ffbe33;
   font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   line-height: 0.95;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .shop-next-mission {
-  margin-top: 12px;
+  margin-top: 8px;
+}
+
+.shop-side-label-secondary {
+  margin-top: 14px;
 }
 
 .shop-side-copy {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
-.shop-footer {
-  margin-top: 18px;
+.shop-side-copy strong {
+  color: #ffdc77;
 }
 
-.shop-action-row {
-  margin-top: 0;
-  justify-content: stretch;
+.shop-side-actions {
+  display: grid;
+  align-content: end;
+  gap: 10px;
 }
 
 .shop-footer-button {
-  flex: 1 1 0;
-  min-width: 0;
+  width: 100%;
+  min-height: 46px;
+}
+
+.arcade-card {
+  border: 3px solid rgba(12, 61, 30, 0.72);
+  background:
+    linear-gradient(180deg, rgba(18, 112, 54, 0.94), rgba(10, 76, 37, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(236, 255, 201, 0.08),
+    inset 0 -8px 16px rgba(4, 30, 12, 0.2),
+    0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+.start-screen,
+.level-screen,
+.brief-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+
+.start-panel,
+.level-panel,
+.brief-panel {
+  width: min(980px, calc(100vw - 36px));
+  border-radius: 28px;
+}
+
+.start-panel {
+  display: grid;
+  gap: 18px;
+  padding: 26px 28px 22px;
+  min-height: min(620px, calc(100vh - 36px));
+  max-height: calc(100vh - 36px);
+  background:
+    radial-gradient(circle at 16% 18%, rgba(255, 217, 86, 0.12), transparent 20%),
+    radial-gradient(circle at 85% 20%, rgba(191, 231, 117, 0.11), transparent 20%),
+    linear-gradient(180deg, rgba(20, 129, 59, 0.96), rgba(8, 78, 36, 0.98));
+  overflow: hidden;
+}
+
+.start-art {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.92fr) minmax(360px, 1.08fr);
+  gap: 18px;
+  align-items: center;
+  min-height: 0;
+}
+
+.start-logo {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.start-eyebrow {
+  margin: 0;
+}
+
+.start-title {
+  margin: 0;
+  color: #ff9a2c;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: clamp(3.1rem, 7vw, 6rem);
+  line-height: 0.84;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow:
+    0 5px 0 rgba(106, 51, 0, 0.92),
+    0 18px 26px rgba(0, 0, 0, 0.24);
+}
+
+.start-subtitle {
+  max-width: 26ch;
+  margin: 0;
+  color: #e8efbf;
+  font-size: 1.06rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.start-tank-illustration {
+  position: relative;
+  min-height: 360px;
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    linear-gradient(156deg, rgba(247, 198, 72, 0.2) 0 14%, transparent 14% 100%),
+    radial-gradient(circle at 22% 28%, rgba(204, 187, 74, 0.9) 0 8%, transparent 8%),
+    radial-gradient(circle at 10% 76%, rgba(30, 110, 44, 0.72), transparent 34%),
+    linear-gradient(180deg, rgba(18, 123, 52, 0.88), rgba(8, 73, 34, 0.92));
+  border: 3px solid rgba(10, 67, 31, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(240, 255, 210, 0.08),
+    inset 0 -14px 22px rgba(2, 18, 7, 0.24);
+}
+
+.start-tank-illustration::before {
+  content: "";
+  position: absolute;
+  left: -4%;
+  right: -8%;
+  bottom: -8%;
+  height: 40%;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(16, 105, 42, 0.78), transparent 22%),
+    radial-gradient(circle at 56% 58%, rgba(9, 78, 31, 0.86), transparent 26%),
+    radial-gradient(circle at 82% 28%, rgba(14, 94, 39, 0.82), transparent 18%),
+    linear-gradient(180deg, rgba(8, 85, 32, 0.78), rgba(4, 52, 22, 0.94));
+  clip-path: polygon(0 48%, 15% 38%, 30% 42%, 48% 28%, 68% 34%, 100% 0, 100% 100%, 0 100%);
+}
+
+.start-smoke,
+.start-shell {
+  position: absolute;
+  display: block;
+}
+
+.start-smoke {
+  background: rgba(199, 187, 97, 0.82);
+  filter: blur(0.3px);
+}
+
+.start-smoke-a {
+  left: 8%;
+  top: 14%;
+  width: 140px;
+  height: 30px;
+  border-radius: 50px;
+  transform: rotate(-12deg);
+}
+
+.start-smoke-b {
+  left: 19%;
+  top: 11%;
+  width: 110px;
+  height: 18px;
+  border-radius: 40px;
+  transform: rotate(8deg);
+}
+
+.start-shell {
+  width: 58px;
+  height: 18px;
+  border-radius: 999px 999px 999px 999px / 60% 60% 40% 40%;
+  background: linear-gradient(180deg, #ffd679, #df9231);
+  border: 2px solid rgba(126, 73, 10, 0.55);
+}
+
+.start-shell::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 2px;
+  width: 16px;
+  height: 10px;
+  background: #ffd679;
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+
+.start-shell-a {
+  top: 7%;
+  right: 18%;
+  transform: rotate(-18deg);
+}
+
+.start-shell-b {
+  right: 6%;
+  bottom: 22%;
+  transform: rotate(20deg) scale(0.76);
+}
+
+.start-tank-shadow {
+  position: absolute;
+  left: 18%;
+  right: 12%;
+  bottom: 16%;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(2, 18, 8, 0.4);
+  filter: blur(10px);
+}
+
+.start-tank-body {
+  position: absolute;
+  left: 14%;
+  right: 8%;
+  bottom: 15%;
+  height: 210px;
+}
+
+.start-tank-track {
+  position: absolute;
+  bottom: 0;
+  width: 70%;
+  height: 64px;
+  border-radius: 44px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(8, 26, 13, 0.86) 0,
+      rgba(8, 26, 13, 0.86) 12px,
+      rgba(32, 88, 41, 0.86) 12px,
+      rgba(32, 88, 41, 0.86) 22px
+    );
+  border: 4px solid rgba(6, 28, 12, 0.86);
+}
+
+.start-tank-track-left {
+  left: 0;
+}
+
+.start-tank-track-right {
+  right: 0;
+}
+
+.start-tank-track::before,
+.start-tank-track::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(9, 18, 10, 0.88);
+  box-shadow:
+    38px 0 0 rgba(9, 18, 10, 0.88),
+    76px 0 0 rgba(9, 18, 10, 0.88),
+    114px 0 0 rgba(9, 18, 10, 0.88),
+    152px 0 0 rgba(9, 18, 10, 0.88);
+}
+
+.start-tank-track::before {
+  left: 20px;
+}
+
+.start-tank-track::after {
+  left: 28px;
+}
+
+.start-tank-hull {
+  position: absolute;
+  left: 12%;
+  right: 10%;
+  bottom: 34px;
+  height: 72px;
+  border-radius: 72px 82px 34px 42px;
+  background:
+    linear-gradient(180deg, #7ad768, #3c9f43 52%, #2c7b31);
+  border: 4px solid rgba(10, 62, 25, 0.9);
+  transform: skewX(-12deg);
+}
+
+.start-tank-turret {
+  position: absolute;
+  left: 18%;
+  bottom: 86px;
+  width: 42%;
+  height: 74px;
+  border-radius: 64px 78px 40px 38px;
+  background:
+    linear-gradient(180deg, #7ce07d, #3ea94c 55%, #2d7d34);
+  border: 4px solid rgba(10, 62, 25, 0.9);
+  transform: skewX(-14deg);
+}
+
+.start-tank-barrel {
+  position: absolute;
+  left: 56%;
+  bottom: 116px;
+  width: 34%;
+  height: 20px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #78dd73, #2d8c38);
+  border: 4px solid rgba(10, 62, 25, 0.9);
+  transform: rotate(-4deg);
+  transform-origin: left center;
+}
+
+.start-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.start-save-status {
+  margin: 0;
+  max-width: 36ch;
+  color: rgba(232, 242, 192, 0.84);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.start-play-button {
+  min-width: 188px;
+  min-height: 72px;
+  padding: 16px 28px;
+  border-radius: 22px;
+  font-size: 1.5rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 247, 202, 0.3),
+    0 16px 30px rgba(217, 140, 35, 0.32);
+}
+
+.hud-bar {
+  width: min(920px, calc(100vw - 36px));
+}
+
+.hud-bar-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.shop-panel {
+  width: min(1180px, calc(100vw - 16px));
+  height: min(704px, calc(100vh - 16px));
+}
+
+.shop-header-arcade {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.shop-header-tank {
+  position: relative;
+  width: 124px;
+  height: 78px;
+}
+
+.shop-header-track,
+.shop-header-hull,
+.shop-header-turret,
+.shop-header-barrel {
+  position: absolute;
+  display: block;
+}
+
+.shop-header-track {
+  bottom: 0;
+  width: 54px;
+  height: 20px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(90deg, #18381d 0, #18381d 10px, #326c39 10px, #326c39 18px);
+  border: 2px solid rgba(8, 29, 12, 0.9);
+}
+
+.shop-header-track-left {
+  left: 12px;
+}
+
+.shop-header-track-right {
+  right: 8px;
+}
+
+.shop-header-hull {
+  left: 18px;
+  right: 8px;
+  bottom: 14px;
+  height: 26px;
+  border-radius: 20px 24px 12px 14px;
+  background: linear-gradient(180deg, #73d65b, #37963d);
+  border: 2px solid rgba(8, 53, 22, 0.86);
+  transform: skewX(-12deg);
+}
+
+.shop-header-turret {
+  left: 28px;
+  bottom: 32px;
+  width: 46px;
+  height: 28px;
+  border-radius: 20px 24px 16px 14px;
+  background: linear-gradient(180deg, #77dd6a, #419f46);
+  border: 2px solid rgba(8, 53, 22, 0.86);
+}
+
+.shop-header-barrel {
+  left: 64px;
+  bottom: 42px;
+  width: 44px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #8aed7e, #37923d);
+  border: 2px solid rgba(8, 53, 22, 0.86);
+}
+
+.shop-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 12px;
+  min-height: 0;
+}
+
+.shop-board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.shop-board-title {
+  margin: 0;
+  color: #f0d759;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2rem;
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shop-board-copy {
+  margin: 8px 0 0;
+  max-width: 34ch;
+  color: #e7efbf;
+  font-size: 0.94rem;
+  line-height: 1.32;
+}
+
+.shop-board-status {
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(12, 67, 30, 0.74);
+  background: rgba(8, 48, 21, 0.36);
+  color: #f8e490;
+}
+
+.shop-board-status strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shop-board-status-label {
+  display: block;
+  color: rgba(227, 238, 163, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.shop-credit-subvalue {
+  display: block;
+  margin-top: 6px;
+  color: rgba(232, 243, 178, 0.84);
+  font-size: 0.8rem;
+}
+
+.shop-weapon-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.shop-weapon-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(115, 123, 38, 0.54);
+  background: rgba(73, 81, 18, 0.38);
+  color: #fff0a6;
+  font-weight: 700;
+}
+
+.difficulty-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(4, 22, 10, 0.54);
+  backdrop-filter: blur(2px);
+}
+
+.difficulty-modal {
+  width: min(340px, calc(100vw - 40px));
+  padding: 22px 18px 18px;
+  border-radius: 28px;
+  text-align: center;
+}
+
+.difficulty-modal-title {
+  margin: 0 0 16px;
+  color: #f1d948;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2.1rem;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.difficulty-choice-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.difficulty-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 3px solid rgba(110, 129, 36, 0.52);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffd53d, #dd941c);
+  color: #5c3200;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 252, 214, 0.34);
+}
+
+.difficulty-choice span,
+.difficulty-choice strong,
+.difficulty-choice small {
+  display: block;
+  text-align: left;
+}
+
+.difficulty-choice strong {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.difficulty-choice small {
+  grid-column: 1 / -1;
+  color: rgba(78, 49, 6, 0.82);
+  font-size: 0.76rem;
+  line-height: 1.18;
+  text-transform: none;
+}
+
+.difficulty-choice-active {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.level-panel,
+.brief-panel {
+  padding: 26px;
+}
+
+.level-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+}
+
+.level-header {
+  text-align: center;
+}
+
+.level-title,
+.brief-title {
+  margin: 8px 0 0;
+  color: #f1d948;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.level-title {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  line-height: 0.92;
+}
+
+.level-meta {
+  margin: 10px 0 0;
+  color: #e5edbc;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.level-tile {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  padding: 12px 10px;
+  border-radius: 18px;
+  border: 3px solid rgba(163, 154, 104, 0.46);
+  background: linear-gradient(180deg, #e7dbbc, #c3b99d);
+  color: #4c3a23;
+  cursor: pointer;
+}
+
+.level-tile-number {
+  color: #a76400;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2rem;
+  line-height: 0.9;
+}
+
+.level-tile-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.level-tile-locked {
+  background: linear-gradient(180deg, #bfb59a, #9a9078);
+  color: rgba(75, 57, 31, 0.6);
+}
+
+.level-tile-active {
+  border-color: rgba(245, 214, 66, 0.8);
+  background: linear-gradient(180deg, #ffd84d, #e6a229);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 212, 0.32),
+    0 14px 24px rgba(223, 152, 30, 0.2);
+}
+
+.level-score {
+  margin: 0;
+  text-align: center;
+  color: #f6d040;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2rem;
+  line-height: 0.95;
+}
+
+.level-actions,
+.brief-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brief-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+}
+
+.brief-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 0.88;
+}
+
+.brief-copy {
+  margin: 0;
+  color: #e7efbf;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.brief-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.brief-stat-card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(11, 62, 29, 0.72);
+  background: rgba(8, 45, 21, 0.34);
+}
+
+.brief-stat-label {
+  display: block;
+  color: rgba(226, 236, 180, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.brief-stat-value {
+  display: block;
+  margin-top: 6px;
+  color: #ffd14a;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.55rem;
+  line-height: 0.95;
+  text-transform: uppercase;
 }
 
 .hidden {
@@ -957,12 +1733,46 @@ canvas {
     max-width: none;
   }
 
-  .shop-main {
+  .menu-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .start-panel {
+    min-height: auto;
+  }
+
+  .start-art {
+    grid-template-columns: 1fr;
+  }
+
+  .start-subtitle {
+    max-width: 40ch;
+  }
+
+  .start-tank-illustration {
+    min-height: 280px;
+  }
+
+  .menu-chip-row {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-stage {
     grid-template-columns: 1fr;
   }
 
   .shop-sidebar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr auto;
+    grid-template-rows: none;
+    align-items: start;
+  }
+
+  .level-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .brief-stat-row {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1031,15 +1841,55 @@ canvas {
     overflow: visible;
   }
 
+  .start-screen,
+  .level-screen,
+  .brief-screen {
+    padding: 12px;
+  }
+
+  .start-panel,
+  .level-panel,
+  .brief-panel {
+    width: calc(100vw - 24px);
+    padding: 18px;
+  }
+
+  .start-tank-illustration {
+    min-height: 220px;
+  }
+
+  .start-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .start-play-button {
+    width: 100%;
+  }
+
   .menu-title {
     font-size: 2.8rem;
   }
 
+  .menu-panel-wide {
+    padding: 20px;
+  }
+
+  .menu-stat-grid,
+  .menu-level-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .shop-panel {
     width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
+    height: calc(100vh - 24px);
     padding: 0;
-    overflow: auto;
+    overflow: hidden;
   }
 
   .shop-shell {
@@ -1047,39 +1897,25 @@ canvas {
   }
 
   .shop-header,
-  .shop-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .shop-mascot {
-    width: 148px;
-    height: 108px;
-    margin: 0 auto;
-  }
-
-  .shop-credit-pill {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .shop-tab-row {
-    gap: 8px;
-  }
-
-  .shop-tab {
-    min-height: 48px;
-    padding: 12px 16px 8px;
-    font-size: 1.1rem;
-  }
-
-  .shop-grid,
+  .shop-header-arcade,
   .shop-sidebar {
     grid-template-columns: 1fr;
   }
 
-  .shop-action-row {
-    width: 100%;
+  .shop-header-tank {
+    display: none;
+  }
+
+  .shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .level-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .level-actions,
+  .brief-actions {
     flex-direction: column;
-    align-items: stretch;
   }
 }

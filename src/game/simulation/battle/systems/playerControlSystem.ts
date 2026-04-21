@@ -1,4 +1,9 @@
-import { moveCircleWithCollisions, normalizeVector, rotationFromVector } from "../geometry";
+import {
+  moveCircleWithCollisions,
+  normalizeVector,
+  rotateAngleTowards,
+  rotationFromVector,
+} from "../geometry";
 import type { BattleInput, BattleState, SimulationEffect } from "../types";
 import { spawnProjectile } from "./projectileSystem";
 
@@ -35,7 +40,11 @@ export function runPlayerControlSystem(
   };
 
   if (aimVector.x !== 0 || aimVector.y !== 0) {
-    player.turretRotation = rotationFromVector(aimVector);
+    player.turretRotation = rotateAngleTowards(
+      player.turretRotation,
+      rotationFromVector(aimVector),
+      player.turretTurnSpeed * deltaSeconds,
+    );
   }
 
   if (state.status === "active" && input.firing && player.fireCooldownRemainingMs <= 0) {
