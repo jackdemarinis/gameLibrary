@@ -23,6 +23,13 @@ import { spawnSimulationEffect } from "../view/spawnSimulationEffect";
 export class BattleScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
   private simulation!: BattleSimulation;
+  private movementKeys?: {
+    left: Phaser.Input.Keyboard.Key;
+    right: Phaser.Input.Keyboard.Key;
+    up: Phaser.Input.Keyboard.Key;
+    down: Phaser.Input.Keyboard.Key;
+  };
+  private arrowKeys?: Phaser.Types.Input.Keyboard.CursorKeys;
   private playerSprite!: TankSprite;
   private readonly enemySprites = new Map<string, TankSprite>();
   private readonly projectileSprites = new Map<string, Phaser.GameObjects.Arc>();
@@ -72,7 +79,18 @@ export class BattleScene extends Phaser.Scene {
     this.renderHud(hud);
 
     this.input.mouse?.disableContextMenu();
-    this.input.keyboard?.on("keydown-ESC", () => {
+    const keyboard = this.input.keyboard;
+    if (keyboard) {
+      this.movementKeys = {
+        left: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+        right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        up: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+        down: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      };
+      this.arrowKeys = keyboard.createCursorKeys();
+    }
+
+    keyboard?.on("keydown-ESC", () => {
       if (this.helpModalOpen) {
         this.setHelpModalOpen(false);
         return;
@@ -256,11 +274,11 @@ export class BattleScene extends Phaser.Scene {
   private readInput(): BattleInput {
     const pointer = this.input.activePointer;
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const keyboard = this.input.keyboard;
-    const moveLeft = keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.A).isDown ?? false;
-    const moveRight = keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.D).isDown ?? false;
-    const moveUp = keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W).isDown ?? false;
-    const moveDown = keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S).isDown ?? false;
+    const moveLeft = (this.movementKeys?.left.isDown ?? false) || (this.arrowKeys?.left.isDown ?? false);
+    const moveRight =
+      (this.movementKeys?.right.isDown ?? false) || (this.arrowKeys?.right.isDown ?? false);
+    const moveUp = (this.movementKeys?.up.isDown ?? false) || (this.arrowKeys?.up.isDown ?? false);
+    const moveDown = (this.movementKeys?.down.isDown ?? false) || (this.arrowKeys?.down.isDown ?? false);
 
     return {
       movementX: Number(moveRight) - Number(moveLeft),

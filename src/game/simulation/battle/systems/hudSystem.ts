@@ -13,7 +13,7 @@ export function buildBattleHudSnapshot(state: BattleState): BattleHudSnapshot {
     totalScore: state.totalScore,
     enemiesRemaining,
     controls: [
-      "WASD to move",
+      "WASD or arrow keys to move",
       "Mouse to aim the turret",
       "Left click to fire",
     ],

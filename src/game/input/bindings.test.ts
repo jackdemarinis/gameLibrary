@@ -9,7 +9,9 @@ describe("input bindings", () => {
 
   it("keeps movement and combat actions mapped to practical defaults", () => {
     expect(keyboardBindings["move-up"]).toContain("W");
+    expect(keyboardBindings["move-up"]).toContain("UP");
     expect(keyboardBindings["move-right"]).toContain("D");
+    expect(keyboardBindings["move-right"]).toContain("RIGHT");
     expect(keyboardBindings.fire).toContain("POINTER_LEFT");
     expect(keyboardBindings.pause).toContain("ESC");
   });
