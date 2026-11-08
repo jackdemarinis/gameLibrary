@@ -42,7 +42,8 @@ function fight(state: AdventureState, foeId: string, maxSteps = 3000): Adventure
     }
     const dx = foe.x - current.player.x;
     const dy = foe.y - current.player.y;
-    const close = Math.hypot(dx, dy) - foe.radius < adventureContent.player.attackRange - 10;
+    const outsideShrine = foe.kind === "boss" && current.player.x < adventureContent.gateX + 10;
+    const close = !outsideShrine && Math.hypot(dx, dy) - foe.radius < adventureContent.player.attackRange - 10;
     current = step(current, { moveX: close ? 0 : dx, moveY: close ? 0 : dy, attack: true });
   }
   return current;
@@ -119,6 +120,77 @@ describe("Lanternwake simulation", () => {
     const simulation = new AdventureSimulation();
     const events = simulation.advance(100, { ...idle, attack: true });
     expect(events.filter((event) => event.type === "swing")).toHaveLength(1);
+  });
+
+  it("keeps a press made on a frame shorter than one fixed step (high-refresh displays)", () => {
+    const simulation = new AdventureSimulation();
+    const shortFrameMs = 1000 / 144;
+    const first = simulation.advance(shortFrameMs, { ...idle, attack: true });
+    expect(first).toHaveLength(0);
+
+    const later = [
+      ...simulation.advance(shortFrameMs, idle),
+      ...simulation.advance(shortFrameMs, idle),
+      ...simulation.advance(shortFrameMs, idle),
+    ];
+    expect(later.filter((event) => event.type === "swing")).toHaveLength(1);
+  });
+
+  it("lands every press across a second of 144Hz frames", () => {
+    const simulation = new AdventureSimulation();
+    let swings = 0;
+    for (let frame = 0; frame < 144; frame += 1) {
+      // Press on frames 0, 65 and 130 (~0.45s apart, longer than the attack cooldown).
+      const events = simulation.advance(1000 / 144, { ...idle, attack: frame % 65 === 0 });
+      swings += events.filter((event) => event.type === "swing").length;
+    }
+    expect(swings).toBe(3);
+  });
+
+  it("only staggers shades with the unlit staff, so the gate cannot open before the lantern", () => {
+    const base = createAdventureState();
+    const shade = base.foes[0];
+    let state = placePlayer(base, { x: shade.x - 50, y: shade.y });
+    state = step(state, { attack: true });
+    const shoved = state.foes[0];
+    expect(shoved.health).toBe(shoved.maxHealth);
+    expect(shoved.x).toBeGreaterThan(shade.x);
+    expect(shoved.stagger).toBeGreaterThan(0);
+
+    state = fight(state, shade.id, 600);
+    expect(state.foes[0].alive).toBe(true);
+    expect(isGateOpen(state)).toBe(false);
+    expect(getObjective(state).step).toBe(0);
+  });
+
+  it("only lets the boss be wounded from inside the shrine", () => {
+    const base = createAdventureState();
+    const boss = base.foes.find((foe) => foe.kind === "boss")!;
+    const cleared: AdventureState = {
+      ...base,
+      hasLantern: true,
+      foes: base.foes.map((foe) => (foe.kind === "shade" ? { ...foe, alive: false } : { ...foe, x: adventureContent.gateX + foe.radius })),
+    };
+    const outside = step(placePlayer(cleared, { x: adventureContent.gateX - 30, y: boss.y }), { attack: true });
+    expect(outside.foes.find((foe) => foe.kind === "boss")!.health).toBe(boss.maxHealth);
+
+    const inside = step(placePlayer(cleared, { x: adventureContent.gateX + 2, y: boss.y + 60 }), { attack: true });
+    expect(inside.foes.find((foe) => foe.kind === "boss")!.health).toBeLessThan(boss.maxHealth);
+  });
+
+  it("opens the shrine gate once the lantern-bearer defeats every shade", () => {
+    let state: AdventureState = { ...createAdventureState(), hasLantern: true };
+    for (const shade of adventureContent.shades) {
+      expect(isGateOpen(state)).toBe(false);
+      state = fight(state, shade.id);
+    }
+    expect(isGateOpen(state)).toBe(true);
+    expect(getObjective(state).step).toBe(3);
+
+    for (let i = 0; i < 400; i += 1) {
+      state = step(state, { moveX: 1 });
+    }
+    expect(state.player.x).toBeGreaterThan(adventureContent.gateX);
   });
 
   it("completes the full campaign deterministically: gather, forge, clear, boss", () => {

@@ -47,8 +47,10 @@ export const adventureContent = {
     maxHealth: 100,
     attackRange: 70,
     attackCooldown: 0.4,
-    baseDamage: 10,
     lanternDamage: 30,
+    // The unlit staff cannot harm anything; it only shoves shades back.
+    staffKnockback: 90,
+    staggerSeconds: 0.6,
     interactRange: 60,
     hurtCooldown: 0.8,
   },

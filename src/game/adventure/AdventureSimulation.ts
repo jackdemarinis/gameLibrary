@@ -19,6 +19,8 @@ export interface FoeState extends Point {
   health: number;
   maxHealth: number;
   alive: boolean;
+  /** Seconds left frozen after an unlit staff shove. */
+  stagger: number;
 }
 
 export interface AdventureState {
@@ -40,6 +42,7 @@ export type AdventureEvent =
   | { type: "crafted" }
   | { type: "swing"; x: number; y: number; range: number }
   | { type: "foeHit"; foeId: string; damage: number }
+  | { type: "foeStaggered"; foeId: string }
   | { type: "foeDefeated"; foeId: string }
   | { type: "playerHurt"; damage: number }
   | { type: "pulse"; x: number; y: number; radius: number }
@@ -75,6 +78,7 @@ export function createAdventureState(): AdventureState {
         health: shade.maxHealth,
         maxHealth: shade.maxHealth,
         alive: true,
+        stagger: 0,
       })),
       {
         id: boss.id,
@@ -85,6 +89,7 @@ export function createAdventureState(): AdventureState {
         health: bossStats.maxHealth,
         maxHealth: bossStats.maxHealth,
         alive: true,
+        stagger: 0,
       },
     ],
     attackTimer: 0,
@@ -194,10 +199,16 @@ export function stepAdventure(
   return { state, events };
 }
 
-/** Thin stateful wrapper for scenes: accumulates frame time into fixed steps. */
+/**
+ * Thin stateful wrapper for scenes: accumulates frame time into fixed steps.
+ * One-shot presses are latched until a fixed step consumes them, so a press on a
+ * short frame (high-refresh displays run frames shorter than one step) is never lost.
+ */
 export class AdventureSimulation {
   private state: AdventureState = createAdventureState();
   private accumulator = 0;
+  private pendingAttack = false;
+  private pendingInteract = false;
 
   getState(): AdventureState {
     return this.state;
@@ -205,16 +216,22 @@ export class AdventureSimulation {
 
   advance(deltaMs: number, input: AdventureInput): AdventureEvent[] {
     this.accumulator += Math.min(maxFrameSeconds, Math.max(0, deltaMs / 1000));
+    this.pendingAttack ||= input.attack;
+    this.pendingInteract ||= input.interact;
     const events: AdventureEvent[] = [];
-    let pendingInput = input;
 
     while (this.accumulator >= fixedStep) {
       this.accumulator -= fixedStep;
-      const result = stepAdventure(this.state, pendingInput);
+      const result = stepAdventure(this.state, {
+        ...input,
+        attack: this.pendingAttack,
+        interact: this.pendingInteract,
+      });
       this.state = result.state;
       events.push(...result.events);
-      // One-shot actions apply only to the first fixed step of a frame.
-      pendingInput = { ...input, attack: false, interact: false };
+      // One-shot actions apply only to the first fixed step that runs.
+      this.pendingAttack = false;
+      this.pendingInteract = false;
     }
 
     return events;
@@ -271,11 +288,21 @@ function attack(state: AdventureState, events: AdventureEvent[]): void {
     if (!foe.alive || distance(foe, state.player) - foe.radius > player.attackRange) {
       continue;
     }
-    if (foe.kind === "boss" && !state.hasLantern) {
-      state.message = "Your strike passes through the Mirewarden. Only ember light can wound it.";
+    if (foe.kind === "boss" && state.player.x < adventureContent.gateX) {
+      state.message = "The Mirewarden's mire repels you. Step through the gate to strike it.";
       continue;
     }
-    const damage = state.hasLantern ? player.lanternDamage : player.baseDamage;
+    if (!state.hasLantern) {
+      if (foe.kind === "boss") {
+        state.message = "Your strike passes through the Mirewarden. Only ember light can wound it.";
+      } else {
+        shoveShade(state, foe);
+        state.message = "The unlit staff only staggers shades. Forge the Ember Lantern to banish them.";
+        events.push({ type: "foeStaggered", foeId: foe.id });
+      }
+      continue;
+    }
+    const damage = player.lanternDamage;
     foe.health = Math.max(0, foe.health - damage);
     events.push({ type: "foeHit", foeId: foe.id, damage });
 
@@ -286,11 +313,26 @@ function attack(state: AdventureState, events: AdventureEvent[]): void {
   }
 }
 
+function shoveShade(state: AdventureState, foe: FoeState): void {
+  const { player, gateX, world } = adventureContent;
+  const dist = distance(foe, state.player);
+  // Shove straight east when stacked exactly on the player.
+  const dirX = dist === 0 ? 1 : (foe.x - state.player.x) / dist;
+  const dirY = dist === 0 ? 0 : (foe.y - state.player.y) / dist;
+  foe.x = clamp(foe.x + dirX * player.staffKnockback, foe.radius, gateX - foe.radius);
+  foe.y = clamp(foe.y + dirY * player.staffKnockback, foe.radius, world.height - foe.radius);
+  foe.stagger = player.staggerSeconds;
+}
+
 function moveFoes(state: AdventureState, dt: number, gateOpen: boolean, events: AdventureEvent[]): void {
   const { shade, bossStats, gateX, world } = adventureContent;
 
   for (const foe of state.foes) {
     if (!foe.alive) {
+      continue;
+    }
+    if (foe.stagger > 0) {
+      foe.stagger = Math.max(0, foe.stagger - dt);
       continue;
     }
     const isBoss = foe.kind === "boss";
