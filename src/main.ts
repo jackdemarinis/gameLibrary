@@ -1,4 +1,6 @@
+import "./theme.css";
 import "./styles.css";
+import "./themeAdapter.css";
 import "./library.css";
 import { applyThemeVariables } from "./game/config/theme";
 import { createSaveStore } from "./game/simulation/saveStore";

@@ -1,10 +1,10 @@
 export const uiTheme = {
-  panelBase: "#103326",
-  textPrimary: "#d6e4af",
-  textStrong: "#f5e59d",
-  textMuted: "#a7bc87",
-  accentSoft: "#f1c24c",
-  accentStrong: "#ed8f2f",
+  panelBase: "var(--surface-1)",
+  textPrimary: "var(--text)",
+  textStrong: "var(--text-bright)",
+  textMuted: "var(--muted)",
+  accentSoft: "var(--accent-2)",
+  accentStrong: "var(--accent)",
 } as const;
 
 export const worldTheme = {
@@ -37,6 +37,6 @@ export function applyThemeVariables(root: HTMLElement): void {
   root.style.setProperty("--text-primary", uiTheme.textPrimary);
   root.style.setProperty("--text-strong", uiTheme.textStrong);
   root.style.setProperty("--text-muted", uiTheme.textMuted);
-  root.style.setProperty("--accent-soft", uiTheme.accentSoft);
+  root.style.setProperty("--gameAccentSoft", uiTheme.accentSoft);
   root.style.setProperty("--accent-strong", uiTheme.accentStrong);
 }

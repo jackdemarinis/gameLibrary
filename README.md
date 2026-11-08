@@ -20,6 +20,19 @@ npm run dev
 
 This milestone establishes the project architecture, original visual direction, save boundary, roadmap docs, and a playable shell scene that future prompts can extend without collapsing into a single giant scene file.
 
+## Shared standards and style
+
+Managed by webMaster at `sites/gameLibrary`. Menus and HUD inherit the shared
+navy/orange theme, Orbitron/Montserrat typography, and component tokens through
+`src/theme.css` and `src/themeAdapter.css`. The battlefield and tank artwork
+retain their game palette.
+
+Read [STANDARDS.md](STANDARDS.md) and [MIGRATION.md](MIGRATION.md). Phaser,
+TypeScript, Vite, existing save data, and gameplay remain in place. New names
+use camelCase. Update the vendored theme and standards from webMaster with
+`python3 scripts/sync_theme.py` and `python3 scripts/syncStandards.py`, each with
+an optional `--check` flag. Validate with `npm run build` and `npm test`.
+
 ## Game library
 
 The start screen hosts the library. Dustline Brigade keeps its main **Play**

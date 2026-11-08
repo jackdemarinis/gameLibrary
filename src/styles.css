@@ -112,7 +112,7 @@ select {
 
 .eyebrow {
   margin: 0 0 12px;
-  color: var(--accent-soft);
+  color: var(--gameAccentSoft);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.28em;

@@ -1,0 +1,51 @@
+/* UI integration with webMaster. Battlefield and tank artwork keep their palette. */
+:root, body { font-family: var(--font-body); background: var(--bg); color: var(--text); }
+h1, h2, h3, h4, h5, h6 { text-shadow: none; }
+.shell-frame { background: radial-gradient(ellipse at top, var(--accent-soft), transparent 55%), var(--bg); }
+.menu-panel, .hud-card, .hud-sidebar-card, .hud-bar, .hud-modal-card, .hud-result-card,
+.shop-panel, .start-panel, .level-panel, .brief-panel {
+  background: var(--surface-1); border-color: var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel);
+}
+.menu-title, .menu-stat-value, .hud-bar-kpi-value, .hud-kpi-value, .hud-help-button,
+.shop-credit-value, .shop-upgrade-price, .shop-side-title, .brief-stat-value,
+.shop-upgrade-badge { font-family: var(--font-display); color: var(--accent-2); text-shadow: none; line-height: 1.15; }
+.menu-title { font-size: clamp(2rem, 4.5vw, 3.8rem); letter-spacing: -.035em; }
+.menu-stat-card, .menu-board-section, .feature-card, .hud-kpi, .hud-bar-kpi,
+.shop-board, .shop-side-card, .shop-upgrade-card, .shop-upgrade-card-maxed,
+.shop-credit-pill, .brief-stat-card {
+  background: var(--bg-deep); border-color: var(--border); border-radius: var(--radius-md); box-shadow: none;
+}
+.menu-chip, .menu-level-card { background: var(--surface-2); border-color: var(--border); border-radius: var(--radius-md); }
+.menu-chip-active, .menu-level-card-active { border-color: var(--accent); box-shadow: none; background: var(--accent-soft); }
+.status-pill, .menu-weapon-pill { background: var(--accent-soft); border-color: var(--border-accent); color: var(--accent-tint); border-radius: var(--radius-pill); }
+.chrome-button { font-family: var(--font-body); border-radius: var(--radius-sm); }
+.chrome-button-primary { background: var(--accent); color: var(--text-bright); box-shadow: var(--shadow-accent); }
+.chrome-button-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.chrome-button-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+.chrome-button-danger { background: var(--red-soft); color: var(--red); border-color: var(--red); }
+.hud-modal-backdrop { background: var(--scrim); }
+.hud-bar-kpi-meter-track, .shop-upgrade-track, .shop-upgrade-pip { background: var(--surface-2); border-color: var(--border); box-shadow: none; }
+.hud-bar-kpi-meter-fill, .shop-upgrade-track-fill, .shop-upgrade-pip-active { background: var(--accent-gradient-bright); box-shadow: none; border-color: var(--accent); }
+.menu-stat-label, .menu-level-state, .shop-eyebrow, .shop-credit-label, .shop-upgrade-tag,
+.shop-upgrade-summary, .shop-side-label, .brief-stat-label { color: var(--muted); }
+.shop-subtitle, .shop-status, .shop-next-mission, .shop-side-copy, .shop-upgrade-bonus { color: var(--text-2); }
+.shop-side-copy strong, .shop-upgrade-title { color: var(--accent-2); }
+.shop-upgrade-badge { background: var(--surface-2); border-color: var(--border); border-radius: var(--radius-sm); }
+.start-title, .level-title, .brief-title, .difficulty-modal-title, .shop-board-title,
+.level-score, .level-tile-number { font-family: var(--font-display); color: var(--accent-2); text-shadow: none; line-height: 1.1; }
+.start-title { font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.start-subtitle, .start-save-status, .level-meta, .brief-copy, .shop-board-copy,
+.shop-credit-subvalue { color: var(--text-2); }
+.level-title, .brief-title { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+.difficulty-modal-backdrop { background: var(--scrim); }
+.difficulty-modal { border-radius: var(--radius-lg); }
+.difficulty-choice { background: var(--surface-2); color: var(--text); border-color: var(--border); border-radius: var(--radius-md); box-shadow: none; }
+.difficulty-choice small { color: var(--muted); }
+.difficulty-choice-active { border-color: var(--accent); background: var(--accent-soft); }
+.level-tile { background: var(--surface-2); color: var(--text); border-color: var(--border); border-radius: var(--radius-md); }
+.level-tile-active { background: var(--accent-soft); border-color: var(--accent); box-shadow: none; }
+.level-tile-locked { background: var(--bg-deep); color: var(--muted); }
+.shop-board-status { background: var(--surface-2); color: var(--accent-2); border-color: var(--border); border-radius: var(--radius-sm); }
+.shop-board-status-label { color: var(--muted); }
+.shop-weapon-pill { background: var(--accent-soft); color: var(--accent-tint); border-color: var(--border-accent); }
+.start-panel { overflow-y: auto; }
