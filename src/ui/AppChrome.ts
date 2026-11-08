@@ -13,11 +13,19 @@ export interface DifficultyChoiceViewModel {
   onPress: () => void;
 }
 
+export interface LibraryCardViewModel {
+  tag: string;
+  title: string;
+  summary: string;
+  action: UiAction;
+}
+
 export interface StartViewModel {
   title: string;
   subtitle: string;
   saveStatus: string;
   playAction: UiAction;
+  libraryCards?: LibraryCardViewModel[];
 }
 
 export interface ShopOfferViewModel {
@@ -107,6 +115,18 @@ export class AppChrome {
   renderStart(model: StartViewModel): void {
     const actionMap = new Map<string, UiAction>();
     const playButton = this.renderActionButton("start-play", model.playAction, actionMap, "start-play-button");
+    const libraryCards = (model.libraryCards ?? [])
+      .map(
+        (card, index) => `
+          <article class="libraryCard">
+            <span class="libraryCardTag">${card.tag}</span>
+            <h2 class="libraryCardTitle">${card.title}</h2>
+            <p class="libraryCardSummary">${card.summary}</p>
+            ${this.renderActionButton(`library-card-${index}`, card.action, actionMap, "libraryCardButton")}
+          </article>
+        `,
+      )
+      .join("");
 
     this.root.innerHTML = `
       <section class="start-screen">
@@ -136,6 +156,16 @@ export class AppChrome {
             <p class="start-save-status">${model.saveStatus}</p>
             ${playButton}
           </div>
+          ${
+            libraryCards
+              ? `
+                <section class="librarySection" aria-label="Game library">
+                  <p class="eyebrow libraryEyebrow">Game Library</p>
+                  <div class="libraryGrid">${libraryCards}</div>
+                </section>
+              `
+              : ""
+          }
         </article>
       </section>
     `;

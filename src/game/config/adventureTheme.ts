@@ -1,0 +1,26 @@
+// Lanternwake world art palette (placeholder shapes). Like `worldTheme`, these are
+// in-canvas art colors, not UI tokens; menus and HUD use the shared theme.css.
+export const adventureTheme = {
+  background: 0x0a0a23,
+  ground: 0x12122e,
+  groundPatch: 0x17173a,
+  shrineGround: 0x1d1d47,
+  gateClosed: 0x6a3a8a,
+  gateOpen: 0x2c2c5a,
+  workbench: 0x8a5a32,
+  workbenchTop: 0xc28a52,
+  timber: 0x3ddc84,
+  timberTrunk: 0x5b3a1e,
+  ironstone: 0x8f93b8,
+  player: 0xf5f5f5,
+  lantern: 0xf6511d,
+  lanternGlow: 0xff8a61,
+  shade: 0x6e5aa8,
+  boss: 0x4b2f78,
+  bossCore: 0xff5470,
+  healthBack: 0x090920,
+  healthFill: 0xffb340,
+  pulse: 0xff5470,
+  promptText: "#ffd7c8",
+  textBackdrop: "#090920cc",
+} as const;

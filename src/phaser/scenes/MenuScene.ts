@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { adventureContent } from "../../game/adventure/adventureContent";
 import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
@@ -34,6 +35,18 @@ export class MenuScene extends Phaser.Scene {
           this.scene.start("shop");
         },
       },
+      libraryCards: [
+        {
+          tag: "New · Survival Adventure",
+          title: adventureContent.title,
+          summary: adventureContent.tagline,
+          action: {
+            label: `Play ${adventureContent.title}`,
+            tone: "secondary",
+            onPress: () => this.scene.start("adventure"),
+          },
+        },
+      ],
     });
   }
 

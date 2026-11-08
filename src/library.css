@@ -1,0 +1,50 @@
+/* Game library cards on the start screen. Tokens only; see theme.css. */
+.librarySection {
+  display: grid;
+  gap: 10px;
+}
+
+.libraryEyebrow {
+  margin: 0;
+}
+
+.libraryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.libraryCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.libraryCardTag {
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.libraryCardTitle {
+  margin: 0;
+  color: var(--accent-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+}
+
+.libraryCardSummary {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.libraryCardButton {
+  justify-self: start;
+}

@@ -65,3 +65,9 @@ Dustline Brigade is an original top-down browser tank shooter that pulls mood fr
 ## Next milestone
 
 Prompt 2 should add fog-of-war exploration on top of the current combat sandbox without coupling the visibility logic to the Phaser scene.
+
+## Library addition: Lanternwake
+
+- Second game reachable from the start screen's Game Library card; Dustline Brigade flow is unchanged.
+- Same architecture rules: fixed-step pure simulation in `src/game/adventure/`, thin `AdventureScene`, DOM HUD via `SceneBridge.showHud`.
+- Scope: move, gather two resources, craft one upgrade, three shades, one boss. No persistence or randomness.

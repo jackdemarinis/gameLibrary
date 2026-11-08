@@ -1,4 +1,5 @@
 import "./styles.css";
+import "./library.css";
 import { applyThemeVariables } from "./game/config/theme";
 import { createSaveStore } from "./game/simulation/saveStore";
 import { createGame } from "./phaser/boot/createGame";
