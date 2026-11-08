@@ -9,37 +9,81 @@ import {
   type AdventureEvent,
   type AdventureState,
 } from "../../game/adventure/AdventureSimulation";
-import { adventureTheme } from "../../game/config/adventureTheme";
+import {
+  bossSprite,
+  flowerSprite,
+  pixelHash,
+  playerDimSprite,
+  playerLitSprite,
+  rockSprite,
+  shadeSprite,
+  torchSprite,
+  treeSprite,
+  tuftSprite,
+  workbenchSprite,
+} from "../../game/adventure/adventureSprites";
+import { adventureTheme as t, nightDarknessByStep } from "../../game/config/adventureTheme";
 import type { HudViewModel } from "../../ui/AppChrome";
+import { ensureLanternwakeTextures, lanternwakeTextureKeys } from "../adventure/lanternwakeTextures";
 import { SceneBridge } from "../adapters/sceneBridge";
 
 interface FoeView {
-  body: Phaser.GameObjects.Arc;
+  body: Phaser.GameObjects.Image;
+  shadow: Phaser.GameObjects.Ellipse;
   healthBar: Phaser.GameObjects.Graphics;
+  bobPhase: number;
+}
+
+interface LightSource {
+  x: number;
+  y: number;
+  radius: number;
 }
 
 const controls = [
   "WASD / Arrows: move",
-  "Space: swing your staff",
+  "Space: swing your staff (only the Ember Lantern can banish shades)",
   "E: gather or forge at the workbench",
   "Esc: back to the library",
 ];
+
+/** Actors and props sort by their feet so overlaps read correctly. */
+const actorDepthBase = 10;
+const healthBarDepth = 60;
+const nightDepth = 50;
+const glowDepth = 51;
+const promptDepth = 62;
+const signDepth = 70;
+const lightTextureSize = 256;
+const decorCount = 70;
+/** Extra camera room so the objective sign (top) and DOM HUD (bottom) never cover the playfield. */
+const viewPadTop = 90;
+const viewPadBottom = 150;
 
 export class AdventureScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
   private simulation!: AdventureSimulation;
   private keys!: Record<"up" | "down" | "left" | "right" | "w" | "a" | "s" | "d" | "attack" | "interact", Phaser.Input.Keyboard.Key>;
-  private player!: Phaser.GameObjects.Arc;
-  private lanternGlow!: Phaser.GameObjects.Arc;
-  private gate!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.GameObjects.Image;
+  private playerShadow!: Phaser.GameObjects.Ellipse;
+  private lanternGlow!: Phaser.GameObjects.Image;
+  private gate!: Phaser.GameObjects.TileSprite;
   private pulseRing!: Phaser.GameObjects.Arc;
   private promptText!: Phaser.GameObjects.Text;
   private objectiveText!: Phaser.GameObjects.Text;
-  private readonly nodeViews = new Map<string, Phaser.GameObjects.Graphics>();
+  private objectiveSign!: Phaser.GameObjects.Graphics;
+  private night!: Phaser.GameObjects.RenderTexture;
+  private lightStamp!: Phaser.GameObjects.Image;
+  private readonly nodeViews = new Map<string, Phaser.GameObjects.Image>();
   private readonly foeViews = new Map<string, FoeView>();
+  private readonly pixelTexts: Phaser.GameObjects.Text[] = [];
+  private torchLights: LightSource[] = [];
   private helpOpen = false;
   private resultShown = false;
   private lastHudSignature = "";
+  private lastObjectiveText = "";
+  private darkness: number = nightDarknessByStep[0];
+  private lastPlayerX = 0;
 
   constructor(bridge: SceneBridge) {
     super("adventure");
@@ -51,14 +95,55 @@ export class AdventureScene extends Phaser.Scene {
     this.helpOpen = false;
     this.resultShown = false;
     this.lastHudSignature = "";
+    this.lastObjectiveText = "";
+    this.darkness = nightDarknessByStep[0];
+    this.pixelTexts.length = 0;
+
+    ensureLanternwakeTextures(this);
 
     const { world } = adventureContent;
-    this.cameras.main.setBackgroundColor(adventureTheme.background);
-    this.cameras.main.setBounds(0, 0, world.width, world.height);
+    this.cameras.main.setBackgroundColor(t.grassDark);
+    this.cameras.main.setBounds(0, -viewPadTop, world.width, world.height + viewPadTop + viewPadBottom);
     this.drawWorld();
     this.createActors();
+    this.createLighting();
+    this.createLabels();
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.bindKeys();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.handleShutdown());
+    this.loadPixelFont();
 
+    const state = this.simulation.getState();
+    this.lastPlayerX = state.player.x;
+    this.sync(state, 0);
+  }
+
+  update(_time: number, delta: number): void {
+    const k = this.keys;
+    // Always read one-shot presses so a press made while paused can't fire later.
+    const attack = Phaser.Input.Keyboard.JustDown(k.attack);
+    const interact = Phaser.Input.Keyboard.JustDown(k.interact);
+
+    if (!this.helpOpen && !this.resultShown) {
+      const events = this.simulation.advance(delta, {
+        moveX: Number(k.right.isDown || k.d.isDown) - Number(k.left.isDown || k.a.isDown),
+        moveY: Number(k.down.isDown || k.s.isDown) - Number(k.up.isDown || k.w.isDown),
+        attack,
+        interact,
+      });
+      const state = this.simulation.getState();
+      events.forEach((event) => this.playEvent(event, state));
+    }
+
+    const state = this.simulation.getState();
+    this.sync(state, delta);
+
+    if (state.status !== "active" && !this.resultShown) {
+      this.showResult(state);
+    }
+  }
+
+  private bindKeys(): void {
     const keyboard = this.input.keyboard;
     if (!keyboard) {
       throw new Error("Lanternwake needs keyboard input.");
@@ -83,166 +168,325 @@ export class AdventureScene extends Phaser.Scene {
       }
       this.scene.start("menu");
     });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.handleShutdown());
-
-    this.sync(this.simulation.getState());
-  }
-
-  update(_time: number, delta: number): void {
-    if (this.helpOpen || this.resultShown) {
-      return;
-    }
-
-    const k = this.keys;
-    const events = this.simulation.advance(delta, {
-      moveX: Number(k.right.isDown || k.d.isDown) - Number(k.left.isDown || k.a.isDown),
-      moveY: Number(k.down.isDown || k.s.isDown) - Number(k.up.isDown || k.w.isDown),
-      attack: Phaser.Input.Keyboard.JustDown(k.attack),
-      interact: Phaser.Input.Keyboard.JustDown(k.interact),
-    });
-    const state = this.simulation.getState();
-
-    events.forEach((event) => this.playEvent(event));
-    this.sync(state);
-
-    if (state.status !== "active") {
-      this.showResult(state);
-    }
   }
 
   private drawWorld(): void {
-    const { world, gateX, workbench } = adventureContent;
-    const ground = this.add.graphics();
-    ground.fillStyle(adventureTheme.ground, 1);
-    ground.fillRect(0, 0, gateX, world.height);
-    ground.fillStyle(adventureTheme.shrineGround, 1);
-    ground.fillRect(gateX, 0, world.width - gateX, world.height);
-    ground.fillStyle(adventureTheme.groundPatch, 1);
-    // Deterministic decorative fog patches.
-    for (let i = 0; i < 18; i += 1) {
-      ground.fillCircle((i * 263) % gateX, (i * 397) % world.height, 40 + (i % 4) * 18);
-    }
+    const { world, gateX, workbench, playerSpawn } = adventureContent;
 
-    this.gate = this.add.rectangle(gateX, world.height / 2, 20, world.height, adventureTheme.gateClosed, 1);
-    this.add.rectangle(workbench.x, workbench.y, 72, 44, adventureTheme.workbench).setStrokeStyle(3, adventureTheme.workbenchTop);
-    this.add
-      .text(workbench.x, workbench.y + 36, "Workbench", { fontFamily: "Montserrat, sans-serif", fontSize: "14px", color: adventureTheme.promptText })
-      .setOrigin(0.5);
+    const fullHeight = world.height + viewPadTop + viewPadBottom;
+    this.add.tileSprite(0, -viewPadTop, gateX, fullHeight, lanternwakeTextureKeys.grass).setOrigin(0);
+    this.add.tileSprite(gateX, -viewPadTop, world.width - gateX, fullHeight, lanternwakeTextureKeys.shrine).setOrigin(0);
+    // Dirt road from the village east to the shrine gate.
+    this.add.tileSprite(0, playerSpawn.y - 24, gateX, 48, lanternwakeTextureKeys.path).setOrigin(0);
+    this.gate = this.add.tileSprite(gateX - 12, -viewPadTop, 24, fullHeight, lanternwakeTextureKeys.gate).setOrigin(0).setDepth(actorDepthBase);
+
+    this.scatterDecor();
+
+    this.addShadow(workbench.x, workbench.y + 16, 66);
+    this.add.image(workbench.x, workbench.y, workbenchSprite.key).setDepth(depthFor(workbench.y));
+    this.torchLights = [-52, 52].map((offset) => {
+      const x = workbench.x + offset;
+      const y = workbench.y - 4;
+      this.add.image(x, y, torchSprite.key).setOrigin(0.5, 1).setDepth(depthFor(y));
+      return { x, y: y - 16, radius: 120 };
+    });
 
     for (const node of adventureContent.resourceNodes) {
-      const art = this.add.graphics({ x: node.x, y: node.y });
-      if (node.kind === "timber") {
-        art.fillStyle(adventureTheme.timberTrunk, 1);
-        art.fillRect(-5, 6, 10, 18);
-        art.fillStyle(adventureTheme.timber, 1);
-        art.fillTriangle(-22, 10, 22, 10, 0, -28);
-      } else {
-        art.fillStyle(adventureTheme.ironstone, 1);
-        art.fillPoints([
-          new Phaser.Math.Vector2(-20, 10),
-          new Phaser.Math.Vector2(-12, -14),
-          new Phaser.Math.Vector2(10, -18),
-          new Phaser.Math.Vector2(22, 4),
-          new Phaser.Math.Vector2(8, 18),
-        ], true);
-      }
+      const isTree = node.kind === "timber";
+      this.addShadow(node.x, node.y + (isTree ? 10 : 12), isTree ? 40 : 44);
+      const art = this.add
+        .image(node.x, node.y, isTree ? treeSprite.key : rockSprite.key)
+        .setOrigin(0.5, isTree ? 0.78 : 0.55)
+        .setDepth(depthFor(node.y));
       this.nodeViews.set(node.id, art);
     }
+  }
+
+  /** Deterministic grass tufts and flowers that avoid the road, nodes and props. */
+  private scatterDecor(): void {
+    const { world, gateX, playerSpawn, workbench, resourceNodes } = adventureContent;
+    const blockers = [workbench, playerSpawn, ...resourceNodes];
+
+    for (let i = 0; i < decorCount; i += 1) {
+      const x = 20 + pixelHash(i, 1, 41) * (gateX - 60);
+      const y = 20 + pixelHash(i, 2, 43) * (world.height - 40);
+      const onRoad = Math.abs(y - playerSpawn.y) < 40;
+      const crowded = blockers.some((point) => Math.hypot(point.x - x, point.y - y) < 60);
+      if (onRoad || crowded) {
+        continue;
+      }
+      const key = pixelHash(i, 3, 47) < 0.3 ? flowerSprite.key : tuftSprite.key;
+      this.add.image(x, y, key).setDepth(depthFor(y) - 1);
+    }
+  }
+
+  private addShadow(x: number, y: number, width: number): Phaser.GameObjects.Ellipse {
+    return this.add.ellipse(x, y, width, width * 0.32, t.groundShadow, 0.35).setDepth(actorDepthBase - 2);
   }
 
   private createActors(): void {
     const state = this.simulation.getState();
     const { bossStats } = adventureContent;
+    this.playerShadow = this.addShadow(state.player.x, state.player.y + 22, 30);
 
-    this.lanternGlow = this.add.circle(state.player.x, state.player.y, 60, adventureTheme.lanternGlow, 0.12).setDepth(4);
-    this.player = this.add.circle(state.player.x, state.player.y, state.player.radius, adventureTheme.player).setDepth(6);
-    this.player.setStrokeStyle(4, adventureTheme.lantern);
-    this.pulseRing = this.add.circle(0, 0, bossStats.pulseRadius).setStrokeStyle(4, adventureTheme.pulse, 0.8).setVisible(false).setDepth(3);
-    this.promptText = this.add
-      .text(0, 0, "", { fontFamily: "Montserrat, sans-serif", fontSize: "15px", color: adventureTheme.promptText })
-      .setOrigin(0.5)
-      .setDepth(10);
+    this.player = this.add.image(state.player.x, state.player.y, playerDimSprite.key).setOrigin(0.5, 0.62);
+    this.pulseRing = this.add
+      .circle(0, 0, bossStats.pulseRadius)
+      .setStrokeStyle(6, t.pulse, 0.85)
+      .setVisible(false)
+      .setDepth(actorDepthBase - 1);
+
+    state.foes.forEach((foe, index) => {
+      const key = foe.kind === "boss" ? bossSprite.key : shadeSprite.key;
+      const shadow = this.addShadow(foe.x, foe.y + foe.radius, foe.radius * 1.6);
+      const body = this.add.image(foe.x, foe.y, key);
+      this.foeViews.set(foe.id, { body, shadow, healthBar: this.add.graphics().setDepth(healthBarDepth), bobPhase: index * 1.7 });
+    });
+  }
+
+  private createLighting(): void {
+    const { world } = adventureContent;
+    this.night = this.add
+      .renderTexture(0, -viewPadTop, world.width, world.height + viewPadTop + viewPadBottom)
+      .setOrigin(0)
+      .setDepth(nightDepth);
+    this.lightStamp = this.make.image({ key: lanternwakeTextureKeys.light, add: false }).setOrigin(0.5);
+    this.lanternGlow = this.add
+      .image(0, 0, lanternwakeTextureKeys.light)
+      .setTint(t.lanternBody)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(glowDepth);
+  }
+
+  private createLabels(): void {
+    const { workbench } = adventureContent;
+    this.pixelTexts.push(
+      this.add
+        .text(workbench.x, workbench.y + 30, "Workbench", this.labelStyle(14))
+        .setOrigin(0.5, 0)
+        .setDepth(depthFor(workbench.y + 30)),
+    );
+    this.promptText = this.add.text(0, 0, "", this.labelStyle(16)).setOrigin(0.5).setDepth(promptDepth);
+    this.objectiveSign = this.add.graphics().setScrollFactor(0).setDepth(signDepth);
     this.objectiveText = this.add
-      .text(this.scale.width / 2, 24, "", {
-        fontFamily: "Montserrat, sans-serif",
-        fontSize: "18px",
-        color: adventureTheme.promptText,
-        align: "center",
-        backgroundColor: adventureTheme.textBackdrop,
-        padding: { x: 14, y: 8 },
-      })
+      .text(this.scale.width / 2, 22, "", { ...this.labelStyle(18), align: "center" })
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
-      .setDepth(20);
-
-    for (const foe of state.foes) {
-      const color = foe.kind === "boss" ? adventureTheme.boss : adventureTheme.shade;
-      const body = this.add.circle(foe.x, foe.y, foe.radius, color, 0.92).setDepth(5);
-      if (foe.kind === "boss") {
-        body.setStrokeStyle(6, adventureTheme.bossCore);
-      }
-      this.foeViews.set(foe.id, { body, healthBar: this.add.graphics().setDepth(7) });
-    }
+      .setDepth(signDepth + 1);
+    this.pixelTexts.push(this.promptText, this.objectiveText);
   }
 
-  private sync(state: AdventureState): void {
+  private labelStyle(size: number): Phaser.Types.GameObjects.Text.TextStyle {
+    return {
+      fontFamily: t.signFont,
+      fontSize: `${size}px`,
+      color: t.signText,
+      stroke: t.signStroke,
+      strokeThickness: 4,
+    };
+  }
+
+  /** Canvas text draws once; redraw labels after the pixel web font arrives. */
+  private loadPixelFont(): void {
+    if (!("fonts" in document)) {
+      return;
+    }
+    document.fonts
+      .load(`16px ${t.signFont}`)
+      .then(() => {
+        this.pixelTexts.forEach((text) => text.active && text.updateText());
+        this.lastObjectiveText = "";
+      })
+      .catch(() => undefined);
+  }
+
+  private sync(state: AdventureState, deltaMs: number): void {
     const { player } = state;
-    this.player.setPosition(player.x, player.y);
-    this.lanternGlow.setPosition(player.x, player.y);
-    this.lanternGlow.setRadius(state.hasLantern ? 120 : 60).setAlpha(state.hasLantern ? 0.22 : 0.1);
-    this.player.setFillStyle(state.hasLantern ? adventureTheme.lanternGlow : adventureTheme.player);
+    const moved = player.x - this.lastPlayerX;
+    if (Math.abs(moved) > 0.01) {
+      this.player.setFlipX(moved < 0);
+    }
+    this.lastPlayerX = player.x;
+
+    const bob = state.status === "active" ? Math.sin(state.elapsed * 12) * 1.5 : 0;
+    this.player
+      .setTexture(state.hasLantern ? playerLitSprite.key : playerDimSprite.key)
+      .setPosition(player.x, player.y + bob)
+      .setDepth(depthFor(player.y));
+    this.playerShadow.setPosition(player.x, player.y + 22);
 
     const prompt = getInteractPrompt(state);
-    this.promptText.setText(prompt ?? "").setPosition(player.x, player.y - 40);
+    this.promptText.setText(prompt ?? "").setPosition(player.x, player.y - 46);
 
-    this.nodeViews.forEach((view, id) => view.setAlpha(state.depletedNodeIds.includes(id) ? 0.18 : 1));
-    this.gate.setFillStyle(isGateOpen(state) ? adventureTheme.gateOpen : adventureTheme.gateClosed, isGateOpen(state) ? 0.35 : 1);
+    this.nodeViews.forEach((view, id) => {
+      const depleted = state.depletedNodeIds.includes(id);
+      view.setAlpha(depleted ? 0.35 : 1);
+      if (depleted) {
+        view.setTint(t.stoneDark);
+      }
+    });
 
-    for (const foe of state.foes) {
+    const gateOpen = isGateOpen(state);
+    this.gate.setAlpha(gateOpen ? 0.25 : 1);
+
+    state.foes.forEach((foe) => {
       const view = this.foeViews.get(foe.id);
       if (!view) {
-        continue;
+        return;
       }
-      view.body.setPosition(foe.x, foe.y).setVisible(foe.alive);
-      view.healthBar.clear();
-      if (foe.alive && foe.health < foe.maxHealth) {
-        const width = foe.radius * 2;
-        view.healthBar.fillStyle(adventureTheme.healthBack, 1);
-        view.healthBar.fillRect(foe.x - width / 2, foe.y - foe.radius - 12, width, 5);
-        view.healthBar.fillStyle(adventureTheme.healthFill, 1);
-        view.healthBar.fillRect(foe.x - width / 2, foe.y - foe.radius - 12, (width * foe.health) / foe.maxHealth, 5);
+      const float = foe.kind === "shade" ? Math.sin(state.elapsed * 3 + view.bobPhase) * 3 : 0;
+      view.body.setPosition(foe.x, foe.y + float).setVisible(foe.alive).setDepth(depthFor(foe.y));
+      view.shadow.setPosition(foe.x, foe.y + foe.radius).setVisible(foe.alive);
+      if (foe.stagger > 0) {
+        view.body.setTint(t.staggerTint);
+      } else {
+        view.body.clearTint();
       }
       if (foe.kind === "boss") {
-        this.pulseRing.setPosition(foe.x, foe.y).setVisible(isBossCharging(state));
+        const charging = isBossCharging(state);
+        this.pulseRing.setPosition(foe.x, foe.y).setVisible(charging);
+        view.body.setScale(charging ? 1 + Math.sin(state.elapsed * 30) * 0.04 : 1);
       }
-    }
+      this.drawHealthBar(view.healthBar, foe.alive && foe.health < foe.maxHealth, foe.x, foe.y - foe.radius - 14, foe.radius * 2, foe.health / foe.maxHealth);
+    });
+
+    this.drawNight(state, deltaMs);
 
     const objective = getObjective(state);
-    this.objectiveText.setText(`${objective.text}\n${state.message}`);
-    this.renderHud(state);
+    this.setObjectiveText(`${objective.text}\n${state.message}`);
+    if (!this.resultShown) {
+      this.renderHud(state);
+    }
   }
 
-  private playEvent(event: AdventureEvent): void {
+  private drawHealthBar(bar: Phaser.GameObjects.Graphics, visible: boolean, x: number, y: number, width: number, fraction: number): void {
+    bar.clear();
+    if (!visible) {
+      return;
+    }
+    const left = Math.round(x - width / 2);
+    bar.fillStyle(t.healthBack, 1);
+    bar.fillRect(left - 2, y - 2, width + 4, 9);
+    bar.fillStyle(t.healthFill, 1);
+    bar.fillRect(left, y, Math.round(width * fraction), 5);
+  }
+
+  /** Night overlay with soft holes cut for the lantern, village torches and the boss's eye. */
+  private drawNight(state: AdventureState, deltaMs: number): void {
+    const target = nightDarknessByStep[getObjective(state).step];
+    this.darkness += (target - this.darkness) * Math.min(1, (deltaMs / 1000) * 1.2);
+
+    const flicker = 1 + Math.sin(state.elapsed * 9) * 0.03 + Math.sin(state.elapsed * 23) * 0.02;
+    const lights: LightSource[] = [
+      { x: state.player.x, y: state.player.y, radius: (state.hasLantern ? 230 : 120) * flicker },
+      ...this.torchLights.map((light) => ({ ...light, radius: light.radius * flicker })),
+    ];
+    const boss = state.foes.find((foe) => foe.kind === "boss");
+    if (boss?.alive) {
+      lights.push({ x: boss.x, y: boss.y, radius: isBossCharging(state) ? 200 : 110 });
+    }
+
+    this.night.clear();
+    this.night.fill(t.night, this.darkness);
+    for (const light of lights) {
+      // The overlay starts at y = -viewPadTop, so shift into its local space.
+      this.lightStamp.setPosition(light.x, light.y + viewPadTop).setScale((light.radius * 2) / lightTextureSize);
+      this.night.erase(this.lightStamp);
+    }
+
+    const glowRadius = state.hasLantern ? 120 * flicker : 0;
+    this.lanternGlow
+      .setVisible(glowRadius > 0)
+      .setPosition(state.player.x, state.player.y)
+      .setScale((glowRadius * 2) / lightTextureSize)
+      .setAlpha(0.22);
+  }
+
+  private setObjectiveText(text: string): void {
+    if (text === this.lastObjectiveText) {
+      return;
+    }
+    this.lastObjectiveText = text;
+    this.objectiveText.setText(text);
+
+    // A chunky wooden sign behind the objective, sized to the text.
+    const padX = 18;
+    const padY = 10;
+    const width = Math.ceil(this.objectiveText.width + padX * 2);
+    const height = Math.ceil(this.objectiveText.height + padY * 2);
+    const left = Math.round(this.objectiveText.x - width / 2);
+    const top = Math.round(this.objectiveText.y - padY);
+    const notch = 4;
+    this.objectiveSign.clear();
+    this.objectiveSign.fillStyle(t.signEdge, 1);
+    this.objectiveSign.fillRect(left + notch, top, width - notch * 2, height);
+    this.objectiveSign.fillRect(left, top + notch, width, height - notch * 2);
+    this.objectiveSign.fillStyle(t.signWood, 0.94);
+    this.objectiveSign.fillRect(left + notch, top + notch, width - notch * 2, height - notch * 2);
+  }
+
+  private playEvent(event: AdventureEvent, state: AdventureState): void {
     switch (event.type) {
       case "swing": {
-        const arc = this.add.circle(event.x, event.y, event.range, adventureTheme.lantern, 0.18).setDepth(2);
-        this.tweens.add({ targets: arc, alpha: 0, scale: 1.1, duration: 160, onComplete: () => arc.destroy() });
+        const ring = this.add
+          .circle(event.x, event.y, event.range)
+          .setStrokeStyle(6, state.hasLantern ? t.swing : t.staffWood, 0.8)
+          .setDepth(glowDepth + 1)
+          .setScale(0.6);
+        this.tweens.add({ targets: ring, alpha: 0, scale: 1.05, duration: 180, onComplete: () => ring.destroy() });
         break;
       }
       case "pulse": {
-        const ring = this.add.circle(event.x, event.y, event.radius, adventureTheme.pulse, 0.3).setDepth(2);
-        this.tweens.add({ targets: ring, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+        const ring = this.add.circle(event.x, event.y, event.radius, t.pulse, 0.3).setDepth(glowDepth + 1);
+        this.tweens.add({ targets: ring, alpha: 0, duration: 320, onComplete: () => ring.destroy() });
         break;
       }
       case "playerHurt":
         this.cameras.main.shake(90, 0.004);
+        this.player.setTint(t.hurtTint);
+        this.time.delayedCall(140, () => this.player.clearTint());
         break;
+      case "gathered": {
+        const node = adventureContent.resourceNodes.find((candidate) => candidate.id === event.nodeId);
+        if (node) {
+          const colors = event.kind === "timber" ? [t.leafLight, t.leafMid, t.trunkLight] : [t.stoneLight, t.oreFleck, t.oreShine];
+          this.burst(node.x, node.y - 10, colors);
+        }
+        break;
+      }
+      case "foeDefeated": {
+        const foe = state.foes.find((candidate) => candidate.id === event.foeId);
+        if (foe) {
+          this.burst(foe.x, foe.y, [t.shadeBody, t.shadeEye, t.lanternCore], foe.kind === "boss" ? 28 : 12);
+        }
+        break;
+      }
       case "crafted":
-      case "gateOpened":
-        this.cameras.main.flash(220, 246, 81, 29);
+      case "gateOpened": {
+        const { r, g, b } = Phaser.Display.Color.IntegerToRGB(t.lanternBody);
+        this.cameras.main.flash(240, r, g, b);
         break;
+      }
       default:
         break;
+    }
+  }
+
+  /** Square pixel shards flying outward, to match the art style. */
+  private burst(x: number, y: number, colors: readonly number[], count = 10): void {
+    for (let i = 0; i < count; i += 1) {
+      const angle = (i / count) * Math.PI * 2;
+      const distance = 30 + (i % 3) * 14;
+      const shard = this.add.rectangle(x, y, 6, 6, colors[i % colors.length]).setDepth(glowDepth + 1);
+      this.tweens.add({
+        targets: shard,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: 420,
+        ease: "Cubic.easeOut",
+        onComplete: () => shard.destroy(),
+      });
     }
   }
 
@@ -252,7 +496,7 @@ export class AdventureScene extends Phaser.Scene {
       layout: "active",
       title: adventureContent.title,
       copy: adventureContent.story,
-      objective: `${objective.chapter} — ${objective.text}`,
+      objective: `${objective.chapter} · ${objective.text}`,
       kpis: [
         { label: "Health", meter: { current: state.player.health, max: state.player.maxHealth } },
         { label: "Timber", value: `${state.inventory.timber}` },
@@ -281,7 +525,7 @@ export class AdventureScene extends Phaser.Scene {
     this.time.delayedCall(250, () => {
       this.showHudIfChanged({
         layout: "result",
-        title: `${adventureContent.title} — ${won ? "Dawn" : "Lost to the Fog"}`,
+        title: `${adventureContent.title}: ${won ? "Dawn" : "Lost to the Fog"}`,
         copy: state.message,
         objective: won ? "Cinderhollow wakes to its first morning in a season." : "Rest, then try the night again.",
         kpis: [
@@ -323,6 +567,12 @@ export class AdventureScene extends Phaser.Scene {
     this.tweens.resumeAll();
     this.nodeViews.clear();
     this.foeViews.clear();
+    this.pixelTexts.length = 0;
+    this.lightStamp.destroy();
     this.bridge.clearChrome();
   }
+}
+
+function depthFor(y: number): number {
+  return actorDepthBase + y / 1000;
 }

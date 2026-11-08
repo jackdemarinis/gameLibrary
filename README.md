@@ -38,10 +38,14 @@ an optional `--check` flag. Validate with `npm run build` and `npm test`.
 The start screen hosts the library. Dustline Brigade keeps its main **Play**
 button; a **Game Library** card below it launches the second game.
 
-**Lanternwake** is an original compact survival adventure (placeholder shapes,
-no external assets). As Cinderhollow's last lantern-keeper you gather timber and
+**Lanternwake** is an original compact survival adventure with its own chunky
+pixel-art look (earthy sandbox mood: grass, dirt road, ore rocks, a corrupted
+brick shrine, and a night that deepens each chapter, lit by torches and your
+lantern). All art is generated in code from character maps, so there are no
+external sprite assets. As Cinderhollow's last lantern-keeper you gather timber and
 ironstone, forge the Ember Lantern at the workbench, drive back three shades to
-open the shrine gate, and defeat the Mirewarden, which only ember light can
+open the shrine gate (the unlit staff only staggers shades, so the lantern comes
+first), and defeat the Mirewarden, which only ember light can
 wound. Its four chapters (Dusk → Nightfall → Midnight → Before Dawn) frame a
 longer-campaign arc but play in a few minutes. Controls: WASD/arrows to move,
 Space to swing, E to gather or forge, Esc to return to the library. It has no
@@ -49,5 +53,9 @@ save data; each run starts fresh.
 
 - Pure, deterministic logic: `src/game/adventure/` (tested in
   `AdventureSimulation.test.ts`).
-- Renderer: `src/phaser/scenes/AdventureScene.ts`; art palette in
+- Renderer: `src/phaser/scenes/AdventureScene.ts`; textures built in
+  `src/phaser/adventure/lanternwakeTextures.ts` from the pixel maps in
+  `src/game/adventure/adventureSprites.ts`; art palette in
   `src/game/config/adventureTheme.ts`; library card styles in `src/library.css`.
+  In-canvas labels use the Pixelify Sans web font; the DOM HUD keeps the shared
+  theme tokens.
