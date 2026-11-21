@@ -1,7 +1,7 @@
 {
   "name": "Game Library",
   "short_name": "Game Library",
-  "description": "Jack DeMarinis's browser game library: Dustline Brigade and Lanternwake. Desktop, keyboard required.",
+  "description": "Jack DeMarinis's browser game library: Pétanque Park, Dustline Brigade and Lanternwake. Desktop, keyboard required.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

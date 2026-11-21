@@ -42,6 +42,9 @@ export class ShopScene extends Phaser.Scene {
     this.drawBackdrop();
     this.renderChrome();
     this.input.keyboard?.on("keydown-ESC", () => this.scene.start("menu"));
+    this.input.keyboard?.on("keydown-ENTER", () => {
+      if (this.bridge.loadOrCreateSave().hasSelectedDifficulty) this.scene.start("level-select");
+    });
   }
 
   private renderChrome(): void {
@@ -81,12 +84,13 @@ export class ShopScene extends Phaser.Scene {
           maxLevel: definition.maxLevel,
           priceValue: price,
           action: {
-            label:
-              price === null
+            label: difficultyLocked
+              ? "Pick difficulty"
+              : price === null
                 ? "Maxed"
                 : save.credits >= price
                   ? "Buy"
-                  : "Locked",
+                  : `Need $${price - save.credits} more`,
             tone: price !== null && save.credits >= price ? "primary" : "secondary",
             disabled: difficultyLocked || price === null || save.credits < price,
             onPress: () => {

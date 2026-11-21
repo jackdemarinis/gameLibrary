@@ -12,7 +12,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "@types/three": "^0.187.0",
+    "phaser": "^3.90.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

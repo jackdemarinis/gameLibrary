@@ -16,6 +16,8 @@ export class LevelSelectScene extends Phaser.Scene {
     this.drawBackdrop();
     this.renderChrome();
     this.input.keyboard?.on("keydown-ESC", () => this.scene.start("shop"));
+    // Enter jumps straight to the highlighted (latest) level's briefing.
+    this.input.keyboard?.on("keydown-ENTER", () => this.scene.start("level-intro"));
   }
 
   private renderChrome(): void {

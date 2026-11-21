@@ -16,6 +16,8 @@ export class LevelIntroScene extends Phaser.Scene {
     this.drawBackdrop();
     this.renderChrome();
     this.input.keyboard?.on("keydown-ESC", () => this.scene.start("level-select"));
+    this.input.keyboard?.on("keydown-ENTER", () => this.scene.start("battle"));
+    this.input.keyboard?.on("keydown-SPACE", () => this.scene.start("battle"));
   }
 
   private renderChrome(): void {
@@ -31,7 +33,7 @@ export class LevelIntroScene extends Phaser.Scene {
       credits: save.credits,
       actions: [
         {
-          label: "Start Mission",
+          label: "Start Mission (Enter)",
           tone: "primary",
           onPress: () => this.scene.start("battle"),
         },

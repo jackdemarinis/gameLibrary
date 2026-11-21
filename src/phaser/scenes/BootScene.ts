@@ -11,6 +11,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.bridge.clearChrome();
-    this.scene.start("menu");
+    // Each game page picks its opening scene: /dustline/ the tank menu, /lanternwake/ the adventure.
+    this.scene.start(document.body.dataset.startScene === "adventure" ? "adventure" : "menu");
   }
 }

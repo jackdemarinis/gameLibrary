@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { goToLibrary } from "../../shared/libraryNav";
 import { adventureContent } from "../../game/adventure/adventureContent";
 import {
   AdventureSimulation,
@@ -166,7 +167,7 @@ export class AdventureScene extends Phaser.Scene {
         this.setHelpOpen(false);
         return;
       }
-      this.scene.start("menu");
+      goToLibrary();
     });
   }
 
@@ -510,7 +511,7 @@ export class AdventureScene extends Phaser.Scene {
       helpBackAction: { label: "Back", tone: "primary", onPress: () => this.setHelpOpen(false) },
       actions: [
         { label: "Restart", tone: "secondary", onPress: () => this.scene.restart() },
-        { label: "Back To Library", tone: "danger", onPress: () => this.scene.start("menu") },
+        { label: "Back To Library", tone: "danger", onPress: () => goToLibrary() },
       ],
     };
     this.showHudIfChanged(model);
@@ -535,7 +536,7 @@ export class AdventureScene extends Phaser.Scene {
         notes: [],
         actions: [
           { label: "Play Again", tone: "primary", onPress: () => this.scene.restart() },
-          { label: "Back To Library", tone: "secondary", onPress: () => this.scene.start("menu") },
+          { label: "Back To Library", tone: "secondary", onPress: () => goToLibrary() },
         ],
       });
     });

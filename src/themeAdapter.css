@@ -38,13 +38,16 @@ h1, h2, h3, h4, h5, h6 { text-shadow: none; }
 .shop-credit-subvalue { color: var(--text-2); }
 .level-title, .brief-title { font-size: clamp(1.8rem, 4vw, 2.6rem); }
 .difficulty-modal-backdrop { background: var(--scrim); }
-.difficulty-modal { border-radius: var(--radius-lg); }
+.difficulty-modal { border-radius: var(--radius-lg); background: var(--surface-1); border: 1px solid var(--border-strong); box-shadow: var(--shadow-panel); }
 .difficulty-choice { background: var(--surface-2); color: var(--text); border-color: var(--border); border-radius: var(--radius-md); box-shadow: none; }
 .difficulty-choice small { color: var(--muted); }
 .difficulty-choice-active { border-color: var(--accent); background: var(--accent-soft); }
 .level-tile { background: var(--surface-2); color: var(--text); border-color: var(--border); border-radius: var(--radius-md); }
 .level-tile-active { background: var(--accent-soft); border-color: var(--accent); box-shadow: none; }
-.level-tile-locked { background: var(--bg-deep); color: var(--muted); }
+.level-tile-locked { background: var(--bg-deep); color: var(--muted); opacity: 0.6; cursor: not-allowed; }
+.level-tile-locked .level-tile-number { color: var(--muted); }
+.level-tile-state { display: block; margin-top: var(--sp-1); font-size: var(--fs-label); color: var(--muted); letter-spacing: var(--tracking-button); text-transform: uppercase; }
+.start-actions { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .shop-board-status { background: var(--surface-2); color: var(--accent-2); border-color: var(--border); border-radius: var(--radius-sm); }
 .shop-board-status-label { color: var(--muted); }
 .shop-weapon-pill { background: var(--accent-soft); color: var(--accent-tint); border-color: var(--border-accent); }

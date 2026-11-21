@@ -33,6 +33,9 @@ def main() -> None:
         if relativePath == "sw.js" or filePath.name.startswith("."):
             continue
         precacheFiles.append(f"./{relativePath}")
+        # Game pages are visited as folders (./petanque/), so cache that URL too.
+        if filePath.name == "index.html" and filePath.parent != distDir:
+            precacheFiles.append(f"./{filePath.parent.relative_to(distDir).as_posix()}/")
         digest.update(relativePath.encode("utf-8"))
         digest.update(filePath.read_bytes())
 

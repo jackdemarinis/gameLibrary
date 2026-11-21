@@ -72,6 +72,10 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin && !fontHosts.has(url.hostname)) {
     return;
   }
+  // Live server endpoints (online rooms, health) must never come from the cache.
+  if (url.origin === self.location.origin && (url.pathname.startsWith("/api/") || url.pathname.startsWith("/ws/"))) {
+    return;
+  }
   event.respondWith(request.mode === "navigate" ? networkFirst(request) : cacheFirst(request));
 });
 

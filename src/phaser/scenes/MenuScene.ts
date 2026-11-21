@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { adventureContent } from "../../game/adventure/adventureContent";
+import { goToLibrary } from "../../shared/libraryNav";
 import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
@@ -16,6 +16,12 @@ export class MenuScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome();
+    this.input.keyboard?.on("keydown-ENTER", () => this.startRun());
+  }
+
+  private startRun(): void {
+    this.bridge.loadOrCreateSave();
+    this.scene.start("shop");
   }
 
   private renderChrome(): void {
@@ -30,23 +36,13 @@ export class MenuScene extends Phaser.Scene {
       playAction: {
         label: "Play",
         tone: "primary",
-        onPress: () => {
-          this.bridge.loadOrCreateSave();
-          this.scene.start("shop");
-        },
+        onPress: () => this.startRun(),
       },
-      libraryCards: [
-        {
-          tag: "New · Survival Adventure",
-          title: adventureContent.title,
-          summary: adventureContent.tagline,
-          action: {
-            label: `Play ${adventureContent.title}`,
-            tone: "secondary",
-            onPress: () => this.scene.start("adventure"),
-          },
-        },
-      ],
+      secondaryAction: {
+        label: "‹ Game Library",
+        tone: "secondary",
+        onPress: goToLibrary,
+      },
     });
   }
 

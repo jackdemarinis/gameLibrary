@@ -25,6 +25,7 @@ export interface StartViewModel {
   subtitle: string;
   saveStatus: string;
   playAction: UiAction;
+  secondaryAction?: UiAction;
   libraryCards?: LibraryCardViewModel[];
 }
 
@@ -115,6 +116,9 @@ export class AppChrome {
   renderStart(model: StartViewModel): void {
     const actionMap = new Map<string, UiAction>();
     const playButton = this.renderActionButton("start-play", model.playAction, actionMap, "start-play-button");
+    const secondaryButton = model.secondaryAction
+      ? this.renderActionButton("start-secondary", model.secondaryAction, actionMap, "start-secondary-button")
+      : "";
     const libraryCards = (model.libraryCards ?? [])
       .map(
         (card, index) => `
@@ -154,7 +158,7 @@ export class AppChrome {
           </div>
           <div class="start-footer">
             <p class="start-save-status">${model.saveStatus}</p>
-            ${playButton}
+            <div class="start-actions">${secondaryButton}${playButton}</div>
           </div>
           ${
             libraryCards
@@ -306,6 +310,7 @@ export class AppChrome {
         >
           <span class="level-tile-number">${level.number}</span>
           <span class="level-tile-label">${level.label}</span>
+          ${level.unlocked ? "" : `<span class="level-tile-state">Locked · clear level ${level.number - 1}</span>`}
         </button>
       `;
     };
