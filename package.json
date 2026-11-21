@@ -5,5 +5,8 @@
   "scripts": {
     "build": "python3 scripts/buildAll.py --install",
     "test": "python3 scripts/testAll.py"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
