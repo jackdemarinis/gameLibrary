@@ -1,7 +1,16 @@
+import { dustlineCitadelLevel } from "./dustlineCitadel";
+import { quarrySwitchbacksLevel } from "./quarrySwitchbacks";
 import { relayStationLevel } from "./relayStation";
+import { scrapyardMazeLevel } from "./scrapyardMaze";
 import { trainingGroundLevel } from "./trainingGround";
 
-export const battleLevelOrder = [trainingGroundLevel, relayStationLevel] as const;
+export const battleLevelOrder = [
+  trainingGroundLevel,
+  relayStationLevel,
+  quarrySwitchbacksLevel,
+  scrapyardMazeLevel,
+  dustlineCitadelLevel,
+] as const;
 
 export function getBattleLevelById(levelId: string) {
   return battleLevelOrder.find((level) => level.id === levelId) ?? trainingGroundLevel;
