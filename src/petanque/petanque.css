@@ -1,0 +1,866 @@
+/* Pétanque Park overlay. Every colour, radius, shadow and font is a theme
+   token set from config/theme.ts. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--panel-shade);
+  font-family: var(--font-body);
+  color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#stage,
+#ui {
+  position: fixed;
+  inset: 0;
+}
+
+#stage canvas {
+  display: block;
+}
+
+#ui {
+  pointer-events: none;
+}
+
+#ui button,
+#ui input,
+.ppScreen > * {
+  pointer-events: auto;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.ppTeam0 {
+  --team: var(--team-a);
+}
+
+.ppTeam1 {
+  --team: var(--team-b);
+}
+
+/* ---------- shared pieces ---------- */
+
+.ppPanel {
+  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-shade) 100%);
+  border: 3px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 32px;
+}
+
+.ppPanel h2 {
+  margin: 0 0 18px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--text-strong);
+  text-align: center;
+}
+
+.ppButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 34px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--panel);
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow: 0 6px 0 var(--accent-deep), var(--shadow-soft);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.ppButton:hover {
+  box-shadow: 0 6px 0 var(--accent-deep), 0 0 0 6px var(--accent-glow);
+}
+
+.ppButton:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--accent-deep);
+}
+
+.ppButtonBig {
+  font-size: 1.7rem;
+  padding: 18px 64px;
+}
+
+.ppButtonGhost {
+  color: var(--text-strong);
+  background: var(--panel);
+  box-shadow: 0 6px 0 var(--panel-edge), var(--shadow-soft);
+}
+
+.ppButtonGhost:hover {
+  box-shadow: 0 6px 0 var(--panel-edge), 0 0 0 6px var(--accent-glow);
+}
+
+.ppButtonGhost:active {
+  box-shadow: 0 2px 0 var(--panel-edge);
+}
+
+.ppSegment {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: var(--meter-track);
+}
+
+.ppSegment button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 20px;
+  background: transparent;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.ppSegment button.isOn {
+  background: var(--panel);
+  color: var(--accent-deep);
+  box-shadow: var(--shadow-soft);
+}
+
+.ppActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+/* ---------- screens ---------- */
+
+.ppScreen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.ppScreen:empty {
+  display: none;
+}
+
+/* End-of-end results sit low so the jack and boules stay visible. */
+.ppScreen:has(.ppSummary:not(.ppFinal)) {
+  align-items: end;
+  padding-bottom: 32px;
+}
+
+.ppTitle {
+  text-align: center;
+  animation: ppPop 0.5s ease-out;
+}
+
+.ppLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 36px 18px 22px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  border: 3px solid var(--panel-edge);
+}
+
+.ppLogo h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 7vw, 4.2rem);
+  line-height: 0.95;
+  color: var(--text-strong);
+  text-align: left;
+}
+
+.ppLogo em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.ppLogoBall {
+  width: clamp(56px, 10vw, 86px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, var(--panel) 0 12%, var(--jack) 34%, var(--team-a) 120%);
+  box-shadow: var(--shadow-soft);
+  animation: ppBob 2.4s ease-in-out infinite;
+}
+
+.ppTagline {
+  margin: 18px auto 26px;
+  max-width: 420px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+}
+
+.ppSetup {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  text-align: center;
+  animation: ppPop 0.35s ease-out;
+}
+
+.ppTeams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 18px 0;
+  text-align: left;
+}
+
+.ppTeam {
+  border-radius: var(--radius-small);
+  padding: 12px;
+  background: var(--panel);
+  border: 3px solid var(--team);
+}
+
+.ppTeam h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  color: var(--team);
+}
+
+.ppSlot {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.ppSlot + .ppSlot {
+  border-top: 2px dashed var(--panel-edge);
+}
+
+.ppAvatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 22%, var(--avatar-hat) 0 30%, transparent 31%),
+    radial-gradient(circle at 50% 46%, var(--avatar-skin) 0 34%, transparent 35%),
+    radial-gradient(circle at 50% 120%, var(--avatar-shirt) 0 52%, transparent 53%),
+    var(--panel-shade);
+  box-shadow: inset 0 0 0 3px var(--panel-edge);
+}
+
+.ppSlotMain {
+  min-width: 0;
+}
+
+.ppName {
+  width: 100%;
+  border: 2px solid var(--panel-edge);
+  border-radius: 10px;
+  padding: 5px 8px;
+  font-weight: 800;
+  color: var(--text-strong);
+  background: var(--panel-shade);
+}
+
+.ppName:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.ppPicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.ppPicker span {
+  flex: 1;
+  text-align: center;
+}
+
+.ppPicker button {
+  border: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--meter-track);
+  font-weight: 900;
+}
+
+.ppToggle {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 800;
+  background: var(--meter-track);
+  color: var(--text-strong);
+}
+
+.ppToggle.isCpu {
+  background: var(--text-strong);
+  color: var(--panel);
+}
+
+.ppRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.ppSummary {
+  min-width: min(380px, 100%);
+  text-align: center;
+  border-color: var(--team, var(--panel-edge));
+  animation: ppPop 0.35s ease-out;
+}
+
+.ppSummary h2 {
+  color: var(--team, var(--text-strong));
+  font-size: 2.4rem;
+  margin-bottom: 6px;
+}
+
+.ppSummary p {
+  margin: 0 0 20px;
+  font-weight: 700;
+}
+
+.ppSummary small {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+.ppTrophy {
+  font-size: 3.4rem;
+  animation: ppBob 1.6s ease-in-out infinite;
+}
+
+.ppFinalScore {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  color: var(--text-strong);
+}
+
+.ppFinalScore span {
+  color: var(--team);
+}
+
+/* ---------- in-game HUD ---------- */
+
+.ppHud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 18px;
+}
+
+.ppScoreboard {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.ppScore {
+  min-width: 150px;
+  padding: 8px 16px;
+  border-radius: var(--radius-small);
+  background: var(--panel);
+  border: 3px solid var(--panel-edge);
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ppScore.isTurn {
+  border-color: var(--team);
+  box-shadow: 0 0 0 4px var(--accent-glow), var(--shadow-soft);
+}
+
+.ppScoreName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--team);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ppPoint {
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--team);
+  color: var(--panel);
+}
+
+.ppScoreValue {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+.ppDots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.ppDots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--meter-track);
+}
+
+.ppDots i.isLeft {
+  background: var(--team);
+}
+
+.ppScoreMid {
+  display: grid;
+  place-content: center;
+  padding: 0 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--text-strong);
+  text-align: center;
+  background: var(--panel);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-soft);
+}
+
+.ppScoreMid small {
+  font-family: var(--font-body);
+  color: var(--text-muted);
+}
+
+.ppTurn {
+  margin-top: 10px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: var(--team);
+  color: var(--panel);
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+}
+
+.ppInfo:empty,
+.ppTurn:empty {
+  display: none;
+}
+
+.ppBottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(560px, 100%);
+}
+
+.ppInfo {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text-strong);
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+}
+
+.ppMeterBox {
+  width: 100%;
+  padding: 10px 14px 14px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 3px solid var(--panel-edge);
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ppMeterBox.isActive {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-glow), var(--shadow);
+}
+
+.ppStyleChip {
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--accent-deep);
+  text-align: center;
+}
+
+.ppMeter {
+  position: relative;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--meter-track);
+  overflow: hidden;
+}
+
+.ppMeterSweet {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--meter-sweet);
+  opacity: 0.85;
+}
+
+.ppMeterFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--meter-power);
+  opacity: 0.9;
+}
+
+.ppMeterLock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  margin-left: -2px;
+  background: var(--text-strong);
+}
+
+.ppMeterMarker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 6px;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: var(--panel);
+  box-shadow: 0 0 0 2px var(--text-strong);
+}
+
+.ppHelp {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  opacity: 0.85;
+}
+
+.ppMeterHidden .ppMeterBox,
+.ppHelpHidden .ppHelp {
+  visibility: hidden;
+}
+
+.ppRoomChip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text-strong);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  box-shadow: var(--shadow-soft);
+}
+
+.ppRoomChip:empty {
+  display: none;
+}
+
+/* ---------- library link ---------- */
+
+.ppHome {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 2;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text-strong);
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: var(--shadow-soft);
+  pointer-events: auto;
+}
+
+.ppHome:hover {
+  box-shadow: 0 0 0 4px var(--accent-glow), var(--shadow-soft);
+}
+
+/* ---------- title menu & lobby ---------- */
+
+.ppTitleMenu {
+  width: 460px;
+  max-width: calc(100vw - 32px);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.ppDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ppDivider::before,
+.ppDivider::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--panel-edge);
+}
+
+.ppField {
+  display: grid;
+  gap: 4px;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.ppOnlineRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.ppJoin {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ppTitleMenu .ppButtonBig {
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ppCode {
+  flex: 1;
+  min-width: 0;
+  border: 2px solid var(--panel-edge);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-align: center;
+  color: var(--text-strong);
+  background: var(--panel-shade);
+}
+
+.ppCode:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.ppJoin .ppButton,
+.ppOnlineRow > .ppButton {
+  white-space: nowrap;
+  padding: 10px 22px;
+  font-size: 1.05rem;
+}
+
+.ppFormError {
+  margin: 0;
+  min-height: 1.2em;
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.ppNotice {
+  margin: 0 auto 16px;
+  max-width: 420px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--danger);
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
+}
+
+.ppButton:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.ppEyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ppCodeBig {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+
+.ppCodeBig span {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 68px;
+  border-radius: var(--radius-small);
+  background: var(--panel-shade);
+  border: 3px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--accent-deep);
+  box-shadow: 0 0 0 5px var(--accent-glow);
+  user-select: text;
+}
+
+.ppLobbyHint {
+  margin: 8px 0 14px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.ppSlotName {
+  padding: 5px 0;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.ppSlot.isMine {
+  border-radius: var(--radius-small);
+  background: var(--panel-shade);
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* ---------- toasts ---------- */
+
+.ppToasts {
+  position: absolute;
+  top: 34%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.ppToast {
+  padding: 10px 26px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 3px solid var(--team, var(--accent));
+  color: var(--team, var(--text-strong));
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  animation: ppPop 0.3s ease-out;
+  text-align: center;
+}
+
+@keyframes ppPop {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ppBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 640px) {
+  .ppTeams {
+    grid-template-columns: 1fr;
+  }
+
+  .ppScore {
+    min-width: 0;
+    padding: 6px 10px;
+  }
+
+  .ppScoreValue {
+    font-size: 1.6rem;
+  }
+
+  .ppPanel {
+    padding: 20px 16px;
+  }
+
+  .ppToast {
+    font-size: 1.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
