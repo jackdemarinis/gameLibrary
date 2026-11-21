@@ -79,8 +79,8 @@ npm test           # = python3 scripts/testAll.py: isolation check, all game tes
 
 ## Deploy (Railway)
 
-One service. `nixpacks.toml` installs Node and Python and runs `npm run build`,
-which runs `buildAll.py --install` (a clean `npm ci` per project). `railway.json`
+One service, built from the `Dockerfile`: a Node 22 stage runs `npm run build`
+(`buildAll.py --install`, a clean `npm ci` per project), then a slim Python image serves `dist/`. `railway.json`
 starts uvicorn and health-checks `/api/health`. Set any `.env.example` variables
 in Railway; the defaults are fine. Rooms live in memory, so keep one replica.
 

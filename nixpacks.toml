@@ -1,6 +1,0 @@
-# One service: Vite builds the static games, FastAPI serves them plus the
-# multiplayer room WebSocket. Needs both Node (build) and Python (build + run).
-providers = ["node", "python"]
-
-[phases.build]
-cmds = ["npm run build"]
