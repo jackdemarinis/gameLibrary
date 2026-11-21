@@ -13,8 +13,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The DOM title screen paints the pixel camo field over this.
     this.cameras.main.setBackgroundColor(worldTheme.background);
-    this.drawBackdrop();
     this.renderChrome();
     this.input.keyboard?.on("keydown-ENTER", () => this.startRun());
   }
@@ -44,29 +44,5 @@ export class MenuScene extends Phaser.Scene {
         onPress: goToLibrary,
       },
     });
-  }
-
-  private drawBackdrop(): void {
-    const graphics = this.add.graphics();
-    const highlight = this.add.graphics();
-
-    graphics.fillGradientStyle(
-      0x10361f,
-      0x0f4d27,
-      worldTheme.background,
-      worldTheme.ground,
-      0.98,
-    );
-    graphics.fillRect(0, 0, gameConfig.width, gameConfig.height);
-
-    for (let x = -160; x < gameConfig.width + 180; x += 180) {
-      graphics.fillStyle(0x0a2515, 0.25);
-      graphics.fillRect(x, 0, 88, gameConfig.height);
-    }
-
-    highlight.fillStyle(0xf2c544, 0.08);
-    highlight.fillTriangle(920, 90, 1240, 220, 990, 480);
-    highlight.fillStyle(0x8dc764, 0.1);
-    highlight.fillTriangle(120, 420, 440, 700, 90, 760);
   }
 }

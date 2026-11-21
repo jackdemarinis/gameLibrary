@@ -1,3 +1,5 @@
+import { getDustlineMenuArt } from "./dustlineMenuArt";
+
 export interface UiAction {
   label: string;
   tone: "primary" | "secondary" | "danger";
@@ -141,6 +143,11 @@ export class AppChrome {
     const secondaryButton = model.secondaryAction
       ? this.renderActionButton("start-secondary", model.secondaryAction, actionMap, "start-secondary-button")
       : "";
+    const art = getDustlineMenuArt();
+    const titleWords = model.title
+      .split(" ")
+      .map((word) => `<span class="startTitleWord" aria-hidden="true">${word}</span>`)
+      .join("");
     const libraryCards = (model.libraryCards ?? [])
       .map(
         (card, index) => `
@@ -155,27 +162,20 @@ export class AppChrome {
       .join("");
 
     this.root.innerHTML = `
-      <section class="start-screen">
+      <section class="start-screen"${art.backdrop ? ` style="background-image: url('${art.backdrop}')"` : ""}>
         <article class="start-panel">
           <div class="start-art">
             <div class="start-logo">
-              <p class="eyebrow start-eyebrow">Arcade Campaign</p>
-              <h1 class="start-title">${model.title}</h1>
+              <p class="start-eyebrow">Arcade Campaign</p>
+              <h1 class="start-title" aria-label="${model.title}">${titleWords}</h1>
               <p class="start-subtitle">${model.subtitle}</p>
             </div>
-            <div class="start-tank-illustration" aria-hidden="true">
-              <span class="start-shell start-shell-a"></span>
-              <span class="start-shell start-shell-b"></span>
-              <span class="start-smoke start-smoke-a"></span>
-              <span class="start-smoke start-smoke-b"></span>
-              <div class="start-tank-shadow"></div>
-              <div class="start-tank-body">
-                <span class="start-tank-track start-tank-track-left"></span>
-                <span class="start-tank-track start-tank-track-right"></span>
-                <span class="start-tank-hull"></span>
-                <span class="start-tank-turret"></span>
-                <span class="start-tank-barrel"></span>
-              </div>
+            <div class="startHero" aria-hidden="true">
+              <img class="startHeroPuff startHeroPuffA" src="${art.puff}" alt="" />
+              <img class="startHeroPuff startHeroPuffB" src="${art.puff}" alt="" />
+              <img class="startHeroShell startHeroShellA" src="${art.shellUp}" alt="" />
+              <img class="startHeroShell startHeroShellB" src="${art.shellDown}" alt="" />
+              <img class="startHeroTank" src="${art.tank}" alt="" />
             </div>
           </div>
           <div class="start-footer">
