@@ -3,7 +3,7 @@
 h1, h2, h3, h4, h5, h6 { text-shadow: none; }
 .shell-frame { background: var(--bg); }
 .menu-panel, .hud-card, .hud-sidebar-card, .hud-bar, .hud-modal-card, .hud-result-card,
-.shop-panel, .start-panel, .level-panel, .brief-panel {
+.shop-panel, .level-panel, .brief-panel {
   background: var(--surface-1); border-color: var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel);
 }
 .menu-title, .menu-stat-value, .hud-bar-kpi-value, .hud-kpi-value, .hud-help-button,
@@ -31,10 +31,9 @@ h1, h2, h3, h4, h5, h6 { text-shadow: none; }
 .shop-subtitle, .shop-status, .shop-next-mission, .shop-side-copy, .shop-upgrade-bonus { color: var(--text-2); }
 .shop-side-copy strong, .shop-upgrade-title { color: var(--accent-2); }
 .shop-upgrade-badge { background: var(--surface-2); border-color: var(--border); border-radius: var(--radius-sm); }
-.start-title, .level-title, .brief-title, .difficulty-modal-title, .shop-board-title,
+.level-title, .brief-title, .difficulty-modal-title, .shop-board-title,
 .level-score, .level-tile-number { font-family: var(--font-display); color: var(--accent-2); text-shadow: none; line-height: 1.1; }
-.start-title { font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: -.04em; overflow-wrap: anywhere; }
-.start-subtitle, .start-save-status, .level-meta, .brief-copy, .shop-board-copy,
+.level-meta, .brief-copy, .shop-board-copy,
 .shop-credit-subvalue { color: var(--text-2); }
 .level-title, .brief-title { font-size: clamp(1.8rem, 4vw, 2.6rem); }
 .difficulty-modal-backdrop { background: var(--scrim); }
@@ -47,14 +46,12 @@ h1, h2, h3, h4, h5, h6 { text-shadow: none; }
 .level-tile-locked { background: var(--bg-deep); color: var(--muted); opacity: 0.6; cursor: not-allowed; }
 .level-tile-locked .level-tile-number { color: var(--muted); }
 .level-tile-state { display: block; margin-top: var(--sp-1); font-size: var(--fs-label); color: var(--muted); letter-spacing: var(--tracking-button); text-transform: uppercase; }
-.start-actions { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .shop-board-status { background: var(--surface-2); color: var(--accent-2); border-color: var(--border); border-radius: var(--radius-sm); }
 .shop-board-status-label { color: var(--muted); }
 .shop-weapon-pill { background: var(--accent-soft); color: var(--accent-tint); border-color: var(--border-accent); }
-.start-panel { overflow-y: auto; }
 
 /* JackGames chrome: flat terminal look, matching the home page. */
-.start-title, .menu-title, .level-title, .brief-title, .difficulty-modal-title, .shop-board-title {
+.menu-title, .level-title, .brief-title, .difficulty-modal-title, .shop-board-title {
   font-weight: 800; text-transform: none; letter-spacing: -0.01em; color: var(--text-bright); text-shadow: var(--title-shadow);
 }
 .eyebrow, .shop-eyebrow { color: var(--accent); letter-spacing: var(--tracking-label); font-weight: 800; }

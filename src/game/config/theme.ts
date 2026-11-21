@@ -84,3 +84,26 @@ export function applyThemeVariables(root: HTMLElement): void {
   root.style.setProperty("--gameAccentSoft", uiTheme.accentSoft);
   root.style.setProperty("--accent-strong", uiTheme.accentStrong);
 }
+
+/**
+ * Pixel-art palette for the Dustline title screen (camo field, hero tank, shells, smoke).
+ * Painted at art resolution by src/ui/dustlineMenuArt.ts and scaled up with no smoothing.
+ */
+export const menuArtTheme = {
+  outline: pixelTheme.outline,
+  camo: [0x123d1b, 0x1a5224, 0x22692e, 0x2c7e37, 0x3a9442, 0x4caa50],
+  tank: [0xd2ea86, 0x93c85c, 0x649f3d, 0x43722c, 0x2c4d1f],
+  treadDark: pixelTheme.treadDark,
+  treadMid: pixelTheme.treadMid,
+  treadLight: pixelTheme.treadLight,
+  wheelFace: 0x6f7668,
+  wheelLight: 0xa3ab97,
+  hub: pixelTheme.steelGap,
+  decal: pixelTheme.coinFace,
+  rivet: 0xb8d679,
+  brass: [0xfff0a0, 0xf1c24c, 0xc98a1c, 0x8a5410],
+  flash: [0xfff6cc, 0xffd24a, 0xf6851f],
+  flashEdge: 0x8a3a10,
+  smoke: [0xf0ecc4, 0xcfc993, 0xa29d66],
+  smokeEdge: 0x55532f,
+} as const;
