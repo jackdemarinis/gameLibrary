@@ -39,7 +39,7 @@ export class MenuScene extends Phaser.Scene {
         onPress: () => this.startRun(),
       },
       secondaryAction: {
-        label: "‹ Game Library",
+        label: "‹ JackGames",
         tone: "secondary",
         onPress: goToLibrary,
       },

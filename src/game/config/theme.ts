@@ -32,6 +32,50 @@ export const worldTheme = {
   fogUnexploredAlpha: 1,
 } as const;
 
+/**
+ * Pixel-art palette for the Dustline battlefield (art, not UI chrome).
+ * Every battle texture is painted from these colours at 4 world px per art pixel.
+ */
+export const pixelTheme = {
+  grass: 0x2f6b34,
+  grassAlt: 0x2c6431,
+  grassDark: 0x245428,
+  grassLight: 0x3b7d3c,
+  grassSeam: 0x27592b,
+  grassShadow: 0x1a3d1d,
+  pebble: 0x6f7a55,
+  flower: 0xd9c25a,
+  outOfBounds: 0x101a12,
+  outOfBoundsAlt: 0x0c140e,
+  steelFace: 0x8d9296,
+  steelLight: 0xc9ccc8,
+  steelShade: 0x5d6266,
+  steelGap: 0x262a2c,
+  steelRivet: 0xe4e6df,
+  stoneFace: 0x4b5450,
+  stoneLight: 0x6d7670,
+  stoneShade: 0x353c39,
+  stoneGap: 0x1b201e,
+  brickFace: 0xc4582c,
+  brickLight: 0xe27d45,
+  brickMortar: 0x5a2a17,
+  brickHole: 0x1d1310,
+  woodFace: 0xb7843f,
+  woodLight: 0xd8a85a,
+  woodDark: 0x7a4f1f,
+  woodEdge: 0x4a2c10,
+  metalCorner: 0xb8b9ad,
+  outline: 0x141810,
+  treadDark: 0x1e211c,
+  treadMid: 0x3d413a,
+  treadLight: 0x5d6358,
+  coinFace: 0xf1c24c,
+  coinLight: 0xfff0a0,
+  coinDark: 0xa86d12,
+  healthBack: 0x1c1410,
+  white: 0xfff6cc,
+} as const;
+
 export function applyThemeVariables(root: HTMLElement): void {
   root.style.setProperty("--panel-base", uiTheme.panelBase);
   root.style.setProperty("--text-primary", uiTheme.textPrimary);
