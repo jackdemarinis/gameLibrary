@@ -23,3 +23,8 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Python backend
+.venv/
+__pycache__/
+.env
