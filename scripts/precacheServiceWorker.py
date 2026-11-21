@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Write the precache list and build version into dist/sw.js after `vite build`.
+"""Write the precache list and build version into dist/sw.js after scripts/buildAll.py assembles dist/.
 
 Lists every file in dist/ (except sw.js itself) so the service worker caches the
 whole app on install, and derives the version from the file contents so each
 deploy gets a fresh cache and the previous deploy's cache is pruned.
 
-Usage: python3 scripts/precacheServiceWorker.py [distDir]   (run by `npm run build`)
+Usage: python3 scripts/precacheServiceWorker.py [distDir]   (run by scripts/buildAll.py)
 """
 import hashlib
 import json

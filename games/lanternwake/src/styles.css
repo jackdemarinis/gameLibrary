@@ -1,0 +1,1662 @@
+:root {
+  color-scheme: dark;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(230, 138, 38, 0.16), transparent 36%),
+    linear-gradient(180deg, #07130f 0%, #06100c 56%, #030705 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.shell-frame {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 184, 56, 0.08), transparent 42%),
+    radial-gradient(circle at 20% 15%, rgba(125, 171, 91, 0.2), transparent 24%),
+    linear-gradient(180deg, rgba(6, 11, 9, 0.92), rgba(3, 7, 5, 0.98));
+}
+
+.shell-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.02) 50%, transparent 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.015) 0,
+      rgba(255, 255, 255, 0.015) 10px,
+      transparent 10px,
+      transparent 34px
+    );
+  pointer-events: none;
+}
+
+.game-root {
+  position: absolute;
+  inset: 0;
+}
+
+.chrome-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.chrome-root > * {
+  pointer-events: auto;
+}
+
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(12px, 2vh, 24px) clamp(18px, 3vw, 32px);
+  overflow: hidden;
+}
+
+.menu-panel,
+.hud-card,
+.hud-sidebar-card,
+.hud-bar,
+.hud-modal-card,
+.hud-result-card {
+  border: 1px solid rgba(205, 214, 154, 0.22);
+  background:
+    linear-gradient(180deg, rgba(16, 54, 38, 0.94), rgba(9, 29, 21, 0.94)),
+    var(--panel-base);
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.menu-panel {
+  position: relative;
+  width: min(920px, 100%);
+  padding: 32px;
+  overflow: hidden;
+  clip-path: polygon(0 18px, 18px 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%);
+}
+
+.menu-header {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--gameAccentSoft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.menu-title {
+  margin: 0;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: clamp(2.8rem, 6vw, 5rem);
+  line-height: 0.88;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow:
+    0 4px 0 rgba(79, 40, 0, 0.9),
+    0 18px 36px rgba(0, 0, 0, 0.4);
+}
+
+.menu-subtitle {
+  max-width: 42ch;
+  margin: 14px 0 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.42;
+}
+
+.menu-subtitle-wide {
+  max-width: 52ch;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 9px 14px;
+  border: 1px solid rgba(248, 198, 83, 0.22);
+  border-radius: 999px;
+  background: rgba(248, 198, 83, 0.1);
+  color: var(--text-strong);
+  font-size: 0.9rem;
+}
+
+.menu-panel-wide {
+  width: min(1120px, 100%);
+  max-height: calc(100vh - 32px);
+  padding: 22px 24px;
+  border-radius: 28px;
+  clip-path: none;
+}
+
+.menu-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.menu-hero-column,
+.menu-board {
+  display: grid;
+  gap: 12px;
+}
+
+.menu-header-left {
+  justify-items: start;
+  text-align: left;
+}
+
+.menu-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.menu-stat-card {
+  border: 1px solid rgba(202, 218, 168, 0.14);
+  background: rgba(7, 20, 15, 0.48);
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.menu-stat-label,
+.menu-level-state {
+  display: inline-flex;
+  margin: 0;
+  color: rgba(226, 236, 180, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.menu-stat-value {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.8rem;
+  line-height: 0.94;
+  letter-spacing: 0.04em;
+}
+
+.menu-stat-detail,
+.menu-section-copy {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.3;
+  font-size: 0.88rem;
+}
+
+.menu-action-row {
+  margin-top: 0;
+  justify-content: flex-start;
+}
+
+.menu-board-section {
+  border: 1px solid rgba(205, 214, 154, 0.14);
+  border-radius: 20px;
+  background: rgba(7, 20, 15, 0.44);
+  padding: 14px;
+}
+
+.menu-board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.menu-section-eyebrow {
+  margin: 0;
+}
+
+.menu-chip-row,
+.menu-level-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.menu-chip-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.menu-level-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.menu-chip,
+.menu-level-card {
+  width: 100%;
+  border: 1px solid rgba(207, 223, 168, 0.15);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(25, 74, 53, 0.82), rgba(11, 35, 25, 0.9));
+  color: var(--text-strong);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease;
+}
+
+.menu-chip {
+  min-height: 76px;
+  padding: 11px 13px;
+}
+
+.menu-level-card {
+  min-height: 94px;
+  padding: 12px 13px;
+}
+
+.menu-chip:hover:not(:disabled),
+.menu-level-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.menu-chip:disabled,
+.menu-level-card:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.menu-chip-active,
+.menu-level-card-active {
+  border-color: rgba(248, 198, 83, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(248, 198, 83, 0.16);
+}
+
+.menu-chip span,
+.menu-level-card span {
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.menu-chip small,
+.menu-level-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  line-height: 1.28;
+  font-size: 0.88rem;
+}
+
+.menu-level-card .menu-level-state {
+  margin-bottom: 8px;
+}
+
+.menu-weapon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.menu-weapon-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 198, 83, 0.18);
+  background: rgba(248, 198, 83, 0.08);
+  color: var(--text-strong);
+  font-size: 0.88rem;
+}
+
+.feature-grid,
+.hud-kpis {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 28px;
+}
+
+.feature-card,
+.hud-kpi,
+.hud-bar-kpi {
+  border: 1px solid rgba(202, 218, 168, 0.14);
+  background: rgba(7, 20, 15, 0.48);
+  padding: 14px 16px;
+}
+
+.feature-card-title,
+.hud-card-title,
+.hud-sidebar-title {
+  margin: 0 0 6px;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.feature-card-body,
+.hud-copy {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.hud-copy-secondary {
+  margin-top: 10px;
+  color: var(--text-primary);
+}
+
+.action-row,
+.hud-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.action-row {
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.chrome-button {
+  border: none;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.chrome-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.chrome-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.chrome-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chrome-button-primary {
+  background: linear-gradient(180deg, #f8c653, #d98c23);
+  color: #2f1800;
+  box-shadow: 0 10px 28px rgba(217, 140, 35, 0.28);
+}
+
+.chrome-button-secondary {
+  background: rgba(89, 132, 87, 0.26);
+  color: var(--text-strong);
+  border: 1px solid rgba(207, 223, 168, 0.16);
+}
+
+.chrome-button-danger {
+  background: rgba(181, 76, 33, 0.22);
+  color: #ffd5b8;
+  border: 1px solid rgba(232, 121, 58, 0.18);
+}
+
+.hud-bar-screen,
+.hud-result-screen {
+  position: absolute;
+  inset: 0;
+}
+
+.hud-bar-screen {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 18px;
+  pointer-events: none;
+}
+
+.hud-bar {
+  width: min(760px, calc(100vw - 36px));
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 26px;
+  pointer-events: auto;
+}
+
+.hud-bar-kpis {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hud-bar-kpi {
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: 18px;
+}
+
+.hud-bar-kpi-metered {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hud-bar-kpi-label {
+  display: block;
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hud-bar-kpi-value {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.55rem;
+  letter-spacing: 0.04em;
+}
+
+.hud-bar-kpi-meter {
+  display: block;
+  margin-top: 10px;
+}
+
+.hud-bar-kpi-meter-track {
+  display: block;
+  width: 100%;
+  height: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(214, 224, 168, 0.2);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(5, 14, 10, 0.88), rgba(7, 22, 15, 0.9)),
+    rgba(4, 10, 7, 0.84);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.04),
+    inset 0 -1px 4px rgba(0, 0, 0, 0.28);
+}
+
+.hud-bar-kpi-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #c85f2a 0%, #e08b2d 52%, #f8c653 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 230, 0.24),
+    0 0 20px rgba(240, 153, 49, 0.22);
+  transition: width 100ms linear;
+}
+
+.hud-help-button {
+  width: 58px;
+  min-width: 58px;
+  min-height: 58px;
+  padding: 0;
+  border-radius: 999px;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.hud-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: rgba(2, 8, 6, 0.56);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.hud-modal-card {
+  width: min(460px, 100%);
+  padding: 22px 24px;
+  border-radius: 24px;
+}
+
+.hud-modal-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.hud-modal-actions .chrome-button {
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.hud-result-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.hud-result-card {
+  width: min(560px, calc(100vw - 40px));
+  padding: 18px 20px;
+  pointer-events: auto;
+  border-radius: 20px;
+}
+
+.hud-card {
+  padding: 14px 16px;
+}
+
+.hud-card-main {
+  max-width: 320px;
+}
+
+.hud-sidebar-card {
+  padding: 14px 16px;
+}
+
+.hud-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.hud-kpi {
+  min-height: 74px;
+}
+
+.hud-action-row {
+  flex-wrap: nowrap;
+  margin-top: 16px;
+}
+
+.hud-action-row .chrome-button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding-left: 16px;
+  padding-right: 16px;
+  text-align: center;
+}
+
+.hud-kpi-value {
+  display: block;
+  margin-top: 4px;
+  color: var(--accent-strong);
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+}
+
+.hud-sidebar-list {
+  display: grid;
+  gap: 10px;
+  padding-left: 18px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.shop-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.shop-panel {
+  width: min(1180px, calc(100vw - 16px));
+  height: min(704px, calc(100vh - 16px));
+  padding: 0;
+  overflow: hidden;
+  clip-path: none;
+  border: 4px solid rgba(12, 32, 21, 0.95);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(118, 177, 71, 0.14), transparent 18%),
+    radial-gradient(circle at 82% 24%, rgba(116, 193, 92, 0.1), transparent 18%),
+    linear-gradient(180deg, #1a8a46 0%, #146f3a 42%, #0c4c28 100%);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 4px rgba(35, 88, 49, 0.78),
+    inset 0 1px 0 rgba(226, 255, 196, 0.08);
+}
+
+.shop-shell {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+}
+
+.shop-shell::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(8, 44, 24, 0.45);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.shop-header,
+.shop-header-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.shop-marquee {
+  min-width: 0;
+}
+
+.shop-eyebrow {
+  color: rgba(232, 243, 178, 0.82);
+}
+
+.shop-title {
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
+  color: #ff9d2b;
+  text-shadow:
+    0 4px 0 rgba(108, 52, 0, 0.8),
+    0 14px 26px rgba(0, 0, 0, 0.26);
+}
+
+.shop-subtitle,
+.shop-status,
+.shop-next-mission,
+.shop-side-copy {
+  margin: 0;
+  color: #e6f0bc;
+  line-height: 1.45;
+}
+
+.shop-subtitle {
+  max-width: 52ch;
+  margin-top: 8px;
+  font-size: 0.96rem;
+}
+
+.shop-status {
+  margin-top: 10px;
+  font-weight: 700;
+  color: #eff2c6;
+  font-size: 0.92rem;
+}
+
+.shop-credit-pill {
+  position: relative;
+  min-width: 188px;
+  padding: 14px 18px 16px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, #7d3613 0%, #602108 100%);
+  border: 4px solid rgba(39, 92, 41, 0.92);
+  box-shadow:
+    inset 0 0 0 2px rgba(160, 209, 110, 0.35),
+    inset 0 10px 18px rgba(255, 176, 50, 0.08),
+    0 10px 26px rgba(0, 0, 0, 0.18);
+}
+
+.shop-credit-pill::before,
+.shop-credit-pill::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b4d680;
+  box-shadow: 0 0 0 2px rgba(30, 74, 31, 0.9);
+}
+
+.shop-credit-pill::before {
+  left: 10px;
+}
+
+.shop-credit-pill::after {
+  right: 10px;
+}
+
+.shop-credit-label {
+  display: block;
+  color: rgba(228, 235, 170, 0.82);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.shop-credit-value {
+  display: block;
+  margin-top: 2px;
+  color: #ffc128;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.95;
+  text-shadow: 0 2px 0 rgba(81, 35, 0, 0.72);
+}
+
+.shop-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 12px;
+  min-height: 0;
+}
+
+.shop-board,
+.shop-side-card {
+  border-radius: 24px;
+  border: 3px solid rgba(13, 72, 31, 0.65);
+  background:
+    linear-gradient(180deg, rgba(14, 118, 56, 0.94), rgba(9, 92, 44, 0.95));
+  box-shadow:
+    inset 0 1px 0 rgba(220, 255, 182, 0.08),
+    inset 0 -8px 18px rgba(4, 40, 17, 0.18);
+}
+
+.shop-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+}
+
+/* Two card rows share the board's height so the whole garage fits on one screen. */
+.shop-grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.shop-upgrade-card {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 22px;
+  border: 2px solid rgba(18, 81, 37, 0.72);
+  background:
+    linear-gradient(180deg, rgba(20, 126, 60, 0.68), rgba(15, 96, 47, 0.72));
+  min-height: 0;
+}
+
+.shop-upgrade-card-maxed {
+  background:
+    linear-gradient(180deg, rgba(28, 110, 54, 0.6), rgba(14, 77, 37, 0.72));
+}
+
+.shop-upgrade-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.shop-upgrade-badge {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  border: 2px solid rgba(15, 70, 29, 0.7);
+  background: linear-gradient(180deg, rgba(35, 122, 58, 0.92), rgba(12, 68, 30, 0.96));
+  color: #ffe268;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shop-upgrade-heading {
+  min-width: 0;
+}
+
+.shop-upgrade-tag {
+  display: block;
+  color: rgba(227, 238, 163, 0.78);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.shop-upgrade-title {
+  margin: 4px 0 0;
+  color: #f0d85d;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.shop-upgrade-price {
+  margin: 0;
+  color: #ffb62f;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.65rem;
+  line-height: 0.95;
+  letter-spacing: 0.03em;
+}
+
+.shop-upgrade-bonus {
+  margin: 0;
+  color: #f4f0bc;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.shop-upgrade-track {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 228, 170, 0.15);
+  background: rgba(9, 40, 20, 0.55);
+}
+
+.shop-upgrade-track-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c66c23, #ecac32 52%, #ffe268 100%);
+}
+
+.shop-upgrade-pips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.shop-upgrade-pip {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(8, 42, 20, 0.72);
+  border: 1px solid rgba(218, 228, 170, 0.14);
+}
+
+.shop-upgrade-pip-active {
+  background: linear-gradient(180deg, #ffd84c, #e79a2d);
+  border-color: rgba(255, 216, 76, 0.3);
+}
+
+.shop-upgrade-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: rgba(227, 238, 163, 0.74);
+  font-size: 0.8rem;
+  line-height: 1.28;
+}
+
+.shop-upgrade-button {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 14px;
+}
+
+.shop-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: 0;
+}
+
+.shop-side-card {
+  padding: 14px;
+}
+
+.shop-side-label {
+  margin: 0;
+  color: rgba(232, 243, 178, 0.78);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.shop-side-title {
+  margin: 8px 0 0;
+  color: #ffbe33;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.5rem;
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shop-next-mission {
+  margin-top: 8px;
+}
+
+.shop-side-label-secondary {
+  margin-top: 14px;
+}
+
+.shop-side-copy {
+  margin-top: 8px;
+}
+
+.shop-side-copy strong {
+  color: #ffdc77;
+}
+
+.shop-side-actions {
+  display: grid;
+  align-content: end;
+  gap: 10px;
+}
+
+.shop-footer-button {
+  width: 100%;
+  min-height: 46px;
+}
+
+.arcade-card {
+  border: 3px solid rgba(12, 61, 30, 0.72);
+  background:
+    linear-gradient(180deg, rgba(18, 112, 54, 0.94), rgba(10, 76, 37, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(236, 255, 201, 0.08),
+    inset 0 -8px 16px rgba(4, 30, 12, 0.2),
+    0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+.level-screen,
+.brief-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+
+.level-panel,
+.brief-panel {
+  width: min(980px, calc(100vw - 36px));
+  border-radius: 28px;
+}
+
+.hud-bar {
+  width: min(920px, calc(100vw - 36px));
+}
+
+.hud-bar-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.shop-panel {
+  width: min(1180px, calc(100vw - 16px));
+  height: min(704px, calc(100vh - 16px));
+}
+
+.shop-header-arcade {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.shop-header-tank {
+  position: relative;
+  width: 124px;
+  height: 78px;
+}
+
+.shop-header-track,
+.shop-header-hull,
+.shop-header-turret,
+.shop-header-barrel {
+  position: absolute;
+  display: block;
+}
+
+.shop-header-track {
+  bottom: 0;
+  width: 54px;
+  height: 20px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(90deg, #18381d 0, #18381d 10px, #326c39 10px, #326c39 18px);
+  border: 2px solid rgba(8, 29, 12, 0.9);
+}
+
+.shop-header-track-left {
+  left: 12px;
+}
+
+.shop-header-track-right {
+  right: 8px;
+}
+
+.shop-header-hull {
+  left: 18px;
+  right: 8px;
+  bottom: 14px;
+  height: 26px;
+  border-radius: 20px 24px 12px 14px;
+  background: linear-gradient(180deg, #73d65b, #37963d);
+  border: 2px solid rgba(8, 53, 22, 0.86);
+  transform: skewX(-12deg);
+}
+
+.shop-header-turret {
+  left: 28px;
+  bottom: 32px;
+  width: 46px;
+  height: 28px;
+  border-radius: 20px 24px 16px 14px;
+  background: linear-gradient(180deg, #77dd6a, #419f46);
+  border: 2px solid rgba(8, 53, 22, 0.86);
+}
+
+.shop-header-barrel {
+  left: 64px;
+  bottom: 42px;
+  width: 44px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #8aed7e, #37923d);
+  border: 2px solid rgba(8, 53, 22, 0.86);
+}
+
+.shop-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 12px;
+  min-height: 0;
+}
+
+.shop-board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.shop-board-title {
+  margin: 0;
+  color: #f0d759;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2rem;
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shop-board-copy {
+  margin: 8px 0 0;
+  max-width: 34ch;
+  color: #e7efbf;
+  font-size: 0.94rem;
+  line-height: 1.32;
+}
+
+.shop-board-status {
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(12, 67, 30, 0.74);
+  background: rgba(8, 48, 21, 0.36);
+  color: #f8e490;
+}
+
+.shop-board-status strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shop-board-status-label {
+  display: block;
+  color: rgba(227, 238, 163, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.shop-credit-subvalue {
+  display: block;
+  margin-top: 6px;
+  color: rgba(232, 243, 178, 0.84);
+  font-size: 0.8rem;
+}
+
+.shop-weapon-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.shop-weapon-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(115, 123, 38, 0.54);
+  background: rgba(73, 81, 18, 0.38);
+  color: #fff0a6;
+  font-weight: 700;
+}
+
+.difficulty-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(4, 22, 10, 0.54);
+  backdrop-filter: blur(2px);
+}
+
+.difficulty-modal {
+  width: min(340px, calc(100vw - 40px));
+  padding: 22px 18px 18px;
+  border-radius: 28px;
+  text-align: center;
+}
+
+.difficulty-modal-title {
+  margin: 0 0 16px;
+  color: #f1d948;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2.1rem;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.difficulty-choice-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.difficulty-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 3px solid rgba(110, 129, 36, 0.52);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffd53d, #dd941c);
+  color: #5c3200;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 252, 214, 0.34);
+}
+
+.difficulty-choice span,
+.difficulty-choice strong,
+.difficulty-choice small {
+  display: block;
+  text-align: left;
+}
+
+.difficulty-choice strong {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.difficulty-choice small {
+  grid-column: 1 / -1;
+  color: rgba(78, 49, 6, 0.82);
+  font-size: 0.76rem;
+  line-height: 1.18;
+  text-transform: none;
+}
+
+.difficulty-choice-active {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.level-panel,
+.brief-panel {
+  padding: 26px;
+}
+
+.level-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+}
+
+.level-header {
+  text-align: center;
+}
+
+.level-title,
+.brief-title {
+  margin: 8px 0 0;
+  color: #f1d948;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.level-title {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  line-height: 0.92;
+}
+
+.level-meta {
+  margin: 10px 0 0;
+  color: #e5edbc;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.level-tile {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  padding: 12px 10px;
+  border-radius: 18px;
+  border: 3px solid rgba(163, 154, 104, 0.46);
+  background: linear-gradient(180deg, #e7dbbc, #c3b99d);
+  color: #4c3a23;
+  cursor: pointer;
+}
+
+.level-tile-number {
+  color: #a76400;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2rem;
+  line-height: 0.9;
+}
+
+.level-tile-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.level-tile-locked {
+  background: linear-gradient(180deg, #bfb59a, #9a9078);
+  color: rgba(75, 57, 31, 0.6);
+}
+
+.level-tile-active {
+  border-color: rgba(245, 214, 66, 0.8);
+  background: linear-gradient(180deg, #ffd84d, #e6a229);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 212, 0.32),
+    0 14px 24px rgba(223, 152, 30, 0.2);
+}
+
+.level-score {
+  margin: 0;
+  text-align: center;
+  color: #f6d040;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 2rem;
+  line-height: 0.95;
+}
+
+.level-actions,
+.brief-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brief-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+}
+
+.brief-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 0.88;
+}
+
+.brief-copy {
+  margin: 0;
+  color: #e7efbf;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.brief-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.brief-stat-card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(11, 62, 29, 0.72);
+  background: rgba(8, 45, 21, 0.34);
+}
+
+.brief-stat-label {
+  display: block;
+  color: rgba(226, 236, 180, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.brief-stat-value {
+  display: block;
+  margin-top: 6px;
+  color: #ffd14a;
+  font-family: Impact, Haettenschweiler, "Franklin Gothic Heavy", sans-serif;
+  font-size: 1.55rem;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.hidden {
+  display: none;
+}
+
+canvas {
+  display: block;
+}
+
+@media (max-width: 980px) {
+  .hud-bar {
+    width: min(620px, calc(100vw - 28px));
+  }
+
+  .hud-bar-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .menu-panel,
+  .hud-card,
+  .hud-sidebar-card,
+  .hud-result-card {
+    max-width: none;
+  }
+
+  .menu-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-chip-row {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-sidebar {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: none;
+    align-items: start;
+  }
+
+  .level-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .brief-stat-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell-frame {
+    overflow-y: auto;
+  }
+
+  .chrome-root {
+    overflow: auto;
+  }
+
+  .menu-screen {
+    position: absolute;
+    align-items: flex-start;
+    min-height: 100%;
+    padding: 16px;
+    overflow: auto;
+  }
+
+  .hud-bar-screen {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .hud-bar {
+    width: calc(100vw - 24px);
+    gap: 10px;
+    padding: 10px;
+    border-radius: 22px;
+  }
+
+  .hud-bar-kpis {
+    gap: 8px;
+  }
+
+  .hud-bar-kpi {
+    padding: 9px 10px;
+  }
+
+  .hud-bar-kpi-value {
+    font-size: 1.2rem;
+  }
+
+  .hud-help-button {
+    width: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 1.4rem;
+  }
+
+  .hud-result-screen {
+    padding: 16px;
+  }
+
+  .hud-result-card {
+    width: calc(100vw - 32px);
+  }
+
+  .hud-modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .menu-panel {
+    padding: 24px 20px;
+    overflow: visible;
+  }
+
+  .level-screen,
+  .brief-screen {
+    padding: 12px;
+  }
+
+  .level-panel,
+  .brief-panel {
+    width: calc(100vw - 24px);
+    padding: 18px;
+  }
+
+  .menu-title {
+    font-size: 2.8rem;
+  }
+
+  .menu-panel-wide {
+    padding: 20px;
+  }
+
+  .menu-stat-grid,
+  .menu-level-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Narrow screens: the whole garage scrolls instead of clipping. */
+  .shop-screen {
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .shop-panel {
+    width: calc(100vw - 16px);
+    height: auto;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .shop-shell {
+    height: auto;
+  }
+
+  .shop-grid {
+    overflow: visible;
+  }
+
+  .shop-shell {
+    padding: 16px;
+  }
+
+  .shop-header,
+  .shop-header-arcade,
+  .shop-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-header-tank {
+    display: none;
+  }
+
+  .shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .level-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .level-actions,
+  .brief-actions {
+    flex-direction: column;
+  }
+}
+
+/* Short screens (landscape phones, small laptops): drop flavor text so the garage still fits. */
+@media (max-height: 620px) {
+  .shop-board-copy,
+  .shop-upgrade-summary {
+    display: none;
+  }
+
+  .shop-board-title {
+    font-size: 1.4rem;
+  }
+
+  .shop-board-header {
+    margin-bottom: 8px;
+  }
+
+  .shop-upgrade-card {
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .shop-upgrade-button {
+    align-self: end;
+    min-height: 32px;
+    padding: 6px 12px;
+  }
+}

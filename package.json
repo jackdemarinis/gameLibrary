@@ -1,25 +1,9 @@
 {
-  "name": "dustline-brigade",
+  "name": "game-library",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "description": "JackGames site: builds the independent projects in library/ and games/*. No shared code lives here.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build && python3 scripts/precacheServiceWorker.py",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest --run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "@types/three": "^0.187.0",
-    "phaser": "^3.90.0",
-    "three": "^0.187.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.0",
-    "vitest": "^3.2.4"
+    "build": "python3 scripts/buildAll.py --install",
+    "test": "python3 scripts/testAll.py"
   }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the JackGames web-app icons (PNG) into public/icons/.
+"""Generate the JackGames web-app icons (PNG) into library/public/icons/.
 
 The JackGames mark: a phosphor-green terminal window with a ">_" prompt on
 near-black, the same shape as the inline SVG logo in src/library/main.ts.
@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 repoRoot = Path(__file__).resolve().parent.parent
-outDir = repoRoot / "public" / "icons"
+outDir = repoRoot / "library" / "public" / "icons"
 
 background = (10, 13, 11, 255)  # --bg #0a0d0b
 green = (62, 240, 138, 255)     # --accent #3ef08a
