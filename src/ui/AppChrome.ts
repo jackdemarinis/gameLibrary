@@ -89,8 +89,30 @@ export interface HudKpi {
   };
 }
 
+/** Portrait plate for character-driven games (top-left). */
+export interface HudStatusViewModel {
+  portraitUrl: string;
+  name: string;
+  caption?: string;
+  meter: { label: string; current: number; max: number };
+}
+
+/** One inventory slot in a bottom hotbar; no icon means an empty slot. */
+export interface HudSlotViewModel {
+  label: string;
+  iconUrl?: string;
+  count?: string;
+  active?: boolean;
+  dim?: boolean;
+}
+
 export interface HudViewModel {
   layout: "active" | "result";
+  /** Per-game look for the HUD; omitted means the default JackGames chrome. */
+  skin?: "lanternwake";
+  /** When set, the active HUD shows a portrait plate + hotbar instead of the KPI bar. */
+  status?: HudStatusViewModel;
+  hotbar?: HudSlotViewModel[];
   title: string;
   copy: string;
   objective: string;
@@ -164,7 +186,7 @@ export class AppChrome {
             libraryCards
               ? `
                 <section class="librarySection" aria-label="Game library">
-                  <p class="eyebrow libraryEyebrow">Game Library</p>
+                  <p class="eyebrow libraryEyebrow">More on JackGames</p>
                   <div class="libraryGrid">${libraryCards}</div>
                 </section>
               `
@@ -190,7 +212,6 @@ export class AppChrome {
       `;
     };
     const renderOffer = (offer: ShopOfferViewModel, index: number): string => {
-      const progress = offer.maxLevel > 0 ? Math.min(100, (offer.level / offer.maxLevel) * 100) : 0;
       const priceLabel = offer.priceValue === null ? "MAX" : `$${offer.priceValue}`;
 
       return `
@@ -204,7 +225,6 @@ export class AppChrome {
             <span class="shop-upgrade-price">${priceLabel}</span>
           </div>
           <p class="shop-upgrade-bonus">${offer.nextBonus}</p>
-          <div class="shop-upgrade-track"><span class="shop-upgrade-track-fill" style="width: ${progress}%"></span></div>
           <div class="shop-upgrade-pips">
             ${Array.from({ length: offer.maxLevel }, (_, pipIndex) => `
               <span class="shop-upgrade-pip${pipIndex < offer.level ? " shop-upgrade-pip-active" : ""}"></span>
@@ -220,20 +240,6 @@ export class AppChrome {
       <section class="shop-screen">
         <article class="shop-panel">
           <div class="shop-shell">
-            <header class="shop-header shop-header-arcade">
-              <div class="shop-header-tank" aria-hidden="true">
-                <span class="shop-header-track shop-header-track-left"></span>
-                <span class="shop-header-track shop-header-track-right"></span>
-                <span class="shop-header-hull"></span>
-                <span class="shop-header-turret"></span>
-                <span class="shop-header-barrel"></span>
-              </div>
-              <div class="shop-credit-pill">
-                <span class="shop-credit-label">Coins</span>
-                <strong class="shop-credit-value">$${model.credits}</strong>
-                <span class="shop-credit-subvalue">Total score: ${model.totalScore}</span>
-              </div>
-            </header>
             <div class="shop-stage">
               <section class="shop-board arcade-card">
                 <div class="shop-board-header">
@@ -251,6 +257,11 @@ export class AppChrome {
                 </div>
               </section>
               <aside class="shop-sidebar">
+                <div class="shop-credit-pill">
+                  <span class="shop-credit-label">Coins</span>
+                  <strong class="shop-credit-value">$${model.credits}</strong>
+                  <span class="shop-credit-subvalue">Total score: ${model.totalScore}</span>
+                </div>
                 <article class="shop-side-card arcade-card">
                   <p class="shop-side-label">Unlocked Weapons</p>
                   <div class="shop-weapon-stack">
@@ -411,19 +422,70 @@ export class AppChrome {
       `;
     };
 
-    if (model.layout === "active") {
-      this.root.innerHTML = `
-        <section class="hud-bar-screen">
-          <article class="hud-bar">
-            <div class="hud-bar-kpis">
-              ${model.kpis.map((kpi) => renderActiveKpi(kpi)).join("")}
+    const skinClass = model.skin ? ` hudSkin-${model.skin}` : "";
+
+    const renderStatus = (status: HudStatusViewModel): string => {
+      const safeMax = Math.max(1, status.meter.max);
+      const fraction = Math.max(0, Math.min(1, status.meter.current / safeMax));
+      return `
+        <article class="hudStatus">
+          <span class="hudPortrait"><img src="${status.portraitUrl}" alt="" /></span>
+          <div class="hudStatusBody">
+            <span class="hudStatusName">${status.name}</span>
+            <div
+              class="hudHealth${fraction <= 0.3 ? " hudHealthLow" : ""}"
+              role="progressbar"
+              aria-label="${status.meter.label}"
+              aria-valuemin="0"
+              aria-valuemax="${safeMax}"
+              aria-valuenow="${Math.max(0, Math.round(status.meter.current))}"
+            >
+              <span class="hudHealthFill" style="width: ${fraction * 100}%"></span>
+              <span class="hudHealthText">${Math.max(0, Math.round(status.meter.current))}/${safeMax}</span>
             </div>
-            ${
-              model.helpAction
-                ? this.renderActionButton("hud-help", model.helpAction, actionMap, "hud-help-button chrome-button chrome-button-secondary")
-                : ""
-            }
-          </article>
+            ${status.caption ? `<span class="hudStatusCaption">${status.caption}</span>` : ""}
+          </div>
+        </article>
+      `;
+    };
+
+    const renderSlot = (slot: HudSlotViewModel, index: number): string => `
+      <div
+        class="hudSlot${slot.active ? " hudSlotActive" : ""}${slot.dim ? " hudSlotDim" : ""}${slot.iconUrl ? "" : " hudSlotEmpty"}"
+        title="${slot.label}"
+        aria-label="${slot.label}${slot.count ? `: ${slot.count}` : ""}"
+      >
+        <span class="hudSlotKey" aria-hidden="true">${index + 1}</span>
+        ${slot.iconUrl ? `<img class="hudSlotIcon" src="${slot.iconUrl}" alt="" />` : ""}
+        ${slot.count ? `<span class="hudSlotCount">${slot.count}</span>` : ""}
+      </div>
+    `;
+
+    const helpButton = model.helpAction
+      ? this.renderActionButton("hud-help", model.helpAction, actionMap, "hud-help-button chrome-button chrome-button-secondary")
+      : "";
+
+    if (model.layout === "active") {
+      const mainHud =
+        model.status || model.hotbar
+          ? `
+            ${model.status ? renderStatus(model.status) : ""}
+            <article class="hudHotbar">
+              ${(model.hotbar ?? []).map(renderSlot).join("")}
+              ${helpButton}
+            </article>
+          `
+          : `
+            <article class="hud-bar">
+              <div class="hud-bar-kpis">
+                ${model.kpis.map((kpi) => renderActiveKpi(kpi)).join("")}
+              </div>
+              ${helpButton}
+            </article>
+          `;
+      this.root.innerHTML = `
+        <section class="hud-bar-screen${skinClass}">
+          ${mainHud}
           ${
             model.helpOpen
               ? `
@@ -457,7 +519,7 @@ export class AppChrome {
       `;
     } else {
       this.root.innerHTML = `
-        <section class="hud-result-screen">
+        <section class="hud-result-screen${skinClass}">
           <article class="hud-result-card">
             <p class="eyebrow">${model.title}</p>
             <h2 class="hud-card-title">Briefing</h2>

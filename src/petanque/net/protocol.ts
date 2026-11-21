@@ -1,7 +1,8 @@
 // Messages Pétanque Park clients relay to each other through the room server.
 // The host's browser is the referee: it alone runs the rules and sends `outcome`.
 
-import type { ThrowStyle } from "../config/rules";
+import type { CpuLevel, ThrowStyle } from "../config/rules";
+import type { CourtId } from "../content/courts";
 import type { MatchState } from "../simulation/match";
 import type { MeterPhase } from "../simulation/meter";
 import type { BallSnapshot, ThrowInput } from "../simulation/physics";
@@ -12,11 +13,14 @@ export interface LobbySlot {
   name: string;
   characterId: string;
   team: number;
+  // CPU slots only.
+  cpuLevel?: CpuLevel;
 }
 
 export interface LobbyState {
   playerCount: 2 | 4;
   targetScore: number;
+  courtId?: CourtId;
   slots: LobbySlot[];
 }
 

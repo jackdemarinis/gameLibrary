@@ -1,5 +1,21 @@
-// The library's catalogue. Add a game here and it appears on the home menu,
-// numbered in this order.
+// The JackGames catalogue. Add a game here and it appears on the home page.
+// The first game is the featured one.
+
+export type CategoryId = "sports" | "arcade" | "adventure" | "multiplayer";
+
+export interface Category {
+  id: CategoryId;
+  label: string;
+  // Short pitch for the "pick by mood" cards.
+  pitch: string;
+}
+
+export const categories: Category[] = [
+  { id: "multiplayer", label: "With Friends", pitch: "Play together online" },
+  { id: "sports", label: "Sports", pitch: "Aim, time it, score" },
+  { id: "arcade", label: "Arcade", pitch: "Fast rounds, upgrades" },
+  { id: "adventure", label: "Adventure", pitch: "Explore and craft" },
+];
 
 export interface GameEntry {
   id: string;
@@ -9,8 +25,9 @@ export interface GameEntry {
   description: string;
   href: string;
   art: string;
-  // CSS background-position for the key art, so the subject stays clear of the menu.
+  // CSS background-position for the cover, so the subject stays in frame.
   artFocus: string;
+  categories: CategoryId[];
   badges: string[];
   players: string;
   controls: string;
@@ -26,8 +43,9 @@ export const games: GameEntry[] = [
       "Sunny-park boules with golf-style swing timing. Play the CPU on one PC, or host a room and send friends a four-letter code.",
     href: "./petanque/",
     art: "./library/petanque.jpg",
-    artFocus: "60% 40%",
-    badges: ["Online", "3D"],
+    artFocus: "50% 78%",
+    categories: ["sports", "multiplayer"],
+    badges: ["New", "Online"],
     players: "1–4 players",
     controls: "Mouse · Space",
   },
@@ -40,7 +58,8 @@ export const games: GameEntry[] = [
       "A top-down tank campaign across scorched frontier levels. Earn credits, unlock weapons and climb the difficulty ladder.",
     href: "./dustline/",
     art: "./library/dustline.jpg",
-    artFocus: "100% 50%",
+    artFocus: "40% 55%",
+    categories: ["arcade"],
     badges: ["Campaign"],
     players: "1 player",
     controls: "WASD · Mouse",
@@ -54,7 +73,8 @@ export const games: GameEntry[] = [
       "Gather timber and ironstone, forge the Ember Lantern, drive back the shades and still the Mirewarden in four short chapters.",
     href: "./lanternwake/",
     art: "./library/lanternwake.jpg",
-    artFocus: "50% 50%",
+    artFocus: "50% 62%",
+    categories: ["adventure"],
     badges: ["Pixel art"],
     players: "1 player",
     controls: "WASD · Space · E",

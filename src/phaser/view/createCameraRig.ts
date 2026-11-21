@@ -8,4 +8,6 @@ export function createCameraRig(
   camera.setBounds(0, 0, gameConfig.worldWidth, gameConfig.worldHeight);
   camera.startFollow(focus, true, 0.08, 0.08);
   camera.setZoom(gameConfig.cameraZoom);
+  // Whole-pixel scrolling keeps the pixel art from shimmering as the camera follows.
+  camera.setRoundPixels(true);
 }

@@ -1,0 +1,149 @@
+/* ------------------------------------------------------------------
+ * JackGames brand layer — the ONE place this site sets token values.
+ *
+ * Load right after the vendored theme.css. It re-points the shared tokens
+ * (same names, so every var(--token) in the site picks them up) to the
+ * JackGames "homebrew terminal" look: near-black, phosphor green, amber,
+ * ANSI cyan/magenta, IBM Plex Sans with Plex Mono for labels, slightly rounded corners, flat
+ * surfaces (no gradients, no drop shadows).
+ *
+ * This is a documented exception to the portfolio theme; see MIGRATION.md.
+ * Site stylesheets still never hardcode colours, fonts, radii or shadows:
+ * add a token here instead.
+ * ------------------------------------------------------------------ */
+
+/* Font, loaded in each page's <head>:
+   https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap */
+
+:root {
+  /* surfaces */
+  --bg: #0a0d0b;
+  --bg-deep: #070908;
+  --surface-1: #0f1411;
+  --surface-2: #151c17;
+  --surface-3: #1c251e;
+  --surface-sunken: #070908;
+  --surface-glass: #0a0d0b;
+
+  /* borders: thin phosphor lines */
+  --border: #1f2b22;
+  --border-strong: #2e4034;
+  --border-accent: #3ef08a;
+
+  /* text */
+  --text: #c9e8cf;
+  --text-bright: #eafff0;
+  --text-2: #a3c4aa;
+  --text-3: #8fb197;
+  --muted: #6b8a72;
+  --muted-2: #445a4a;
+
+  /* accent: phosphor green, with near-black ink for text on it */
+  --accent: #3ef08a;
+  --accent-2: #7dffb3;
+  --accent-hover: #6dffa8;
+  --accent-tint: #b9ffd5;
+  --accent-ink: #03160a;
+  --accent-edge: #3ef08a;
+  --accent-soft: rgba(62, 240, 138, 0.1);
+  --accent-glow: rgba(62, 240, 138, 0.35);
+  /* Flat on purpose: "gradient" tokens resolve to solid colours. */
+  --accent-gradient: #3ef08a;
+  --accent-gradient-bright: #6dffa8;
+  --bullet-gradient: #3ef08a;
+
+  /* highlight: amber, the second terminal colour */
+  --highlight: #ffb000;
+  --highlight-soft: rgba(255, 176, 0, 0.12);
+  --highlight-ink: #1d1300;
+
+  /* overlays */
+  --scrim: rgba(4, 6, 5, 0.86);
+  --row-hover: rgba(62, 240, 138, 0.05);
+  --row-active: rgba(62, 240, 138, 0.1);
+
+  /* ANSI-style status / category colours */
+  --green: #3ef08a;
+  --green-soft: rgba(62, 240, 138, 0.12);
+  --red: #ff5f56;
+  --red-soft: rgba(255, 95, 86, 0.14);
+  --amber: #ffb000;
+  --amber-soft: rgba(255, 176, 0, 0.12);
+  --info: #4fd6ff;
+  --info-soft: rgba(79, 214, 255, 0.12);
+  --grape: #ff6ad5;
+  --grape-soft: rgba(255, 106, 213, 0.12);
+
+  /* type: a clean sans for reading, its mono sibling for labels and UI bits */
+  --font-display: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --tracking-label: 0.08em;
+  --tracking-button: 0.04em;
+  --line-height: 1.55;
+
+  /* shape: slightly rounded */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-pill: 8px;
+
+  /* depth: none. Edges come from 1px borders instead. */
+  --shadow-card: none;
+  --shadow-card-lift: none;
+  --shadow-panel: none;
+  --shadow-board: none;
+  --shadow-inset: none;
+  --shadow-accent: none;
+  --shadow-accent-lift: none;
+  --shadow-accent-press: none;
+  --ring-accent: 0 0 0 1px #3ef08a;
+  --ring-highlight: 0 0 0 1px #ffb000;
+  --glow-text: none;
+  --glow-text-soft: none;
+  --title-shadow: none;
+
+  /* Lanternwake in-game HUD: carved wood + parchment, matching the canvas
+     objective sign (values mirror src/game/config/adventureTheme.ts). */
+  --font-pixel: 'Pixelify Sans', ui-monospace, monospace;
+  --lw-wood: #6b4426;
+  --lw-wood-dark: #523319;
+  --lw-wood-light: #8a5a33;
+  --lw-wood-edge: #3d2614;
+  --lw-ink: #2a1a0e;
+  --lw-parchment: #fff4d6;
+  --lw-parchment-2: #e8cf9e;
+  --lw-parchment-dim: #c9a878;
+  --lw-health: #e5483f;
+  --lw-health-low: #ff8a5c;
+  --lw-ember: #ffc457;
+  --lw-scrim: rgba(11, 16, 51, 0.72);
+  --lw-bevel: inset 0 3px 0 #8a5a33, inset 0 -3px 0 #523319;
+  --lw-bevel-press: inset 0 3px 0 #523319;
+  --lw-frame: inset 0 0 0 4px #6b4426;
+  --lw-ember-glow: 0 0 10px rgba(255, 196, 87, 0.75);
+  --lw-sky: #9fd2f0;
+  --lw-slot: #3a2413;
+  --lw-slot-empty: #2f1d10;
+  --lw-slot-inset: inset 0 3px 0 #24160b, inset 3px 0 0 #24160b;
+  --lw-frame-light: inset 0 0 0 2px #c89058;
+  --lw-bar-shine: inset 0 3px 0 rgba(255, 255, 255, 0.28);
+  --lw-text-outline: 2px 0 0 #2a1a0e, -2px 0 0 #2a1a0e, 0 2px 0 #2a1a0e, 0 -2px 0 #2a1a0e;
+}
+
+/* The shared base styles put a white glow on h1 and white text on the accent. */
+h1 {
+  text-shadow: none;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 1px solid var(--highlight);
+  outline-offset: 2px;
+}

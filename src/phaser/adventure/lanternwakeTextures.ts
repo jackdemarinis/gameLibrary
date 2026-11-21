@@ -7,6 +7,7 @@ export const lanternwakeTextureKeys = {
   path: "lwPathTile",
   shrine: "lwShrineTile",
   gate: "lwGateTile",
+  cobble: "lwCobbleTile",
   light: "lwLight",
 } as const;
 
@@ -45,6 +46,21 @@ export function ensureLanternwakeTextures(scene: Phaser.Scene): void {
   buildTile(scene, lanternwakeTextureKeys.gate, 8, 32, (x, y) =>
     brick(x, y, 37, { mortar: t.stoneDark, face: t.stoneMid, light: t.stoneLight, fleck: t.shrineMoss }),
   );
+
+  // Rounded cobbles in offset rows, 6x4 art pixels each, with dark grout between.
+  buildTile(scene, lanternwakeTextureKeys.cobble, 12, 16, (x, y) => {
+    const row = Math.floor(y / 4);
+    const shiftedX = (x + (row % 2) * 3) % 6;
+    const localY = y % 4;
+    if (localY === 3 || shiftedX === 5) {
+      return t.cobbleDark;
+    }
+    const corner = (shiftedX === 0 || shiftedX === 4) && (localY === 0 || localY === 2);
+    if (corner) {
+      return t.cobbleMid;
+    }
+    return localY === 0 ? t.cobbleLight : pixelHash(x, y, 53) < 0.15 ? t.cobbleMid : t.cobbleLight;
+  });
 
   buildLight(scene);
 }
@@ -122,4 +138,26 @@ function buildLight(scene: Phaser.Scene): void {
   context.fillStyle = gradient;
   context.fillRect(0, 0, size, size);
   canvas.refresh();
+}
+
+/** Renders a sprite map to a PNG data URL for DOM use (HUD icons), at the sprite's own scale. */
+export function spriteDataUrl(sprite: PixelSprite): string {
+  const { rows, scale, palette } = sprite;
+  const canvas = document.createElement("canvas");
+  canvas.width = rows[0].length * scale;
+  canvas.height = rows.length * scale;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return "";
+  }
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x += 1) {
+      const color = palette[row[x]];
+      if (color !== undefined) {
+        context.fillStyle = `#${color.toString(16).padStart(6, "0")}`;
+        context.fillRect(x * scale, y * scale, scale, scale);
+      }
+    }
+  });
+  return canvas.toDataURL("image/png");
 }

@@ -17,7 +17,18 @@ import {
   type BreakableObstacleLayer,
 } from "../view/createBreakableObstacleLayer";
 import { createFogOfWarLayer, type FogOfWarLayer } from "../view/createFogOfWarLayer";
-import { createTankSprite, type TankSprite } from "../view/drawTank";
+import {
+  createTankSprite,
+  drawPixelHealthBar,
+  syncTankPose,
+  type TankArtPalette,
+  type TankSprite,
+} from "../view/drawTank";
+import {
+  ensureBattlefieldTexture,
+  ensureCoinTexture,
+  ensureShotTexture,
+} from "../view/dustlinePixelArt";
 import { spawnSimulationEffect } from "../view/spawnSimulationEffect";
 
 export class BattleScene extends Phaser.Scene {
@@ -32,8 +43,8 @@ export class BattleScene extends Phaser.Scene {
   private arrowKeys?: Phaser.Types.Input.Keyboard.CursorKeys;
   private playerSprite!: TankSprite;
   private readonly enemySprites = new Map<string, TankSprite>();
-  private readonly projectileSprites = new Map<string, Phaser.GameObjects.Arc>();
-  private readonly pickupSprites = new Map<string, Phaser.GameObjects.Arc>();
+  private readonly projectileSprites = new Map<string, Phaser.GameObjects.Image>();
+  private readonly pickupSprites = new Map<string, Phaser.GameObjects.Image>();
   private breakableObstacleLayer!: BreakableObstacleLayer;
   private fogLayer!: FogOfWarLayer;
   private lastHudSignature = "";
@@ -51,7 +62,8 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     const save = this.bridge.loadOrCreateSave();
-    this.simulation = new BattleSimulation(this.bridge.getBattleLevel(), save);
+    const level = this.bridge.getBattleLevel();
+    this.simulation = new BattleSimulation(level, save);
     this.resultsQueued = false;
     this.helpModalOpen = false;
     this.lastHudSignature = "";
@@ -62,8 +74,7 @@ export class BattleScene extends Phaser.Scene {
     this.currentHud = hud;
 
     this.cameras.main.setBackgroundColor(worldTheme.background);
-    this.drawGround();
-    this.drawIndestructibleWalls(snapshot.indestructibleWalls);
+    this.drawBattlefield(level.id, snapshot.indestructibleWalls);
     this.createSprites(snapshot);
     this.breakableObstacleLayer = createBreakableObstacleLayer(this);
     this.fogLayer = createFogOfWarLayer(this);
@@ -139,12 +150,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private createSprites(snapshot: BattleSnapshot): void {
-    this.playerSprite = createTankSprite(this, snapshot.player.x, snapshot.player.y, {
-      hull: worldTheme.playerHull,
-      turret: worldTheme.playerTurret,
-      shadowAlpha: 0.32,
-      scale: 1,
-    });
+    this.playerSprite = createTankSprite(this, snapshot.player.x, snapshot.player.y, playerPalette);
 
     snapshot.enemies.forEach((enemy) => {
       if (!enemy.alive) {
@@ -207,13 +213,16 @@ export class BattleScene extends Phaser.Scene {
     });
 
     projectiles.forEach((projectile) => {
-      const color = projectile.faction === "player" ? worldTheme.accentSoft : worldTheme.enemyGlow;
       const existing = this.projectileSprites.get(projectile.id);
 
       if (!existing) {
-        const circle = this.add.circle(projectile.x, projectile.y, projectile.radius, color, 1);
-        circle.setDepth(5);
-        this.projectileSprites.set(projectile.id, circle);
+        const key =
+          projectile.faction === "player"
+            ? ensureShotTexture(this, "player", worldTheme.accentSoft)
+            : ensureShotTexture(this, "enemy", worldTheme.enemyGlow);
+        const shot = this.add.image(projectile.x, projectile.y, key);
+        shot.setDepth(5);
+        this.projectileSprites.set(projectile.id, shot);
       }
 
       const sprite = this.projectileSprites.get(projectile.id);
@@ -238,18 +247,17 @@ export class BattleScene extends Phaser.Scene {
 
     pickups.forEach((pickup) => {
       if (!this.pickupSprites.has(pickup.id)) {
-        const coin = this.add.circle(pickup.x, pickup.y, pickup.radius, worldTheme.accentSoft, 0.92);
-        coin.setStrokeStyle(4, 0x4a3400, 0.95);
+        const coin = this.add.image(pickup.x, pickup.y, ensureCoinTexture(this));
         coin.setDepth(4);
+        // Coin spin: squash the width in a few hard steps, like a flipbook.
         this.tweens.add({
           targets: coin,
-          scaleX: 1.12,
-          scaleY: 1.12,
-          alpha: 0.7,
-          duration: 440,
+          scaleX: 0.25,
+          duration: 520,
           yoyo: true,
           repeat: -1,
-          ease: "Sine.easeInOut",
+          ease: "Stepped",
+          easeParams: [3],
         });
         this.pickupSprites.set(pickup.id, coin);
       }
@@ -263,10 +271,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private syncTankSprite(sprite: TankSprite, tank: TankSnapshot): void {
-    sprite.container.setPosition(tank.x, tank.y);
-    sprite.container.setRotation(tank.hullRotation);
-    sprite.artContainer.setY(-tank.recoilOffset);
-    sprite.turret.setRotation(tank.turretRotation - tank.hullRotation);
+    syncTankPose(sprite, tank.x, tank.y, tank.hullRotation, tank.turretRotation, tank.recoilOffset);
     sprite.container.setAlpha(tank.alive ? 1 : 0.28);
     this.renderEnemyHealthBar(sprite, tank);
   }
@@ -398,59 +403,19 @@ export class BattleScene extends Phaser.Scene {
     this.bridge.clearChrome();
   }
 
-  private drawGround(): void {
-    const graphics = this.add.graphics();
-
-    graphics.fillStyle(worldTheme.ground, 1);
-    graphics.fillRect(0, 0, gameConfig.worldWidth, gameConfig.worldHeight);
-
-    for (let x = 0; x < gameConfig.worldWidth; x += gameConfig.gridSize) {
-      for (let y = 0; y < gameConfig.worldHeight; y += gameConfig.gridSize) {
-        const useAlt = (x / gameConfig.gridSize + y / gameConfig.gridSize) % 2 === 0;
-
-        graphics.fillStyle(useAlt ? worldTheme.groundStripe : worldTheme.ground, 0.24);
-        graphics.fillRect(x, y, gameConfig.gridSize - 2, gameConfig.gridSize - 2);
-      }
-    }
-
-    for (let index = 0; index < 70; index += 1) {
-      graphics.fillStyle(worldTheme.floorDust, 0.11);
-      graphics.fillCircle(
-        Phaser.Math.Between(0, gameConfig.worldWidth),
-        Phaser.Math.Between(0, gameConfig.worldHeight),
-        Phaser.Math.Between(2, 5),
-      );
-    }
-  }
-
-  private drawIndestructibleWalls(walls: readonly { x: number; y: number; width: number; height: number }[]): void {
-    const graphics = this.add.graphics();
-    graphics.setDepth(1);
-
-    walls.forEach((wall) => {
-      graphics.fillStyle(worldTheme.wallFill, 1);
-      graphics.lineStyle(4, worldTheme.wallStroke, 0.95);
-      graphics.fillRoundedRect(wall.x, wall.y, wall.width, wall.height, 10);
-      graphics.strokeRoundedRect(wall.x, wall.y, wall.width, wall.height, 10);
-    });
+  /** Ground and indestructible walls are baked into one pixel-art image per level. */
+  private drawBattlefield(levelId: string, walls: BattleSnapshot["indestructibleWalls"]): void {
+    const key = ensureBattlefieldTexture(this, levelId, gameConfig.worldWidth, gameConfig.worldHeight, walls);
+    this.add.image(0, 0, key).setOrigin(0).setDepth(0);
   }
 
   private renderEnemyHealthBar(sprite: TankSprite, tank: TankSnapshot): void {
-    const width = 56;
-    const height = 8;
-
-    sprite.healthBar.clear();
-
     if (tank.faction !== "enemy" || !tank.showHealthBar || !tank.alive) {
+      sprite.healthBar.clear();
       return;
     }
 
-    const fillWidth = Math.max(0, Math.min(width, (tank.health / tank.maxHealth) * width));
-
-    sprite.healthBar.fillStyle(worldTheme.enemyHealthBarBack, 0.92);
-    sprite.healthBar.fillRoundedRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4, 5);
-    sprite.healthBar.fillStyle(worldTheme.enemyHealthBarFill, 1);
-    sprite.healthBar.fillRoundedRect(-width / 2, -height / 2, fillWidth, height, 4);
+    drawPixelHealthBar(sprite.healthBar, tank.health / tank.maxHealth, worldTheme.enemyHealthBarFill);
   }
 }
 
@@ -461,29 +426,46 @@ function formatTime(elapsedMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function getEnemyPalette(enemy: TankSnapshot) {
-  switch (enemy.archetype) {
-    case "heavy":
-      return {
-        hull: 0x6f6d60,
-        turret: 0xf0d58a,
-        shadowAlpha: 0.26,
-        scale: 1,
-      };
-    case "flanker":
-      return {
-        hull: 0x4c6f82,
-        turret: 0xc8e0ef,
-        shadowAlpha: 0.2,
-        scale: 0.88,
-      };
-    case "chaser":
-    default:
-      return {
-        hull: worldTheme.enemyHull,
-        turret: worldTheme.accentSoft,
-        shadowAlpha: 0.22,
-        scale: 0.92,
-      };
-  }
+const playerPalette: TankArtPalette = {
+  name: "player",
+  hull: worldTheme.playerHull,
+  turret: worldTheme.playerTurret,
+  width: 16,
+  length: 18,
+  domeRadius: 4,
+  barrelLength: 9,
+};
+
+const enemyPalettes: Record<NonNullable<TankSnapshot["archetype"]>, TankArtPalette> = {
+  chaser: {
+    name: "chaser",
+    hull: worldTheme.enemyHull,
+    turret: worldTheme.accentSoft,
+    width: 14,
+    length: 16,
+    domeRadius: 4,
+    barrelLength: 8,
+  },
+  heavy: {
+    name: "heavy",
+    hull: 0x6f6d60,
+    turret: 0xf0d58a,
+    width: 18,
+    length: 20,
+    domeRadius: 5,
+    barrelLength: 9,
+  },
+  flanker: {
+    name: "flanker",
+    hull: 0x4c6f82,
+    turret: 0xc8e0ef,
+    width: 12,
+    length: 14,
+    domeRadius: 3,
+    barrelLength: 8,
+  },
+};
+
+function getEnemyPalette(enemy: TankSnapshot): TankArtPalette {
+  return enemyPalettes[enemy.archetype ?? "chaser"];
 }

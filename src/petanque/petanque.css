@@ -63,8 +63,8 @@ button {
 /* ---------- shared pieces ---------- */
 
 .ppPanel {
-  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-shade) 100%);
-  border: 3px solid var(--panel-edge);
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 28px 32px;
@@ -80,56 +80,59 @@ button {
 
 .ppButton {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   padding: 14px 34px;
   font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--panel);
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
-  box-shadow: 0 6px 0 var(--accent-deep), var(--shadow-soft);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: none;
+  transition: background 0.1s ease;
 }
 
 .ppButton:hover {
-  box-shadow: 0 6px 0 var(--accent-deep), 0 0 0 6px var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .ppButton:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 var(--accent-deep);
+  background: var(--accent-deep);
+  box-shadow: none;
 }
 
 .ppButtonBig {
-  font-size: 1.7rem;
-  padding: 18px 64px;
+  font-size: 1.2rem;
+  padding: 16px 56px;
 }
 
 .ppButtonGhost {
   color: var(--text-strong);
   background: var(--panel);
-  box-shadow: 0 6px 0 var(--panel-edge), var(--shadow-soft);
+  outline: 1px solid var(--panel-edge);
+  box-shadow: none;
 }
 
 .ppButtonGhost:hover {
-  box-shadow: 0 6px 0 var(--panel-edge), 0 0 0 6px var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .ppButtonGhost:active {
-  box-shadow: 0 2px 0 var(--panel-edge);
+  box-shadow: none;
 }
 
 .ppSegment {
   display: inline-flex;
   padding: 4px;
   gap: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--meter-track);
 }
 
 .ppSegment button {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   padding: 8px 20px;
   background: transparent;
   font-weight: 800;
@@ -183,7 +186,7 @@ button {
   border-radius: var(--radius);
   background: var(--panel);
   box-shadow: var(--shadow);
-  border: 3px solid var(--panel-edge);
+  border: 1px solid var(--panel-edge);
 }
 
 .ppLogo h1 {
@@ -197,7 +200,7 @@ button {
 
 .ppLogo em {
   font-style: normal;
-  color: var(--accent);
+  color: var(--logo-accent);
 }
 
 .ppLogoBall {
@@ -213,7 +216,7 @@ button {
   margin: 18px auto 26px;
   max-width: 420px;
   padding: 8px 18px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
   color: var(--text);
   font-weight: 700;
@@ -240,7 +243,7 @@ button {
   border-radius: var(--radius-small);
   padding: 12px;
   background: var(--panel);
-  border: 3px solid var(--team);
+  border: 1px solid var(--team);
 }
 
 .ppTeam h3 {
@@ -279,7 +282,7 @@ button {
 
 .ppName {
   width: 100%;
-  border: 2px solid var(--panel-edge);
+  border: 1px solid var(--panel-edge);
   border-radius: 10px;
   padding: 5px 8px;
   font-weight: 800;
@@ -290,7 +293,7 @@ button {
 .ppName:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .ppPicker {
@@ -319,7 +322,7 @@ button {
 
 .ppToggle {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   padding: 6px 12px;
   font-weight: 800;
   background: var(--meter-track);
@@ -402,7 +405,7 @@ button {
   padding: 8px 16px;
   border-radius: var(--radius-small);
   background: var(--panel);
-  border: 3px solid var(--panel-edge);
+  border: 1px solid var(--panel-edge);
   box-shadow: var(--shadow-soft);
   text-align: center;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -410,7 +413,7 @@ button {
 
 .ppScore.isTurn {
   border-color: var(--team);
-  box-shadow: 0 0 0 4px var(--accent-glow), var(--shadow-soft);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-soft);
 }
 
 .ppScoreName {
@@ -429,7 +432,7 @@ button {
   font-weight: 900;
   letter-spacing: 0.06em;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--team);
   color: var(--panel);
 }
@@ -480,7 +483,7 @@ button {
 .ppTurn {
   margin-top: 10px;
   padding: 6px 18px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--team);
   color: var(--panel);
   font-weight: 800;
@@ -503,7 +506,7 @@ button {
 
 .ppInfo {
   padding: 4px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
   color: var(--text-strong);
   font-weight: 800;
@@ -515,14 +518,14 @@ button {
   padding: 10px 14px 14px;
   border-radius: var(--radius);
   background: var(--panel);
-  border: 3px solid var(--panel-edge);
+  border: 1px solid var(--panel-edge);
   box-shadow: var(--shadow-soft);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .ppMeterBox.isActive {
   border-color: var(--accent);
-  box-shadow: 0 0 0 5px var(--accent-glow), var(--shadow);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow);
 }
 
 .ppStyleChip {
@@ -536,7 +539,7 @@ button {
 .ppMeter {
   position: relative;
   height: 26px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--meter-track);
   overflow: hidden;
 }
@@ -583,7 +586,7 @@ button {
   font-weight: 700;
   color: var(--text-strong);
   padding: 3px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
   opacity: 0.85;
 }
@@ -598,7 +601,7 @@ button {
   top: 18px;
   right: 18px;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
   color: var(--text-strong);
   font-weight: 900;
@@ -618,7 +621,7 @@ button {
   left: 18px;
   z-index: 2;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
   color: var(--text-strong);
   font-weight: 800;
@@ -628,7 +631,7 @@ button {
 }
 
 .ppHome:hover {
-  box-shadow: 0 0 0 4px var(--accent-glow), var(--shadow-soft);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-soft);
 }
 
 /* ---------- title menu & lobby ---------- */
@@ -690,8 +693,8 @@ button {
 .ppCode {
   flex: 1;
   min-width: 0;
-  border: 2px solid var(--panel-edge);
-  border-radius: 999px;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-small);
   padding: 10px 14px;
   font-family: var(--font-display);
   font-size: 1.2rem;
@@ -705,7 +708,7 @@ button {
 .ppCode:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .ppJoin .ppButton,
@@ -726,7 +729,7 @@ button {
   margin: 0 auto 16px;
   max-width: 420px;
   padding: 8px 18px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
   color: var(--danger);
   font-weight: 800;
@@ -760,12 +763,12 @@ button {
   height: 68px;
   border-radius: var(--radius-small);
   background: var(--panel-shade);
-  border: 3px solid var(--accent);
+  border: 1px solid var(--accent);
   font-family: var(--font-display);
   font-size: 2.4rem;
   font-weight: 800;
   color: var(--accent-deep);
-  box-shadow: 0 0 0 5px var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent);
   user-select: text;
 }
 
@@ -802,9 +805,9 @@ button {
 
 .ppToast {
   padding: 10px 26px;
-  border-radius: 999px;
+  border-radius: var(--radius-small);
   background: var(--panel);
-  border: 3px solid var(--team, var(--accent));
+  border: 1px solid var(--team, var(--accent));
   color: var(--team, var(--text-strong));
   font-family: var(--font-display);
   font-size: 1.5rem;

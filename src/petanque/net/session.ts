@@ -1,7 +1,8 @@
 // An online room: who's in it, the pre-match lobby, and relaying game payloads.
 // The host owns the lobby and is the referee for the match.
 
-import { match as matchRules } from "../config/rules";
+import { cpuLevels, defaultCpuLevel, match as matchRules, type CpuLevel } from "../config/rules";
+import { getCourt, type CourtId } from "../content/courts";
 import { characters, getCharacter } from "../content/characters";
 import type { MatchConfig } from "../simulation/match";
 import { isGamePayload, type GamePayload, type LobbySlot, type LobbyState } from "./protocol";
@@ -20,7 +21,7 @@ const slotTeams = [0, 1, 0, 1];
 
 function cpuSlot(index: number): LobbySlot {
   const character = characters[(index + 1) % characters.length];
-  return { controllerId: null, name: `${character.name} (CPU)`, characterId: character.id, team: slotTeams[index] };
+  return { controllerId: null, name: `${character.name} (CPU)`, characterId: character.id, team: slotTeams[index], cpuLevel: defaultCpuLevel };
 }
 
 export class OnlineSession {
@@ -88,6 +89,7 @@ export class OnlineSession {
     this.lobby = {
       playerCount: 2,
       targetScore: matchRules.defaultTargetScore,
+      courtId: getCourt(undefined).id,
       slots: [{ controllerId: this.myId, name, characterId, team: 0 }, cpuSlot(1)],
     };
     this.publishLobby();
@@ -146,12 +148,24 @@ export class OnlineSession {
     this.publishLobby();
   }
 
-  cycleCpuCharacter(slotIndex: number, step: number): void {
+  setCourt(courtId: CourtId): void {
+    if (!this.lobby) return;
+    this.lobby = { ...this.lobby, courtId: getCourt(courtId).id };
+    this.publishLobby();
+  }
+
+  setCpuCharacter(slotIndex: number, characterId: string): void {
     const slot = this.lobby?.slots[slotIndex];
     if (!this.lobby || !slot || slot.controllerId !== null) return;
-    const current = characters.findIndex((character) => character.id === slot.characterId);
-    const next = characters[(current + step + characters.length) % characters.length];
+    const next = getCharacter(characterId);
     this.lobby.slots[slotIndex] = { ...slot, characterId: next.id, name: `${next.name} (CPU)` };
+    this.publishLobby();
+  }
+
+  setCpuLevel(slotIndex: number, level: CpuLevel): void {
+    const slot = this.lobby?.slots[slotIndex];
+    if (!this.lobby || !slot || slot.controllerId !== null || !(level in cpuLevels)) return;
+    this.lobby.slots[slotIndex] = { ...slot, cpuLevel: level };
     this.publishLobby();
   }
 
@@ -196,11 +210,13 @@ export class OnlineSession {
     if (!this.lobby) return null;
     return {
       targetScore: this.lobby.targetScore,
+      courtId: getCourt(this.lobby.courtId).id,
       players: this.lobby.slots.map((slot) => ({
         name: slot.name,
         characterId: slot.characterId,
         team: slot.team,
         isCpu: slot.controllerId === null,
+        cpuLevel: slot.controllerId === null ? (slot.cpuLevel ?? defaultCpuLevel) : undefined,
         controllerId: slot.controllerId,
       })),
     };

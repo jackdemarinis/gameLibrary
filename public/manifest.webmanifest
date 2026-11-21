@@ -1,13 +1,13 @@
 {
-  "name": "Game Library",
-  "short_name": "Game Library",
-  "description": "Jack DeMarinis's browser game library: Pétanque Park, Dustline Brigade and Lanternwake. Desktop, keyboard required.",
+  "name": "JackGames",
+  "short_name": "JackGames",
+  "description": "JackGames: Jack DeMarinis's free browser games. Pétanque Park, Dustline Brigade and Lanternwake. Desktop, keyboard required.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0a0a23",
-  "theme_color": "#0a0a23",
+  "background_color": "#0a0d0b",
+  "theme_color": "#0a0d0b",
   "icons": [
     {
       "src": "icons/icon-192.png",

@@ -1,6 +1,6 @@
-# Game Library
+# JackGames
 
-A small, installable web arcade with a console-style game-select menu. It holds three
+JackGames: a small, installable web arcade with a game-portal home page. It holds three
 original games:
 
 | Game | Path | Players | Engine |
@@ -84,8 +84,8 @@ Everything you see is generated in code. That covers the clearcoat "toy"
 characters with painted faces that change expression and blink, the park,
 textures and lighting. There are no external models or images.
 
-Pétanque has its own Wii-style palette in `src/petanque/config/theme.ts`. See
-MIGRATION.md for why.
+Pétanque's 3D park keeps its sunny palette; its menus and HUD use the JackGames
+terminal look (`src/petanque/config/theme.ts`). See MIGRATION.md.
 
 ### Dustline Brigade
 
@@ -116,9 +116,9 @@ server.
 ## Shared standards
 
 Managed by webMaster at `sites/gameLibrary`:
-- Menus, the HUD and the library use the shared navy/orange theme through the
-  vendored `src/theme.css`. Never edit that file by hand. It is vendored by
-  `webmaster/scripts/sync_theme.py`.
+- Menus, the HUD and the home page use the shared token names from the
+  vendored `src/theme.css` (never edit it by hand; `webmaster/scripts/sync_theme.py`
+  owns it). Their values come from `src/jackGames.css`, the JackGames brand layer.
 - The site-specific mapping lives in `src/themeAdapter.css`.
 
 See [STANDARDS.md](STANDARDS.md) and [MIGRATION.md](MIGRATION.md).

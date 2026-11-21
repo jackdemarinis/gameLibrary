@@ -690,7 +690,7 @@ select {
   position: relative;
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: minmax(0, 1fr);
   gap: 12px;
   padding: 14px;
 }
@@ -822,23 +822,28 @@ select {
 }
 
 .shop-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding: 14px;
   overflow: hidden;
 }
 
+/* Two card rows share the board's height so the whole garage fits on one screen. */
 .shop-grid {
   display: grid;
+  flex: 1;
+  min-height: 0;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: 1fr;
+  grid-auto-rows: minmax(0, 1fr);
   gap: 10px;
-  height: 100%;
 }
 
 .shop-upgrade-card {
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr auto;
-  gap: 8px;
-  padding: 12px;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 10px 12px;
   border-radius: 22px;
   border: 2px solid rgba(18, 81, 37, 0.72);
   background:
@@ -853,7 +858,7 @@ select {
 
 .shop-upgrade-head {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: start;
   gap: 10px;
 }
@@ -861,8 +866,8 @@ select {
 .shop-upgrade-badge {
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   border-radius: 16px;
   border: 2px solid rgba(15, 70, 29, 0.7);
   background: linear-gradient(180deg, rgba(35, 122, 58, 0.92), rgba(12, 68, 30, 0.96));
@@ -947,6 +952,10 @@ select {
 }
 
 .shop-upgrade-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   margin: 0;
   color: rgba(227, 238, 163, 0.74);
   font-size: 0.8rem;
@@ -955,14 +964,14 @@ select {
 
 .shop-upgrade-button {
   width: 100%;
-  min-height: 42px;
-  padding: 10px 14px;
+  min-height: 38px;
+  padding: 8px 14px;
   border-radius: 14px;
 }
 
 .shop-sidebar {
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
   min-height: 0;
 }
@@ -1885,11 +1894,25 @@ canvas {
     align-items: stretch;
   }
 
+  /* Narrow screens: the whole garage scrolls instead of clipping. */
+  .shop-screen {
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
   .shop-panel {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 24px);
+    width: calc(100vw - 16px);
+    height: auto;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
+  }
+
+  .shop-shell {
+    height: auto;
+  }
+
+  .shop-grid {
+    overflow: visible;
   }
 
   .shop-shell {
@@ -1917,5 +1940,33 @@ canvas {
   .level-actions,
   .brief-actions {
     flex-direction: column;
+  }
+}
+
+/* Short screens (landscape phones, small laptops): drop flavor text so the garage still fits. */
+@media (max-height: 620px) {
+  .shop-board-copy,
+  .shop-upgrade-summary {
+    display: none;
+  }
+
+  .shop-board-title {
+    font-size: 1.4rem;
+  }
+
+  .shop-board-header {
+    margin-bottom: 8px;
+  }
+
+  .shop-upgrade-card {
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .shop-upgrade-button {
+    align-self: end;
+    min-height: 32px;
+    padding: 6px 12px;
   }
 }

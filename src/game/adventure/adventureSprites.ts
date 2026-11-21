@@ -10,7 +10,8 @@ export interface PixelSprite {
   palette: Readonly<Record<string, number>>;
 }
 
-const playerRows = [
+/** Head and torso, shared by every frame; legs come from the frame below. */
+const playerTopRows = [
   "...hhhhh....",
   "..hhhhhhh.x.",
   "..hhsssssxyx",
@@ -23,11 +24,20 @@ const playerRows = [
   ".s.tttt...w.",
   "...bbbb...w.",
   "...pppp...w.",
-  "...pp.pp..w.",
-  "...pp.pp..w.",
-  "..BBB.BBB.w.",
-  "..BB...BB...",
 ];
+
+/** Leg poses: standing, then a 4-step run cycle (stride, pass, other stride, pass). */
+const playerLegFrames = {
+  idle: ["...pp.pp..w.", "...pp.pp..w.", "..BBB.BBB.w.", "..BB...BB..."],
+  strideA: ["..PP..pp..w.", ".PP....pp.w.", "BB......BBw.", "............"],
+  pass: ["...pp.PP..w.", "...pp..PP.w.", "..BBB..BB.w.", "............"],
+  strideB: ["..pp..PP..w.", ".pp....PP.w.", "BB......BBw.", "............"],
+} as const;
+
+export type PlayerPose = keyof typeof playerLegFrames;
+
+/** Frame order while running; each entry is held for one animation tick. */
+export const playerRunCycle: readonly PlayerPose[] = ["strideA", "pass", "strideB", "pass"];
 
 const playerPalette = {
   h: t.hair,
@@ -37,23 +47,26 @@ const playerPalette = {
   T: t.tunicDark,
   b: t.belt,
   p: t.pants,
+  P: t.pantsBack,
   B: t.boots,
   w: t.staffWood,
 };
 
-export const playerDimSprite: PixelSprite = {
-  key: "lwPlayerDim",
-  scale: 3,
-  rows: playerRows,
-  palette: { ...playerPalette, x: t.staffKnot, y: t.staffWood },
-};
+const dimPalette = { ...playerPalette, x: t.staffKnot, y: t.staffWood };
+const litPalette = { ...playerPalette, x: t.lanternBody, y: t.lanternCore };
 
-export const playerLitSprite: PixelSprite = {
-  key: "lwPlayerLit",
-  scale: 3,
-  rows: playerRows,
-  palette: { ...playerPalette, x: t.lanternBody, y: t.lanternCore },
-};
+export function playerTextureKey(lit: boolean, pose: PlayerPose): string {
+  return `lwPlayer${lit ? "Lit" : "Dim"}_${pose}`;
+}
+
+const playerFrameSprites: PixelSprite[] = (Object.keys(playerLegFrames) as PlayerPose[]).flatMap((pose) => [
+  { key: playerTextureKey(false, pose), scale: 3, rows: [...playerTopRows, ...playerLegFrames[pose]], palette: dimPalette },
+  { key: playerTextureKey(true, pose), scale: 3, rows: [...playerTopRows, ...playerLegFrames[pose]], palette: litPalette },
+]);
+
+/** Standing frames, kept as named exports for callers that only need a still. */
+export const playerDimSprite = playerFrameSprites[0];
+export const playerLitSprite = playerFrameSprites[1];
 
 export const shadeSprite: PixelSprite = {
   key: "lwShade",
@@ -192,9 +205,279 @@ export const flowerSprite: PixelSprite = {
   palette: { r: t.flowerRose, c: t.flowerGold, g: t.grassDark },
 };
 
+const roofRows = (chimney: boolean): string[] => [
+  chimney ? "..................CC............" : "................................",
+  chimney ? ".................CCCC..........." : "................................",
+  chimney ? ".................CccC..........." : "................................",
+  chimney ? "........oooooooooCccCooo........" : "........oooooooooooooooo........",
+  chimney ? ".......oHHHHHHHHHCccCHHHo......." : ".......oHHHHHHHHHHHHHHHHo.......",
+  "......oRRRRRRRRRRRRRRRRRRo......",
+  ".....oRRrRRRrRRRrRRRrRRRRRo.....",
+  "....oRRRRRRRRRRRRRRRRRRRRRRo....",
+  "...oRrRRRrRRRrRRRrRRRrRRRrRRo...",
+  "..oRRRRRRRRRRRRRRRRRRRRRRRRRRo..",
+  ".oRRrRRRrRRRrRRRrRRRrRRRrRRRRRo.",
+  "orrrrrrrrrrrrrrrrrrrrrrrrrrrrrro",
+];
+
+const cottageWallRows = [
+  ".oWWWWWWWWWWWWWWWWWWWWWWWWWWWWo.",
+  ".oWggggWWWWWWTTTTTTWWWWWWggggWo.",
+  ".oWgGGgWWWWWTDDDDDDTWWWWWgGGgWo.",
+  ".oWgGGgWWWWWTDDdDDDTWWWWWgGGgWo.",
+  ".oWggggWWWWWTDDdDDDTWWWWWggggWo.",
+  ".oSSSSSSSSSSTDDdDDkTSSSSSSSSSSo.",
+  ".oSsSSSsSSSSTDDdDDDTSSSsSSSsSSo.",
+  ".oSSSSSSSSSSTDDdDDDTSSSSSSSSSSo.",
+  ".ossssssssssTDDdDDDTsssssssssso.",
+  "..ooooooooooppppppppoooooooooo..",
+];
+
+const cottageBasePalette = {
+  o: t.roofOutline,
+  C: t.chimney,
+  c: t.chimneyDark,
+  W: t.plaster,
+  g: t.windowFrame,
+  G: t.windowGlass,
+  T: t.benchWoodDark,
+  D: t.benchWoodMid,
+  d: t.benchWoodDark,
+  k: t.torchFlame,
+  S: t.stoneMid,
+  s: t.stoneDark,
+  p: t.cobbleMid,
+};
+
+export const cottageRedSprite: PixelSprite = {
+  key: "lwCottageRed",
+  scale: 4,
+  rows: [...roofRows(true), ...cottageWallRows],
+  palette: { ...cottageBasePalette, H: t.roofRedLight, R: t.roofRed, r: t.roofRedDark },
+};
+
+export const cottageBlueSprite: PixelSprite = {
+  key: "lwCottageBlue",
+  scale: 4,
+  rows: [...roofRows(false), ...cottageWallRows],
+  palette: { ...cottageBasePalette, H: t.roofBlueLight, R: t.roofBlue, r: t.roofBlueDark },
+};
+
+export const wellSprite: PixelSprite = {
+  key: "lwWell",
+  scale: 3,
+  rows: [
+    "..wwwwwwww..",
+    ".wWWWWWWWWw.",
+    "..w......w..",
+    "..w..rr..w..",
+    "..w..bb..w..",
+    ".SSSSSSSSSS.",
+    "SsddddddddsS",
+    "SsSSSSSSSSsS",
+    "SSsSSSSSsSSS",
+    "SsSSSsSSSSsS",
+    ".SSSSSSSSSS.",
+  ],
+  palette: { w: t.benchWoodDark, W: t.benchWoodLight, r: t.dirtLight, b: t.benchWoodMid, S: t.stoneMid, s: t.stoneDark, d: t.waterDark },
+};
+
+export const fenceSprite: PixelSprite = {
+  key: "lwFence",
+  scale: 3,
+  rows: [
+    ".pp......pp.....",
+    ".PP......PP.....",
+    "rrrrrrrrrrrrrrrr",
+    ".PP......PP.....",
+    ".PP......PP.....",
+    "rrrrrrrrrrrrrrrr",
+    ".PP......PP.....",
+    ".kk......kk.....",
+  ],
+  palette: { p: t.benchWoodLight, P: t.benchWoodMid, r: t.trunkLight, k: t.benchWoodDark },
+};
+
+export const crateSprite: PixelSprite = {
+  key: "lwCrate",
+  scale: 3,
+  rows: [
+    "oooooooooo",
+    "oLLLLLLLLo",
+    "oLlLLLLlLo",
+    "oLLlLLlLLo",
+    "oLLLllLLLo",
+    "oLLLllLLLo",
+    "oLLlLLlLLo",
+    "oLlLLLLlLo",
+    "oLLLLLLLLo",
+    "oooooooooo",
+  ],
+  palette: { o: t.benchWoodDark, L: t.benchWoodMid, l: t.benchWoodLight },
+};
+
+export const barrelSprite: PixelSprite = {
+  key: "lwBarrel",
+  scale: 3,
+  rows: [
+    ".ooooooo.",
+    "oMMMMMMMo",
+    "oaaaaaaao",
+    "oMMlMMMMo",
+    "oMMlMMMMo",
+    "oMMlMMMMo",
+    "oaaaaaaao",
+    "oMMlMMMMo",
+    "oMMMMMMMo",
+    ".ooooooo.",
+  ],
+  palette: { o: t.benchWoodDark, M: t.benchWoodMid, l: t.benchWoodLight, a: t.anvilDark },
+};
+
+const bushRows = [
+  "....GGGGG.....",
+  "..GGgggggGG...",
+  ".GgghhgggggG..",
+  "GgghhgggggggG.",
+  "GggggggggggggG",
+  "GgggggGgggggGG",
+  ".GgggggggggggG",
+  "..GGgggggggGG.",
+  "....GGGGGGG...",
+];
+
+export const bushSprite: PixelSprite = {
+  key: "lwBush",
+  scale: 3,
+  rows: bushRows,
+  palette: { G: t.leafDark, g: t.leafMid, h: t.leafLight },
+};
+
+export const berryBushSprite: PixelSprite = {
+  key: "lwBerryBush",
+  scale: 3,
+  rows: [
+    "....GGGGG.....",
+    "..GGgggbgGG...",
+    ".GgghhgggggG..",
+    "GgbhhgggbgggG.",
+    "GggggggggggggG",
+    "GgggbgGgggbgGG",
+    ".GgggggggggggG",
+    "..GGgbgggggGG.",
+    "....GGGGGGG...",
+  ],
+  palette: { G: t.leafDark, g: t.leafMid, h: t.leafLight, b: t.berry },
+};
+
+export const mushroomSprite: PixelSprite = {
+  key: "lwMushroom",
+  scale: 3,
+  rows: ["..RRRR..", ".RwRRwR.", "RRRRRwRR", "RwRRRRRR", ".uuuuuu.", "...ss...", "...ss...", "..ssss.."],
+  palette: { R: t.mushroomCap, w: t.mushroomSpot, u: t.mushroomGill, s: t.mushroomStem },
+};
+
+export const stumpSprite: PixelSprite = {
+  key: "lwStump",
+  scale: 3,
+  rows: [
+    "...kkkkkk...",
+    "..kKKKKKKk..",
+    "..kKyyyyKk..",
+    "..kKyKKyKk..",
+    "..kKyyyyKk..",
+    "..kkKKKKkk..",
+    ".kkkkkkkkkk.",
+    "kk.kk..kk.kk",
+  ],
+  palette: { k: t.trunkDark, K: t.trunkLight, y: t.benchWoodLight },
+};
+
+// HUD art: hotbar items and the lantern-keeper's portrait.
+export const timberItemSprite: PixelSprite = {
+  key: "lwItemTimber",
+  scale: 3,
+  rows: [".kkkkkkkkyy.", "kKKKKKKKyLLy", "kKkKKKKkyLoy", "kKKKKkKKyLLy", ".kkkkkkkkyy."],
+  palette: { k: t.trunkDark, K: t.trunkLight, y: t.benchWoodDark, L: t.benchWoodLight, o: t.trunkDark },
+};
+
+export const ironstoneItemSprite: PixelSprite = {
+  key: "lwItemIronstone",
+  scale: 3,
+  rows: ["...SSSS...", ".SSllssS..", "SllOosssS.", "SsssssoOsS", "SssoOssssS", ".SSsssssS.", "..SSSSSS.."],
+  palette: { S: t.stoneDark, s: t.stoneMid, l: t.stoneLight, o: t.oreFleck, O: t.oreShine },
+};
+
+const lanternItemRows = ["..hhhh..", "..h..h..", ".oooooo.", ".oLccLo.", ".oLccLo.", ".oLccLo.", ".oLLLLo.", ".oooooo."];
+
+export const lanternLitItemSprite: PixelSprite = {
+  key: "lwItemLanternLit",
+  scale: 3,
+  rows: lanternItemRows,
+  palette: { h: t.anvilLight, o: t.anvilDark, L: t.lanternBody, c: t.lanternCore },
+};
+
+export const lanternDimItemSprite: PixelSprite = {
+  key: "lwItemLanternDim",
+  scale: 3,
+  rows: lanternItemRows,
+  palette: { h: t.anvilLight, o: t.anvilDark, L: t.stoneMid, c: t.stoneDark },
+};
+
+export const staffItemSprite: PixelSprite = {
+  key: "lwItemStaff",
+  scale: 3,
+  rows: [
+    "........x.",
+    ".......xyx",
+    "......w.x.",
+    ".....w....",
+    "....w.....",
+    "...w......",
+    "..w.......",
+    ".w........",
+    "w.........",
+  ],
+  palette: { w: t.staffWood, x: t.staffKnot, y: t.staffWood },
+};
+
+export const portraitSprite: PixelSprite = {
+  key: "lwPortrait",
+  scale: 4,
+  rows: [
+    "...hhhhhh...",
+    "..hhhhhhhh..",
+    ".hhhhhhhhhh.",
+    ".hhsssssshh.",
+    ".hsessssesh.",
+    ".hssssssssh.",
+    ".hsssMMsssh.",
+    "..ssssssss..",
+    "...tttttt...",
+    ".tttttttttt.",
+    "tttTttttTttt",
+  ],
+  palette: { h: t.hair, s: t.skin, e: t.eye, M: t.lips, t: t.tunic, T: t.tunicDark },
+};
+
 export const adventureSprites: readonly PixelSprite[] = [
-  playerDimSprite,
-  playerLitSprite,
+  ...playerFrameSprites,
+  cottageRedSprite,
+  cottageBlueSprite,
+  wellSprite,
+  fenceSprite,
+  crateSprite,
+  barrelSprite,
+  bushSprite,
+  berryBushSprite,
+  mushroomSprite,
+  stumpSprite,
+  timberItemSprite,
+  ironstoneItemSprite,
+  lanternLitItemSprite,
+  lanternDimItemSprite,
+  staffItemSprite,
+  portraitSprite,
   shadeSprite,
   bossSprite,
   treeSprite,

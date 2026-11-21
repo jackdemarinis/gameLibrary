@@ -4,6 +4,6 @@ export const gameConfig = {
   height: 720,
   worldWidth: 1760,
   worldHeight: 1080,
-  cameraZoom: 1.18,
+  cameraZoom: 1.25,
   gridSize: 64,
 } as const;

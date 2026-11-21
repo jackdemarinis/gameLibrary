@@ -1,7 +1,9 @@
 import "./theme.css";
+import "./jackGames.css";
 import "./styles.css";
 import "./themeAdapter.css";
 import "./library.css";
+import "./lanternwakeHud.css";
 import { applyThemeVariables } from "./game/config/theme";
 import { createSaveStore } from "./game/simulation/saveStore";
 import { createGame } from "./phaser/boot/createGame";

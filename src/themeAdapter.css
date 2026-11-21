@@ -1,7 +1,7 @@
-/* UI integration with webMaster. Battlefield and tank artwork keep their palette. */
+/* UI integration with webMaster tokens (values set by jackGames.css). Battlefield and tank artwork keep their palette. */
 :root, body { font-family: var(--font-body); background: var(--bg); color: var(--text); }
 h1, h2, h3, h4, h5, h6 { text-shadow: none; }
-.shell-frame { background: radial-gradient(ellipse at top, var(--accent-soft), transparent 55%), var(--bg); }
+.shell-frame { background: var(--bg); }
 .menu-panel, .hud-card, .hud-sidebar-card, .hud-bar, .hud-modal-card, .hud-result-card,
 .shop-panel, .start-panel, .level-panel, .brief-panel {
   background: var(--surface-1); border-color: var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel);
@@ -19,7 +19,7 @@ h1, h2, h3, h4, h5, h6 { text-shadow: none; }
 .menu-chip-active, .menu-level-card-active { border-color: var(--accent); box-shadow: none; background: var(--accent-soft); }
 .status-pill, .menu-weapon-pill { background: var(--accent-soft); border-color: var(--border-accent); color: var(--accent-tint); border-radius: var(--radius-pill); }
 .chrome-button { font-family: var(--font-body); border-radius: var(--radius-sm); }
-.chrome-button-primary { background: var(--accent); color: var(--text-bright); box-shadow: var(--shadow-accent); }
+.chrome-button-primary { background: var(--accent-gradient); color: var(--accent-ink); box-shadow: var(--shadow-accent); font-weight: 800; }
 .chrome-button-primary:hover:not(:disabled) { background: var(--accent-hover); }
 .chrome-button-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 .chrome-button-danger { background: var(--red-soft); color: var(--red); border-color: var(--red); }
@@ -52,3 +52,19 @@ h1, h2, h3, h4, h5, h6 { text-shadow: none; }
 .shop-board-status-label { color: var(--muted); }
 .shop-weapon-pill { background: var(--accent-soft); color: var(--accent-tint); border-color: var(--border-accent); }
 .start-panel { overflow-y: auto; }
+
+/* JackGames chrome: flat terminal look, matching the home page. */
+.start-title, .menu-title, .level-title, .brief-title, .difficulty-modal-title, .shop-board-title {
+  font-weight: 800; text-transform: none; letter-spacing: -0.01em; color: var(--text-bright); text-shadow: var(--title-shadow);
+}
+.eyebrow, .shop-eyebrow { color: var(--accent); letter-spacing: var(--tracking-label); font-weight: 800; }
+.chrome-button {
+  font-family: var(--font-display); font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: var(--tracking-button);
+  border-radius: var(--radius-pill); padding: var(--sp-3) var(--sp-5);
+}
+.chrome-button-primary:hover:not(:disabled) { background: var(--accent-gradient-bright); box-shadow: var(--shadow-accent-lift); filter: none; }
+.chrome-button-primary:active:not(:disabled) { background: var(--accent-2); box-shadow: none; }
+.chrome-button-secondary { border: 1px solid var(--border-strong); box-shadow: var(--shadow-card); }
+.chrome-button-secondary:hover:not(:disabled) { background: var(--surface-3); filter: none; }
+.difficulty-choice-active, .level-tile-active, .menu-chip-active, .menu-level-card-active { box-shadow: var(--ring-accent); }
+.chrome-button-primary { font-size: 1rem; }

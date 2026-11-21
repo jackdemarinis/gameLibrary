@@ -40,6 +40,33 @@ export const adventureTheme = {
   torchFlame: 0xffc457,
   torchCore: 0xfff3c4,
 
+  // Cottages, well and yard.
+  roofRedLight: 0xe0664a,
+  roofRed: 0xb83a2e,
+  roofRedDark: 0x7d2420,
+  roofBlueLight: 0x6a9bd6,
+  roofBlue: 0x3f6aa8,
+  roofBlueDark: 0x283f6e,
+  roofOutline: 0x3a1a14,
+  plaster: 0xf0e2c0,
+  plasterShade: 0xd2bf98,
+  windowGlass: 0x9fd2f0,
+  windowFrame: 0x5f3c20,
+  chimney: 0x6a6f7a,
+  chimneyDark: 0x3e424b,
+  waterDark: 0x1f3550,
+  cobbleLight: 0xd8d2c4,
+  cobbleMid: 0xb5ad9c,
+  cobbleDark: 0x8a8273,
+
+  // Greenery.
+  berry: 0xd0303f,
+  mushroomCap: 0xd23b33,
+  mushroomSpot: 0xfff4e6,
+  mushroomGill: 0xe9cfa6,
+  mushroomStem: 0xf3e6cc,
+  lips: 0xc96b5c,
+
   // Lantern-keeper.
   skin: 0xf1c393,
   hair: 0x5b3419,
@@ -48,6 +75,7 @@ export const adventureTheme = {
   tunicDark: 0x285685,
   belt: 0x6b4426,
   pants: 0x4a3a2a,
+  pantsBack: 0x33281d,
   boots: 0x2f2217,
   staffWood: 0x9b6b3b,
   staffKnot: 0x6e4a28,

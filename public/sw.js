@@ -1,4 +1,4 @@
-// Game Library service worker: the installed web app works offline after one visit.
+// JackGames service worker: the installed web app works offline after one visit.
 // `npm run build` runs scripts/precacheServiceWorker.py, which writes the hashed build
 // files and a content-based version into dist/sw.js. Each deploy therefore installs a
 // fresh cache with the whole app, and the previous deploy's cache is deleted.
