@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { goToLibrary } from "../../shared/libraryNav";
-import { adventureContent } from "../../game/adventure/adventureContent";
+import { adventureContent, type PropKind } from "../../game/adventure/adventureContent";
 import {
   AdventureSimulation,
   getInteractPrompt,
@@ -11,21 +11,37 @@ import {
   type AdventureState,
 } from "../../game/adventure/AdventureSimulation";
 import {
+  barrelSprite,
+  berryBushSprite,
   bossSprite,
+  bushSprite,
+  cottageBlueSprite,
+  cottageRedSprite,
+  crateSprite,
+  fenceSprite,
   flowerSprite,
+  ironstoneItemSprite,
+  lanternDimItemSprite,
+  lanternLitItemSprite,
+  mushroomSprite,
   pixelHash,
-  playerDimSprite,
-  playerLitSprite,
+  playerRunCycle,
+  playerTextureKey,
+  portraitSprite,
   rockSprite,
   shadeSprite,
+  staffItemSprite,
+  stumpSprite,
+  timberItemSprite,
   torchSprite,
   treeSprite,
   tuftSprite,
+  wellSprite,
   workbenchSprite,
 } from "../../game/adventure/adventureSprites";
 import { adventureTheme as t, nightDarknessByStep } from "../../game/config/adventureTheme";
 import type { HudViewModel } from "../../ui/AppChrome";
-import { ensureLanternwakeTextures, lanternwakeTextureKeys } from "../adventure/lanternwakeTextures";
+import { ensureLanternwakeTextures, lanternwakeTextureKeys, spriteDataUrl } from "../adventure/lanternwakeTextures";
 import { SceneBridge } from "../adapters/sceneBridge";
 
 interface FoeView {
@@ -40,6 +56,32 @@ interface LightSource {
   y: number;
   radius: number;
 }
+
+const propTextures: Record<PropKind, string> = {
+  cottageRed: cottageRedSprite.key,
+  cottageBlue: cottageBlueSprite.key,
+  well: wellSprite.key,
+  fence: fenceSprite.key,
+  crate: crateSprite.key,
+  barrel: barrelSprite.key,
+  bush: bushSprite.key,
+  berryBush: berryBushSprite.key,
+  mushroom: mushroomSprite.key,
+  stump: stumpSprite.key,
+};
+
+/** Props big enough to cast a ground shadow, with its width. */
+const propShadowWidth: Partial<Record<PropKind, number>> = {
+  well: 40,
+  barrel: 26,
+  crate: 28,
+  bush: 40,
+  berryBush: 40,
+  stump: 34,
+};
+
+/** Seconds per run-cycle frame at full speed. */
+const runFrameSeconds = 0.1;
 
 const controls = [
   "WASD / Arrows: move",
@@ -59,7 +101,7 @@ const lightTextureSize = 256;
 const decorCount = 70;
 /** Extra camera room so the objective sign (top) and DOM HUD (bottom) never cover the playfield. */
 const viewPadTop = 90;
-const viewPadBottom = 150;
+const viewPadBottom = 110;
 
 export class AdventureScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -85,6 +127,9 @@ export class AdventureScene extends Phaser.Scene {
   private lastObjectiveText = "";
   private darkness: number = nightDarknessByStep[0];
   private lastPlayerX = 0;
+  private lastPlayerY = 0;
+  private runClock = 0;
+  private hudIcons: Record<"portrait" | "staff" | "lanternLit" | "lanternDim" | "timber" | "ironstone", string> | null = null;
 
   constructor(bridge: SceneBridge) {
     super("adventure");
@@ -116,6 +161,8 @@ export class AdventureScene extends Phaser.Scene {
 
     const state = this.simulation.getState();
     this.lastPlayerX = state.player.x;
+    this.lastPlayerY = state.player.y;
+    this.runClock = 0;
     this.sync(state, 0);
   }
 
@@ -179,9 +226,13 @@ export class AdventureScene extends Phaser.Scene {
     this.add.tileSprite(gateX, -viewPadTop, world.width - gateX, fullHeight, lanternwakeTextureKeys.shrine).setOrigin(0);
     // Dirt road from the village east to the shrine gate.
     this.add.tileSprite(0, playerSpawn.y - 24, gateX, 48, lanternwakeTextureKeys.path).setOrigin(0);
+    for (const path of adventureContent.cobblePaths) {
+      this.add.tileSprite(path.x, path.y, path.w, path.h, lanternwakeTextureKeys.cobble).setOrigin(0);
+    }
     this.gate = this.add.tileSprite(gateX - 12, -viewPadTop, 24, fullHeight, lanternwakeTextureKeys.gate).setOrigin(0).setDepth(actorDepthBase);
 
     this.scatterDecor();
+    this.placeProps();
 
     this.addShadow(workbench.x, workbench.y + 16, 66);
     this.add.image(workbench.x, workbench.y, workbenchSprite.key).setDepth(depthFor(workbench.y));
@@ -203,17 +254,36 @@ export class AdventureScene extends Phaser.Scene {
     }
   }
 
+  /** Cottages, fences and greenery from the content layout, depth-sorted by their feet. */
+  private placeProps(): void {
+    adventureContent.props.forEach((prop, index) => {
+      const shadow = propShadowWidth[prop.kind];
+      if (shadow) {
+        this.addShadow(prop.x, prop.y - 3, shadow);
+      }
+      const art = this.add.image(prop.x, prop.y, propTextures[prop.kind]).setOrigin(0.5, 1).setDepth(depthFor(prop.y));
+      // Mirror some greenery so repeats don't look stamped.
+      if ((prop.kind === "bush" || prop.kind === "mushroom" || prop.kind === "stump") && pixelHash(index, 9, 61) < 0.5) {
+        art.setFlipX(true);
+      }
+    });
+  }
+
   /** Deterministic grass tufts and flowers that avoid the road, nodes and props. */
   private scatterDecor(): void {
     const { world, gateX, playerSpawn, workbench, resourceNodes } = adventureContent;
-    const blockers = [workbench, playerSpawn, ...resourceNodes];
+    const blockers = [workbench, playerSpawn, ...resourceNodes, ...adventureContent.props];
+    const inside = (x: number, y: number) =>
+      [...adventureContent.obstacles, ...adventureContent.cobblePaths].some(
+        (box) => x > box.x - 16 && x < box.x + box.w + 16 && y > box.y - 70 && y < box.y + box.h + 16,
+      );
 
     for (let i = 0; i < decorCount; i += 1) {
       const x = 20 + pixelHash(i, 1, 41) * (gateX - 60);
       const y = 20 + pixelHash(i, 2, 43) * (world.height - 40);
       const onRoad = Math.abs(y - playerSpawn.y) < 40;
       const crowded = blockers.some((point) => Math.hypot(point.x - x, point.y - y) < 60);
-      if (onRoad || crowded) {
+      if (onRoad || crowded || inside(x, y)) {
         continue;
       }
       const key = pixelHash(i, 3, 47) < 0.3 ? flowerSprite.key : tuftSprite.key;
@@ -230,7 +300,7 @@ export class AdventureScene extends Phaser.Scene {
     const { bossStats } = adventureContent;
     this.playerShadow = this.addShadow(state.player.x, state.player.y + 22, 30);
 
-    this.player = this.add.image(state.player.x, state.player.y, playerDimSprite.key).setOrigin(0.5, 0.62);
+    this.player = this.add.image(state.player.x, state.player.y, playerTextureKey(false, "idle")).setOrigin(0.5, 0.62);
     this.pulseRing = this.add
       .circle(0, 0, bossStats.pulseRadius)
       .setStrokeStyle(6, t.pulse, 0.85)
@@ -303,15 +373,29 @@ export class AdventureScene extends Phaser.Scene {
 
   private sync(state: AdventureState, deltaMs: number): void {
     const { player } = state;
-    const moved = player.x - this.lastPlayerX;
-    if (Math.abs(moved) > 0.01) {
-      this.player.setFlipX(moved < 0);
+    const movedX = player.x - this.lastPlayerX;
+    const movedY = player.y - this.lastPlayerY;
+    if (Math.abs(movedX) > 0.01) {
+      this.player.setFlipX(movedX < 0);
     }
     this.lastPlayerX = player.x;
+    this.lastPlayerY = player.y;
 
-    const bob = state.status === "active" ? Math.sin(state.elapsed * 12) * 1.5 : 0;
+    // Run cycle while moving (by actual displacement, so walls stop the legs too); breathe while idle.
+    const running = state.status === "active" && Math.hypot(movedX, movedY) > 0.05;
+    let pose: Parameters<typeof playerTextureKey>[1] = "idle";
+    let bob = 0;
+    if (running) {
+      this.runClock += deltaMs / 1000;
+      const frame = Math.floor(this.runClock / runFrameSeconds) % playerRunCycle.length;
+      pose = playerRunCycle[frame];
+      bob = pose === "pass" ? -3 : 0;
+    } else {
+      this.runClock = 0;
+      bob = state.status === "active" ? Math.round(Math.sin(state.elapsed * 3)) : 0;
+    }
     this.player
-      .setTexture(state.hasLantern ? playerLitSprite.key : playerDimSprite.key)
+      .setTexture(playerTextureKey(state.hasLantern, pose))
       .setPosition(player.x, player.y + bob)
       .setDepth(depthFor(player.y));
     this.playerShadow.setPosition(player.x, player.y + 22);
@@ -491,19 +575,58 @@ export class AdventureScene extends Phaser.Scene {
     }
   }
 
+  private getHudIcons(): NonNullable<AdventureScene["hudIcons"]> {
+    this.hudIcons ??= {
+      portrait: spriteDataUrl(portraitSprite),
+      staff: spriteDataUrl(staffItemSprite),
+      lanternLit: spriteDataUrl(lanternLitItemSprite),
+      lanternDim: spriteDataUrl(lanternDimItemSprite),
+      timber: spriteDataUrl(timberItemSprite),
+      ironstone: spriteDataUrl(ironstoneItemSprite),
+    };
+    return this.hudIcons;
+  }
+
   private renderHud(state: AdventureState): void {
     const objective = getObjective(state);
+    const icons = this.getHudIcons();
+    const { recipe } = adventureContent;
+    const needsMaterials = !state.hasLantern;
     const model: HudViewModel = {
       layout: "active",
+      skin: "lanternwake",
       title: adventureContent.title,
       copy: adventureContent.story,
       objective: `${objective.chapter} · ${objective.text}`,
-      kpis: [
-        { label: "Health", meter: { current: state.player.health, max: state.player.maxHealth } },
-        { label: "Timber", value: `${state.inventory.timber}` },
-        { label: "Ironstone", value: `${state.inventory.ironstone}` },
-        { label: "Lantern", value: state.hasLantern ? "Ember" : "Dim" },
-        { label: "Chapter", value: objective.chapter },
+      kpis: [],
+      status: {
+        portraitUrl: icons.portrait,
+        name: "Lantern-keeper",
+        caption: objective.chapter,
+        meter: { label: "Health", current: state.player.health, max: state.player.maxHealth },
+      },
+      hotbar: [
+        { label: "Staff", iconUrl: icons.staff, active: !state.hasLantern },
+        {
+          label: state.hasLantern ? "Ember Lantern" : "Lantern (unlit)",
+          iconUrl: state.hasLantern ? icons.lanternLit : icons.lanternDim,
+          active: state.hasLantern,
+          dim: !state.hasLantern,
+        },
+        {
+          label: "Timber",
+          iconUrl: icons.timber,
+          count: needsMaterials ? `${state.inventory.timber}/${recipe.timber}` : `${state.inventory.timber}`,
+          dim: state.inventory.timber === 0,
+        },
+        {
+          label: "Ironstone",
+          iconUrl: icons.ironstone,
+          count: needsMaterials ? `${state.inventory.ironstone}/${recipe.ironstone}` : `${state.inventory.ironstone}`,
+          dim: state.inventory.ironstone === 0,
+        },
+        { label: "Empty slot" },
+        { label: "Empty slot" },
       ],
       notes: controls,
       helpOpen: this.helpOpen,
@@ -511,7 +634,7 @@ export class AdventureScene extends Phaser.Scene {
       helpBackAction: { label: "Back", tone: "primary", onPress: () => this.setHelpOpen(false) },
       actions: [
         { label: "Restart", tone: "secondary", onPress: () => this.scene.restart() },
-        { label: "Back To Library", tone: "danger", onPress: () => goToLibrary() },
+        { label: "Back To JackGames", tone: "danger", onPress: () => goToLibrary() },
       ],
     };
     this.showHudIfChanged(model);
@@ -526,6 +649,7 @@ export class AdventureScene extends Phaser.Scene {
     this.time.delayedCall(250, () => {
       this.showHudIfChanged({
         layout: "result",
+        skin: "lanternwake",
         title: `${adventureContent.title}: ${won ? "Dawn" : "Lost to the Fog"}`,
         copy: state.message,
         objective: won ? "Cinderhollow wakes to its first morning in a season." : "Rest, then try the night again.",
@@ -536,7 +660,7 @@ export class AdventureScene extends Phaser.Scene {
         notes: [],
         actions: [
           { label: "Play Again", tone: "primary", onPress: () => this.scene.restart() },
-          { label: "Back To Library", tone: "secondary", onPress: () => goToLibrary() },
+          { label: "Back To JackGames", tone: "secondary", onPress: () => goToLibrary() },
         ],
       });
     });

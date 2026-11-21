@@ -193,6 +193,23 @@ describe("Lanternwake simulation", () => {
     expect(state.player.x).toBeGreaterThan(adventureContent.gateX);
   });
 
+  it("blocks walking through a cottage but slides along its wall", () => {
+    const [wall] = adventureContent.obstacles;
+    const below = { x: wall.x + wall.w / 2, y: wall.y + wall.h + 40 };
+    let state = placePlayer(createAdventureState(), below);
+    for (let i = 0; i < 120; i += 1) {
+      state = step(state, { moveY: -1 });
+    }
+    expect(state.player.y).toBeGreaterThanOrEqual(wall.y + wall.h);
+
+    const startX = state.player.x;
+    for (let i = 0; i < 30; i += 1) {
+      state = step(state, { moveX: 1, moveY: -1 });
+    }
+    expect(state.player.x).toBeGreaterThan(startX + 20);
+    expect(state.player.y).toBeGreaterThanOrEqual(wall.y + wall.h);
+  });
+
   it("completes the full campaign deterministically: gather, forge, clear, boss", () => {
     const play = (): AdventureState => {
       let state = gatherAll(createAdventureState());
@@ -203,6 +220,8 @@ describe("Lanternwake simulation", () => {
       expect(getObjective(state).step).toBe(2);
 
       for (const shade of adventureContent.shades) {
+        // Head out to the open road first so the straight-line bot isn't blocked by cottages.
+        state = walkTo(state, { x: state.player.x, y: adventureContent.playerSpawn.y });
         state = fight(state, shade.id);
       }
       expect(isGateOpen(state)).toBe(true);

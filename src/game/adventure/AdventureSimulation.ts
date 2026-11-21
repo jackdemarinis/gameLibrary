@@ -248,8 +248,31 @@ function movePlayer(state: AdventureState, input: AdventureInput, dt: number, ga
 
   const r = state.player.radius;
   const maxX = gateOpen ? world.width - r : gateX - r;
-  state.player.x = clamp(state.player.x + (input.moveX / length) * player.speed * dt, r, maxX);
-  state.player.y = clamp(state.player.y + (input.moveY / length) * player.speed * dt, r, world.height - r);
+  const startX = state.player.x;
+  const startY = state.player.y;
+  // Move one axis at a time so walls block that axis only and the player slides along them.
+  state.player.x = clamp(startX + (input.moveX / length) * player.speed * dt, r, maxX);
+  state.player.x = blockAxis(state.player.x, state.player.y, startX, "x");
+  state.player.y = clamp(startY + (input.moveY / length) * player.speed * dt, r, world.height - r);
+  state.player.y = blockAxis(state.player.y, state.player.x, startY, "y");
+}
+
+/** Collision half-size of the lantern-keeper's feet against village props. */
+const footHalf = 14;
+
+/** Returns `value` on `axis`, pulled back so the player's foot box stays out of every obstacle. */
+export function blockAxis(value: number, other: number, previous: number, axis: "x" | "y"): number {
+  let result = value;
+  for (const box of adventureContent.obstacles) {
+    const [lo, size, otherLo, otherSize] = axis === "x" ? [box.x, box.w, box.y, box.h] : [box.y, box.h, box.x, box.w];
+    const overlapsOther = other + footHalf > otherLo && other - footHalf < otherLo + otherSize;
+    const overlapsAxis = result + footHalf > lo && result - footHalf < lo + size;
+    if (!overlapsOther || !overlapsAxis) {
+      continue;
+    }
+    result = previous <= lo + size / 2 ? lo - footHalf : lo + size + footHalf;
+  }
+  return result;
 }
 
 function interact(state: AdventureState, events: AdventureEvent[]): void {
