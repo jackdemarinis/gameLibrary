@@ -3,6 +3,7 @@ import "./jackGames.css";
 import "./styles.css";
 import "./themeAdapter.css";
 import "./dustlineMenu.css";
+import "./stage.css";
 import { applyThemeVariables } from "./game/config/theme";
 import { createSaveStore } from "./game/simulation/saveStore";
 import { createGame } from "./phaser/boot/createGame";
@@ -20,8 +21,10 @@ applyThemeVariables(document.documentElement);
 
 appRoot.innerHTML = `
   <div class="shell-frame">
-    <div id="game-root" class="game-root"></div>
-    <div id="chrome-root" class="chrome-root"></div>
+    <div class="gameStage">
+      <div id="game-root" class="game-root"></div>
+      <div id="chrome-root" class="chrome-root"></div>
+    </div>
   </div>
 `;
 

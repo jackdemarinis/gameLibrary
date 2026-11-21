@@ -103,6 +103,48 @@
   --glow-text: none;
   --glow-text-soft: none;
   --title-shadow: none;
+
+  /* Dustline title screen: pixel military-arcade skin over a pixel camo field
+     (art colours mirror menuArtTheme / pixelTheme in src/game/config/theme.ts). */
+  --font-pixel: 'Pixelify Sans', ui-monospace, monospace;
+  --font-pixel-display: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;
+  --dl-ink: #141810;
+  --dl-camo: #22692e;
+  --dl-plate: #1f2a18;
+  --dl-plate-light: #3a4b2c;
+  --dl-plate-dark: #0e140b;
+  --dl-olive: #4a5b30;
+  --dl-olive-light: #71874a;
+  --dl-olive-dark: #2c3a1c;
+  --dl-khaki: #ece6b4;
+  --dl-khaki-dim: #b8b386;
+  --dl-gold: #f6c744;
+  --dl-gold-light: #fff0a0;
+  --dl-gold-dark: #b5780f;
+  --dl-ember: #f26a1b;
+  --dl-ember-light: #ff9a4a;
+  --dl-title-outline:
+    4px 0 0 #141810, -4px 0 0 #141810, 0 4px 0 #141810, 0 -4px 0 #141810,
+    4px 4px 0 #141810, -4px 4px 0 #141810, 4px -4px 0 #141810, -4px -4px 0 #141810,
+    0 8px 0 #141810, 4px 8px 0 #141810, -4px 8px 0 #141810, 0 12px 0 #0e2a12, 4px 12px 0 #0e2a12, -4px 12px 0 #0e2a12;
+  --dl-text-outline: 2px 0 0 #141810, -2px 0 0 #141810, 0 2px 0 #141810, 0 -2px 0 #141810;
+  --dl-plate-bevel: inset 0 3px 0 #3a4b2c, inset 0 -3px 0 #0e140b;
+  --dl-gold-bevel: inset 0 4px 0 #fff0a0, inset 0 -5px 0 #b5780f;
+  --dl-gold-bevel-press: inset 0 4px 0 #b5780f;
+  --dl-olive-bevel: inset 0 3px 0 #71874a, inset 0 -4px 0 #2c3a1c;
+  --dl-olive-bevel-press: inset 0 3px 0 #2c3a1c;
+  --dl-drop: 0 6px 0 #0e2a12;
+
+  /* Play-screen stage: the 16:9 game window, framed in riveted olive steel,
+     centred on a calm dark field. */
+  --stage-bg: #12160f;
+  --stage-bg-glow: #1b2216;
+  --stage-frame: #4a5b30;
+  --stage-frame-light: #71874a;
+  --stage-frame-dark: #2c3a1c;
+  --stage-frame-edge: #0b0f08;
+  --stage-rivet: #b8d679;
+  --stage-drop: rgba(0, 0, 0, 0.55);
 }
 
 /* The shared base styles put a white glow on h1 and white text on the accent. */
