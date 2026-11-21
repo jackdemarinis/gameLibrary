@@ -2,13 +2,15 @@
 // Simplified from the official rules: fixed circle, jack re-thrown by the same
 // team until it lands in the valid zone.
 
-import { match as matchConfig, pitch } from "../config/rules";
+import { match as matchConfig, pitch, type CpuLevel } from "../config/rules";
+import type { CourtId } from "../content/courts";
 
 export interface PlayerSlot {
   name: string;
   characterId: string;
   team: number;
   isCpu: boolean;
+  cpuLevel?: CpuLevel;
   // Online play: the room clientId steering this player (null = CPU run by the host).
   controllerId?: string | null;
 }
@@ -16,6 +18,7 @@ export interface PlayerSlot {
 export interface MatchConfig {
   players: PlayerSlot[];
   targetScore: number;
+  courtId?: CourtId;
 }
 
 export type MatchPhase = "jack" | "boules" | "endOver" | "matchOver";

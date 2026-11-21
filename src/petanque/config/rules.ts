@@ -44,16 +44,18 @@ export const throwing = {
   elevationDegrees: { roll: 14, lob: 58 } satisfies Record<ThrowStyle, number>,
   maxAimDegrees: 35,
   aimDegreesPerSecond: 22,
-  maxAccuracyErrorDegrees: 7,
+  // A fully missed straightness bar pulls the throw this far off line.
+  maxAccuracyErrorDegrees: 9,
 } as const;
 
+// Two timed bars. Distance: a needle runs 0 -> full -> 0 on a loop; press to
+// lock how far. Straightness: a needle swings left <-> right through the centre;
+// press to lock, and the further from centre the more the throw pulls off line.
 export const meter = {
-  // Bar runs from `overshoot` (left of the sweet spot) to 1 (full power).
-  fillSeconds: 1.15,
-  returnSeconds: 1.0,
-  overshoot: -0.14,
-  sweetSpotHalfWidth: 0.018,
-  accuracyWindow: 0.12,
+  distanceSweepSeconds: 1.15,
+  directionSweepSeconds: 0.62,
+  // Within this much of centre the throw goes dead straight.
+  directionSweetSpot: 0.07,
 } as const;
 
 export const match = {
@@ -63,8 +65,25 @@ export const match = {
   defaultTargetScore: 7,
 } as const;
 
-export const cpu = {
-  thinkSeconds: 0.9,
-  powerNoise: 0.035,
-  aimNoiseDegrees: 2.5,
-} as const;
+export type CpuLevel = "easy" | "normal" | "hard";
+
+export interface CpuProfile {
+  label: string;
+  thinkSeconds: number;
+  // Fraction of the distance bar; 0.03 is about a third of a metre.
+  powerNoise: number;
+  aimNoiseDegrees: number;
+  // How often it tries to knock a rival boule off the jack when one sits close.
+  shootChance: number;
+  // Reads the pitch: weighs pointing vs shooting and lobs over blockers.
+  readsPitch: boolean;
+}
+
+export const cpuLevels: Record<CpuLevel, CpuProfile> = {
+  easy: { label: "Easy", thinkSeconds: 1.2, powerNoise: 0.075, aimNoiseDegrees: 5.5, shootChance: 0, readsPitch: false },
+  normal: { label: "Normal", thinkSeconds: 1.0, powerNoise: 0.035, aimNoiseDegrees: 2.5, shootChance: 0.45, readsPitch: false },
+  hard: { label: "Hard", thinkSeconds: 0.9, powerNoise: 0.014, aimNoiseDegrees: 0.9, shootChance: 0.85, readsPitch: true },
+};
+
+export const cpuLevelOrder: readonly CpuLevel[] = ["easy", "normal", "hard"];
+export const defaultCpuLevel: CpuLevel = "normal";

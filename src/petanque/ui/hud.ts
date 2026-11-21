@@ -1,26 +1,21 @@
-// DOM overlay: title, local setup, online lobby, in-game HUD, swing meter,
-// toasts and results. Styling lives in petanque.css; colours come from theme.ts.
+// DOM overlay: title, local setup, online lobby, in-game HUD, the two-bar
+// throw meter, toasts and results. Styling lives in petanque.css; colours come
+// from theme.ts.
 
-import { match as matchRules, meter as meterRules, type ThrowStyle } from "../config/rules";
+import { cpuLevelOrder, cpuLevels, defaultCpuLevel, match as matchRules, meter as meterRules, throwing, type CpuLevel, type ThrowStyle } from "../config/rules";
 import { characters, getCharacter, teamNames } from "../content/characters";
+import { courts, defaultCourtId, getCourt, type CourtId } from "../content/courts";
+import type { LobbyState } from "../net/protocol";
 import type { MatchConfig, MatchState, PlayerSlot } from "../simulation/match";
 import { boulesPerPlayer, teamBoulesLeft } from "../simulation/match";
 import type { MeterState } from "../simulation/meter";
-import type { LobbyState } from "../net/protocol";
-
-function hex(color: number): string {
-  return `#${color.toString(16).padStart(6, "0")}`;
-}
+import { powerToDistance } from "../simulation/physics";
 
 function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 }
 
-function avatar(characterId: string): string {
-  const character = getCharacter(characterId);
-  const hat = character.hat === "none" ? character.hair : character.hatColor;
-  return `<div class="ppAvatar" style="--avatar-skin:${hex(character.skin)};--avatar-shirt:${hex(character.shirt)};--avatar-hat:${hex(hat)}"></div>`;
-}
+export type PortraitSource = (characterId: string) => string;
 
 export interface TitleHandlers {
   onLocal(): void;
@@ -28,35 +23,67 @@ export interface TitleHandlers {
   onJoin(code: string, name: string): void;
 }
 
+export interface SetupHandlers {
+  onStart(config: MatchConfig): void;
+  onBack(): void;
+  onPreviewCourt(id: CourtId): void;
+}
+
 export interface LobbyHandlers {
   onPlayerCount(count: 2 | 4): void;
   onTargetScore(score: number): void;
+  onCourt(id: CourtId): void;
   onEditName(name: string): void;
-  onPickCharacter(slotIndex: number, step: number): void;
+  onPickCharacter(slotIndex: number, characterId: string): void;
+  onCpuLevel(slotIndex: number, level: CpuLevel): void;
   onStart(): void;
   onLeave(): void;
 }
+
+interface SetupSlot {
+  name: string;
+  characterId: string;
+  team: number;
+  isCpu: boolean;
+  cpuLevel: CpuLevel;
+}
+
+const presets: Array<{ id: string; label: string; count: 2 | 4; cpu: boolean[]; teams: number[] }> = [
+  { id: "vsCpu", label: "1 vs 1 · you vs CPU", count: 2, cpu: [false, true], teams: [0, 1] },
+  { id: "hotSeat", label: "1 vs 1 · two players", count: 2, cpu: [false, false], teams: [0, 1] },
+  { id: "threeCpu", label: "2 vs 2 · you + 3 CPUs", count: 4, cpu: [false, true, true, true], teams: [0, 1, 0, 1] },
+];
 
 export class Hud {
   private readonly root: HTMLElement;
   private readonly screen: HTMLElement;
   private readonly hudLayer: HTMLElement;
   private readonly toastLayer: HTMLElement;
-  private readonly meterFill: HTMLElement;
-  private readonly meterMarker: HTMLElement;
-  private readonly meterLock: HTMLElement;
   private readonly meterBox: HTMLElement;
+  private readonly distanceFill: HTMLElement;
+  private readonly distanceNeedle: HTMLElement;
+  private readonly distanceReadout: HTMLElement;
+  private readonly directionNeedle: HTMLElement;
+  private readonly directionBar: HTMLElement;
+  private readonly distanceBar: HTMLElement;
   private readonly scoreBoard: HTMLElement;
   private readonly turnBanner: HTMLElement;
   private readonly infoLine: HTMLElement;
   private readonly styleChip: HTMLElement;
   private readonly roomChip: HTMLElement;
   private toastTimer = 0;
+  private portrait: PortraitSource = () => "";
 
   constructor(root: HTMLElement) {
     this.root = root;
+    const metreTicks = Array.from({ length: throwing.maxDistance - throwing.minDistance + 1 }, (_, index) => {
+      const metres = throwing.minDistance + index;
+      const left = (index / (throwing.maxDistance - throwing.minDistance)) * 100;
+      return `<i style="left:${left}%" class="${metres % 2 === 0 ? "isMajor" : ""}">${metres % 2 === 0 ? `<b>${metres}</b>` : ""}</i>`;
+    }).join("");
+    const sweet = meterRules.directionSweetSpot * 50;
     root.innerHTML = `
-      <a class="ppHome" href="../" aria-label="Back to Game Library">‹ Library</a>
+      <a class="ppHome" href="../" aria-label="Back to JackGames">‹ JackGames</a>
       <div class="ppHud" hidden>
         <div class="ppScoreboard"></div>
         <div class="ppTurn"></div>
@@ -65,14 +92,25 @@ export class Hud {
           <div class="ppInfo"></div>
           <div class="ppMeterBox">
             <div class="ppStyleChip"></div>
-            <div class="ppMeter">
-              <div class="ppMeterSweet"></div>
-              <div class="ppMeterFill"></div>
-              <div class="ppMeterLock"></div>
-              <div class="ppMeterMarker"></div>
+            <div class="ppBar" data-bar="distance">
+              <span class="ppBarLabel">Distance</span>
+              <div class="ppTrack">
+                <div class="ppTicks">${metreTicks}</div>
+                <div class="ppFill"></div>
+                <div class="ppNeedle"></div>
+              </div>
+              <span class="ppReadout"></span>
+            </div>
+            <div class="ppBar" data-bar="direction">
+              <span class="ppBarLabel">Straight</span>
+              <div class="ppTrack ppTrackDirection">
+                <div class="ppSweet" style="left:${50 - sweet}%;width:${sweet * 2}%"></div>
+                <div class="ppNeedle"></div>
+              </div>
+              <span class="ppReadout ppReadoutHint">◀ ▶</span>
             </div>
           </div>
-          <div class="ppHelp">← → aim · ↑ ↓ roll / lob · Space: start, set power, set accuracy</div>
+          <div class="ppHelp">← → aim · ↑ ↓ roll / lob · Space: start → lock distance → lock straight</div>
         </div>
       </div>
       <div class="ppToasts"></div>
@@ -88,17 +126,22 @@ export class Hud {
     this.styleChip = find(".ppStyleChip");
     this.roomChip = find(".ppRoomChip");
     this.meterBox = find(".ppMeterBox");
-    this.meterFill = find(".ppMeterFill");
-    this.meterMarker = find(".ppMeterMarker");
-    this.meterLock = find(".ppMeterLock");
-
-    const sweet = find(".ppMeterSweet");
-    sweet.style.left = `${this.meterPercent(-meterRules.sweetSpotHalfWidth)}%`;
-    sweet.style.width = `${this.meterPercent(meterRules.sweetSpotHalfWidth) - this.meterPercent(-meterRules.sweetSpotHalfWidth)}%`;
+    this.distanceBar = find('[data-bar="distance"]');
+    this.directionBar = find('[data-bar="direction"]');
+    this.distanceFill = this.distanceBar.querySelector<HTMLElement>(".ppFill")!;
+    this.distanceNeedle = this.distanceBar.querySelector<HTMLElement>(".ppNeedle")!;
+    this.distanceReadout = this.distanceBar.querySelector<HTMLElement>(".ppReadout")!;
+    this.directionNeedle = this.directionBar.querySelector<HTMLElement>(".ppNeedle")!;
   }
 
-  private meterPercent(value: number): number {
-    return ((value - meterRules.overshoot) / (1 - meterRules.overshoot)) * 100;
+  setPortraitSource(source: PortraitSource): void {
+    this.portrait = source;
+  }
+
+  private avatar(characterId: string, extraClass = ""): string {
+    const character = getCharacter(characterId);
+    const src = this.portrait(characterId);
+    return `<span class="ppAvatar ${extraClass}">${src ? `<img src="${src}" alt="${escapeHtml(character.name)}" draggable="false" />` : ""}</span>`;
   }
 
   closeScreen(): void {
@@ -172,113 +215,210 @@ export class Hud {
     for (const button of this.screen.querySelectorAll<HTMLButtonElement>("button")) button.disabled = busy;
   }
 
+  // ---------- shared pieces ----------
+
+  private segment(name: string, options: Array<[string | number, string]>, current: string | number, extraClass = ""): string {
+    return `<div class="ppSegment ${extraClass}" role="group">${options
+      .map(([value, label]) => `<button data-${name}="${value}" class="${value === current ? "isOn" : ""}" aria-pressed="${value === current}">${label}</button>`)
+      .join("")}</div>`;
+  }
+
+  private bindSegment(scope: ParentNode, name: string, onPick: (value: string) => void): void {
+    for (const button of scope.querySelectorAll<HTMLButtonElement>(`[data-${name}]`)) {
+      button.addEventListener("click", () => onPick(button.getAttribute(`data-${name}`)!));
+    }
+  }
+
+  private courtPicker(current: CourtId, enabled: boolean): string {
+    return `<div class="ppCourts">${courts
+      .map(
+        (court) => `
+        <button class="ppCourt ppCourt-${court.id} ${court.id === current ? "isOn" : ""}" data-court="${court.id}" ${enabled ? "" : "disabled"} aria-pressed="${court.id === current}">
+          <strong>${escapeHtml(court.name)}</strong>
+          <small>${escapeHtml(court.blurb)}</small>
+        </button>`,
+      )
+      .join("")}</div>`;
+  }
+
+  // Character select grid, shown over the setup or lobby panel.
+  private openCharacterPicker(current: string, taken: Set<string>, onPick: (characterId: string) => void): void {
+    const overlay = document.createElement("div");
+    overlay.className = "ppPickerOverlay";
+    overlay.innerHTML = `
+      <div class="ppPanel ppPickerPanel" role="dialog" aria-label="Choose a character">
+        <h2>Choose a player</h2>
+        <div class="ppRoster">
+          ${characters
+            .map((character) => {
+              const isTaken = taken.has(character.id) && character.id !== current;
+              return `
+              <button class="ppRosterCard ${character.id === current ? "isOn" : ""}" data-character="${character.id}" ${isTaken ? "disabled" : ""}>
+                ${this.avatar(character.id, "ppAvatarBig")}
+                <strong>${escapeHtml(character.name)}</strong>
+                <small>${isTaken ? "Taken" : escapeHtml(character.tagline)}</small>
+              </button>`;
+            })
+            .join("")}
+        </div>
+        <div class="ppActions"><button class="ppButton ppButtonGhost" data-cancel>Cancel</button></div>
+      </div>
+    `;
+    const close = () => overlay.remove();
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) close();
+    });
+    overlay.querySelector("[data-cancel]")!.addEventListener("click", close);
+    for (const button of overlay.querySelectorAll<HTMLButtonElement>("[data-character]")) {
+      button.addEventListener("click", () => {
+        close();
+        onPick(button.dataset.character!);
+      });
+    }
+    this.screen.appendChild(overlay);
+    overlay.querySelector<HTMLButtonElement>(".ppRosterCard.isOn, .ppRosterCard:not([disabled])")?.focus();
+  }
+
   // ---------- local setup ----------
 
-  showSetup(previous: MatchConfig | null, onStart: (config: MatchConfig) => void, onBack: () => void): void {
-    let playerCount = previous?.players.length ?? 2;
+  showSetup(previous: MatchConfig | null, handlers: SetupHandlers): void {
+    let playerCount: 2 | 4 = previous?.players.length === 4 ? 4 : 2;
     let targetScore = previous?.targetScore ?? matchRules.defaultTargetScore;
-    const slots: PlayerSlot[] = [0, 1, 2, 3].map((index) => {
+    let courtId: CourtId = getCourt(previous?.courtId ?? defaultCourtId).id;
+    const defaults = ["rafa", "mina", "zuri", "gus"];
+    const slots: SetupSlot[] = [0, 1, 2, 3].map((index) => {
       const existing = previous?.players[index];
-      return existing ?? { name: characters[index].name, characterId: characters[index].id, team: index % 2, isCpu: index === 1 };
+      if (existing) {
+        return { name: existing.name, characterId: existing.characterId, team: existing.team, isCpu: existing.isCpu, cpuLevel: existing.cpuLevel ?? defaultCpuLevel };
+      }
+      const character = getCharacter(defaults[index]);
+      return { name: character.name, characterId: character.id, team: index % 2, isCpu: index !== 0, cpuLevel: defaultCpuLevel };
     });
+    handlers.onPreviewCourt(courtId);
+
+    const applyPreset = (preset: (typeof presets)[number]) => {
+      playerCount = preset.count;
+      preset.cpu.forEach((isCpu, index) => {
+        slots[index].isCpu = isCpu;
+        slots[index].team = preset.teams[index];
+      });
+    };
 
     const render = () => {
-      const activeSlots = slots.slice(0, playerCount);
+      const active = slots.slice(0, playerCount);
+      const perTeam = playerCount / 2;
+      const teamCounts = [0, 1].map((team) => active.filter((slot) => slot.team === team).length);
+      const balanced = teamCounts[0] === perTeam && teamCounts[1] === perTeam;
+      const presetOn = presets.find(
+        (preset) => preset.count === playerCount && preset.cpu.every((isCpu, index) => active[index]?.isCpu === isCpu && active[index]?.team === preset.teams[index]),
+      );
+      let humanNumber = 0;
       this.screen.innerHTML = `
         <div class="ppPanel ppSetup">
           <h2>Match Setup</h2>
-          ${this.segment("count", [[2, "1 vs 1"], [4, "2 vs 2"]], playerCount)}
-          <div class="ppTeams">
-            ${[0, 1]
-              .map(
-                (team) => `
-              <div class="ppTeam ppTeam${team}">
-                <h3>${teamNames[team]}</h3>
-                ${activeSlots
-                  .map((slot, index) => ({ slot, index }))
-                  .filter(({ slot }) => slot.team === team)
-                  .map(
-                    ({ slot, index }) => `
-                    <div class="ppSlot" data-slot="${index}">
-                      ${avatar(slot.characterId)}
-                      <div class="ppSlotMain">
-                        <input class="ppName" maxlength="16" value="${escapeHtml(slot.name)}" aria-label="Player name" />
-                        ${this.picker(getCharacter(slot.characterId).name)}
-                      </div>
-                      <button class="ppToggle ${slot.isCpu ? "isCpu" : ""}" data-cpu>${slot.isCpu ? "CPU" : "Human"}</button>
-                    </div>`,
-                  )
-                  .join("")}
-              </div>`,
-              )
+          <div class="ppPresets">${presets
+            .map((preset) => `<button class="ppChip ${presetOn?.id === preset.id ? "isOn" : ""}" data-preset="${preset.id}">${preset.label}</button>`)
+            .join("")}</div>
+          <div class="ppRow"><span>Players</span>${this.segment("count", [[2, "1 vs 1"], [4, "2 vs 2"]], playerCount)}</div>
+          <div class="ppSlots ppSlots${playerCount}">
+            ${active
+              .map((slot, index) => {
+                const label = slot.isCpu ? "CPU" : `P${++humanNumber}`;
+                return `
+                <div class="ppSlotCard ppTeam${slot.team}" data-slot="${index}">
+                  <button class="ppPortraitButton" data-pick aria-label="Change character for slot ${index + 1}">
+                    ${this.avatar(slot.characterId, "ppAvatarBig")}
+                    <span class="ppSlotTag">${label}</span>
+                    <span class="ppSlotChange">Change</span>
+                  </button>
+                  <div class="ppSlotMain">
+                    <input class="ppName" maxlength="16" value="${escapeHtml(slot.name)}" aria-label="Player ${index + 1} name" />
+                    <span class="ppSlotCharacter">${escapeHtml(getCharacter(slot.characterId).name)}</span>
+                    ${this.segment("controller", [["human", "Human"], ["cpu", "CPU"]], slot.isCpu ? "cpu" : "human", "ppSegmentSmall")}
+                    ${slot.isCpu ? this.segment("level", cpuLevelOrder.map((level) => [level, cpuLevels[level].label]), slot.cpuLevel, "ppSegmentSmall") : ""}
+                    ${this.segment("team", [[0, teamNames[0]], [1, teamNames[1]]], slot.team, "ppSegmentSmall ppSegmentTeam")}
+                  </div>
+                </div>`;
+              })
               .join("")}
           </div>
+          <p class="ppFormError">${balanced ? "" : `Each team needs ${perTeam} player${perTeam === 1 ? "" : "s"}: ${teamNames[0]} has ${teamCounts[0]}, ${teamNames[1]} has ${teamCounts[1]}.`}</p>
+          <div class="ppRow ppRowTop"><span>Court</span>${this.courtPicker(courtId, true)}</div>
           <div class="ppRow"><span>Play to</span>${this.segment("target", matchRules.targetScoreOptions.map((score) => [score, String(score)]), targetScore)}</div>
           <div class="ppActions">
             <button class="ppButton ppButtonGhost" data-back>Back</button>
-            <button class="ppButton" data-start>Start Match</button>
+            <button class="ppButton" data-start ${balanced ? "" : "disabled"}>Start Match</button>
           </div>
         </div>
       `;
-      this.bindSegment("count", (value) => {
-        playerCount = value;
-        render();
-      });
-      this.bindSegment("target", (value) => {
-        targetScore = value;
-        render();
-      });
-      for (const slotElement of this.screen.querySelectorAll<HTMLElement>("[data-slot]")) {
-        const slot = slots[Number(slotElement.dataset.slot)];
-        slotElement.querySelector<HTMLInputElement>(".ppName")!.addEventListener("input", (event) => {
-          slot.name = (event.target as HTMLInputElement).value;
-        });
-        for (const button of slotElement.querySelectorAll<HTMLButtonElement>("[data-pick]")) {
-          button.addEventListener("click", () => {
-            const current = characters.findIndex((character) => character.id === slot.characterId);
-            const next = (current + Number(button.dataset.pick) + characters.length) % characters.length;
-            if (slot.name === characters[current].name) slot.name = characters[next].name;
-            slot.characterId = characters[next].id;
-            render();
-          });
-        }
-        slotElement.querySelector("[data-cpu]")!.addEventListener("click", () => {
-          slot.isCpu = !slot.isCpu;
+      const panel = this.screen.querySelector<HTMLElement>(".ppSetup")!;
+      for (const button of panel.querySelectorAll<HTMLButtonElement>("[data-preset]")) {
+        button.addEventListener("click", () => {
+          applyPreset(presets.find((preset) => preset.id === button.dataset.preset)!);
           render();
         });
       }
-      this.screen.querySelector("[data-back]")!.addEventListener("click", onBack);
-      this.screen.querySelector("[data-start]")!.addEventListener("click", () => {
-        const players = slots
-          .slice(0, playerCount)
-          .map((slot) => ({ ...slot, name: slot.name.trim() || getCharacter(slot.characterId).name, controllerId: undefined }));
-        onStart({ players, targetScore });
+      this.bindSegment(panel, "count", (value) => {
+        playerCount = value === "4" ? 4 : 2;
+        // Keep teams balanced when growing: slots 3 and 4 alternate.
+        if (playerCount === 4) {
+          slots[2].team = slots[0].team;
+          slots[3].team = slots[1].team;
+        }
+        render();
+      });
+      this.bindSegment(panel, "target", (value) => {
+        targetScore = Number(value);
+        render();
+      });
+      this.bindSegment(panel, "court", (value) => {
+        courtId = getCourt(value).id;
+        handlers.onPreviewCourt(courtId);
+        render();
+      });
+      for (const card of panel.querySelectorAll<HTMLElement>("[data-slot]")) {
+        const slot = slots[Number(card.dataset.slot)];
+        card.querySelector<HTMLInputElement>(".ppName")!.addEventListener("input", (event) => {
+          slot.name = (event.target as HTMLInputElement).value;
+        });
+        card.querySelector("[data-pick]")!.addEventListener("click", () => {
+          const taken = new Set(active.map((other) => other.characterId));
+          this.openCharacterPicker(slot.characterId, taken, (characterId) => {
+            if (slot.name.trim() === "" || slot.name === getCharacter(slot.characterId).name) slot.name = getCharacter(characterId).name;
+            slot.characterId = characterId;
+            render();
+          });
+        });
+        this.bindSegment(card, "controller", (value) => {
+          slot.isCpu = value === "cpu";
+          render();
+        });
+        this.bindSegment(card, "level", (value) => {
+          slot.cpuLevel = value as CpuLevel;
+          render();
+        });
+        this.bindSegment(card, "team", (value) => {
+          slot.team = Number(value);
+          render();
+        });
+      }
+      panel.querySelector("[data-back]")!.addEventListener("click", handlers.onBack);
+      panel.querySelector("[data-start]")!.addEventListener("click", () => {
+        if (!balanced) return;
+        const players: PlayerSlot[] = active.map((slot) => ({
+          name: slot.name.trim() || getCharacter(slot.characterId).name,
+          characterId: slot.characterId,
+          team: slot.team,
+          isCpu: slot.isCpu,
+          cpuLevel: slot.isCpu ? slot.cpuLevel : undefined,
+          controllerId: undefined,
+        }));
+        handlers.onStart({ players: alternateTeams(players), targetScore, courtId });
       });
     };
 
     this.hudLayer.hidden = true;
     render();
-  }
-
-  private segment(name: string, options: Array<[number, string]>, current: number): string {
-    return `<div class="ppSegment" role="group">${options
-      .map(([value, label]) => `<button data-${name}="${value}" class="${value === current ? "isOn" : ""}">${label}</button>`)
-      .join("")}</div>`;
-  }
-
-  private bindSegment(name: string, onPick: (value: number) => void): void {
-    for (const button of this.screen.querySelectorAll<HTMLButtonElement>(`[data-${name}]`)) {
-      button.addEventListener("click", () => onPick(Number(button.getAttribute(`data-${name}`))));
-    }
-  }
-
-  private picker(label: string, enabled = true): string {
-    if (!enabled) return `<div class="ppPicker"><span>${escapeHtml(label)}</span></div>`;
-    return `<div class="ppPicker">
-      <button data-pick="-1" aria-label="Previous character">‹</button>
-      <span>${escapeHtml(label)}</span>
-      <button data-pick="1" aria-label="Next character">›</button>
-    </div>`;
   }
 
   // ---------- online lobby ----------
@@ -287,8 +427,10 @@ export class Hud {
     this.hudLayer.hidden = true;
     const focused = document.activeElement instanceof HTMLInputElement && this.screen.contains(document.activeElement);
     if (focused) return; // Don't yank the name box out from under someone typing; next update catches up.
+    if (this.screen.querySelector(".ppPickerOverlay")) return; // Character grid open: refresh once it closes.
 
     const humans = lobby.slots.filter((slot) => slot.controllerId !== null).length;
+    const courtId = getCourt(lobby.courtId).id;
     this.screen.innerHTML = `
       <div class="ppPanel ppSetup ppLobby">
         <p class="ppEyebrow">Room code</p>
@@ -297,35 +439,33 @@ export class Hud {
           .map((letter) => `<span>${letter}</span>`)
           .join("")}</div>
         <p class="ppLobbyHint">Friends open this page, enter the code, and press Join.</p>
-        ${isHost ? this.segment("count", [[2, "1 vs 1"], [4, "2 vs 2"]], lobby.playerCount) : ""}
-        <div class="ppTeams">
-          ${[0, 1]
-            .map(
-              (team) => `
-            <div class="ppTeam ppTeam${team}">
-              <h3>${teamNames[team]}</h3>
-              ${lobby.slots
-                .map((slot, index) => ({ slot, index }))
-                .filter(({ slot }) => slot.team === team)
-                .map(({ slot, index }) => {
-                  const mine = slot.controllerId === myId;
-                  const editable = mine || (isHost && slot.controllerId === null);
-                  const tag = mine ? "You" : slot.controllerId === null ? "CPU" : "Friend";
-                  return `
-                  <div class="ppSlot ${mine ? "isMine" : ""}" data-slot="${index}">
-                    ${avatar(slot.characterId)}
-                    <div class="ppSlotMain">
-                      ${mine ? `<input class="ppName" data-myname maxlength="16" value="${escapeHtml(slot.name)}" aria-label="Your name" />` : `<div class="ppSlotName">${escapeHtml(slot.name)}</div>`}
-                      ${this.picker(getCharacter(slot.characterId).name, editable)}
-                    </div>
-                    <span class="ppToggle ${slot.controllerId === null ? "isCpu" : ""}">${tag}</span>
-                  </div>`;
-                })
-                .join("")}
-            </div>`,
-            )
+        ${isHost ? `<div class="ppRow"><span>Players</span>${this.segment("count", [[2, "1 vs 1"], [4, "2 vs 2"]], lobby.playerCount)}</div>` : ""}
+        <div class="ppSlots ppSlots${lobby.playerCount}">
+          ${lobby.slots
+            .map((slot, index) => {
+              const mine = slot.controllerId === myId;
+              const isCpu = slot.controllerId === null;
+              const editable = mine || (isHost && isCpu);
+              const tag = mine ? "You" : isCpu ? "CPU" : "Friend";
+              const level = slot.cpuLevel ?? defaultCpuLevel;
+              return `
+              <div class="ppSlotCard ppTeam${slot.team} ${mine ? "isMine" : ""}" data-slot="${index}">
+                <button class="ppPortraitButton" data-pick ${editable ? "" : "disabled"} aria-label="Change character">
+                  ${this.avatar(slot.characterId, "ppAvatarBig")}
+                  <span class="ppSlotTag">${tag}</span>
+                  ${editable ? '<span class="ppSlotChange">Change</span>' : ""}
+                </button>
+                <div class="ppSlotMain">
+                  ${mine ? `<input class="ppName" data-myname maxlength="16" value="${escapeHtml(slot.name)}" aria-label="Your name" />` : `<div class="ppSlotName">${escapeHtml(slot.name)}</div>`}
+                  <span class="ppSlotCharacter">${escapeHtml(getCharacter(slot.characterId).name)} · ${teamNames[slot.team]}</span>
+                  ${isCpu && isHost ? this.segment("level", cpuLevelOrder.map((value) => [value, cpuLevels[value].label]), level, "ppSegmentSmall") : ""}
+                  ${isCpu && !isHost ? `<span class="ppSlotCharacter">${cpuLevels[level].label} CPU</span>` : ""}
+                </div>
+              </div>`;
+            })
             .join("")}
         </div>
+        <div class="ppRow ppRowTop"><span>Court</span>${this.courtPicker(courtId, isHost)}</div>
         ${isHost ? `<div class="ppRow"><span>Play to</span>${this.segment("target", matchRules.targetScoreOptions.map((score) => [score, String(score)]), lobby.targetScore)}</div>` : `<p class="ppLobbyHint">Play to ${lobby.targetScore}. Waiting for the host to start…</p>`}
         <div class="ppActions">
           <button class="ppButton ppButtonGhost" data-leave>Leave</button>
@@ -334,13 +474,15 @@ export class Hud {
       </div>
     `;
 
+    const panel = this.screen.querySelector<HTMLElement>(".ppLobby")!;
     if (isHost) {
-      this.bindSegment("count", (value) => handlers.onPlayerCount(value as 2 | 4));
-      this.bindSegment("target", handlers.onTargetScore);
-      this.screen.querySelector("[data-start]")!.addEventListener("click", handlers.onStart);
+      this.bindSegment(panel, "count", (value) => handlers.onPlayerCount(value === "4" ? 4 : 2));
+      this.bindSegment(panel, "target", (value) => handlers.onTargetScore(Number(value)));
+      this.bindSegment(panel, "court", (value) => handlers.onCourt(getCourt(value).id));
+      panel.querySelector("[data-start]")!.addEventListener("click", handlers.onStart);
     }
-    this.screen.querySelector("[data-leave]")!.addEventListener("click", handlers.onLeave);
-    const nameInput = this.screen.querySelector<HTMLInputElement>("[data-myname]");
+    panel.querySelector("[data-leave]")!.addEventListener("click", handlers.onLeave);
+    const nameInput = panel.querySelector<HTMLInputElement>("[data-myname]");
     if (nameInput) {
       const commit = () => {
         if (nameInput.value.trim()) handlers.onEditName(nameInput.value.trim());
@@ -350,10 +492,14 @@ export class Hud {
         if (event.key === "Enter") nameInput.blur();
       });
     }
-    for (const slotElement of this.screen.querySelectorAll<HTMLElement>("[data-slot]")) {
-      for (const button of slotElement.querySelectorAll<HTMLButtonElement>("[data-pick]")) {
-        button.addEventListener("click", () => handlers.onPickCharacter(Number(slotElement.dataset.slot), Number(button.dataset.pick)));
-      }
+    for (const card of panel.querySelectorAll<HTMLElement>("[data-slot]")) {
+      const index = Number(card.dataset.slot);
+      const slot = lobby.slots[index];
+      card.querySelector<HTMLButtonElement>("[data-pick]:not([disabled])")?.addEventListener("click", () => {
+        const taken = new Set(lobby.slots.map((other) => other.characterId));
+        this.openCharacterPicker(slot.characterId, taken, (characterId) => handlers.onPickCharacter(index, characterId));
+      });
+      this.bindSegment(card, "level", (value) => handlers.onCpuLevel(index, value as CpuLevel));
     }
   }
 
@@ -372,8 +518,13 @@ export class Hud {
         const total = state.config.players.filter((player) => player.team === team).length * perPlayer;
         const dots = Array.from({ length: total }, (_, index) => `<i class="${index < left ? "isLeft" : ""}"></i>`).join("");
         const isTurn = state.currentTeam === team && state.phase !== "endOver" && state.phase !== "matchOver";
+        const faces = state.config.players
+          .filter((player) => player.team === team)
+          .map((player) => this.avatar(player.characterId, "ppAvatarTiny"))
+          .join("");
         return `
           <div class="ppScore ppTeam${team} ${isTurn ? "isTurn" : ""}">
+            <div class="ppScoreFaces">${faces}</div>
             <div class="ppScoreName">${teamNames[team]}${pointTeam === team ? '<span class="ppPoint">POINT</span>' : ""}</div>
             <div class="ppScoreValue">${state.scores[team]}</div>
             <div class="ppDots">${dots}</div>
@@ -403,24 +554,20 @@ export class Hud {
   }
 
   setMeter(state: MeterState): void {
-    const active = state.phase === "power" || state.phase === "accuracy";
-    this.meterBox.classList.toggle("isActive", active);
-    const zero = this.meterPercent(0);
-    if (state.phase === "power") {
-      this.meterFill.style.left = `${zero}%`;
-      this.meterFill.style.width = `${this.meterPercent(state.value) - zero}%`;
-      this.meterLock.hidden = true;
-    } else if (state.phase === "accuracy" || state.phase === "done") {
-      this.meterFill.style.left = `${zero}%`;
-      this.meterFill.style.width = `${this.meterPercent(state.power) - zero}%`;
-      this.meterLock.hidden = false;
-      this.meterLock.style.left = `${this.meterPercent(state.power)}%`;
-    } else {
-      this.meterFill.style.width = "0";
-      this.meterLock.hidden = true;
-    }
-    const markerValue = state.phase === "idle" || state.phase === "cancelled" ? 0 : state.value;
-    this.meterMarker.style.left = `${this.meterPercent(markerValue)}%`;
+    this.meterBox.dataset.phase = state.phase;
+    const distance = state.phase === "distance" ? state.value : state.phase === "idle" ? 0 : state.power;
+    this.distanceFill.style.width = `${distance * 100}%`;
+    this.distanceNeedle.style.left = `${distance * 100}%`;
+    this.distanceReadout.textContent = state.phase === "idle" ? "Space" : `${powerToDistance(distance).toFixed(1)} m`;
+    this.distanceBar.classList.toggle("isLocked", state.phase === "direction" || state.phase === "done");
+    this.distanceBar.classList.toggle("isActive", state.phase === "distance" || state.phase === "idle");
+    const direction = state.phase === "direction" || state.phase === "done" ? state.value : 0;
+    this.directionNeedle.style.left = `${50 + direction * 50}%`;
+    this.directionBar.classList.toggle("isActive", state.phase === "direction");
+    this.directionBar.classList.toggle("isLocked", state.phase === "done");
+    this.directionBar.classList.toggle("isWaiting", state.phase === "idle" || state.phase === "distance");
+    const off = Math.abs(direction);
+    this.directionBar.classList.toggle("isPerfect", state.phase === "done" && off <= meterRules.directionSweetSpot);
   }
 
   toast(text: string, team: number | null = null, seconds = 1.8): void {
@@ -458,4 +605,15 @@ export class Hud {
     this.screen.querySelector("[data-rematch]")?.addEventListener("click", onRematch);
     this.screen.querySelector("[data-menu]")!.addEventListener("click", onMenu);
   }
+}
+
+// Throwing order alternates teams (A, B, A, B) however the slots were filled.
+export function alternateTeams(players: PlayerSlot[]): PlayerSlot[] {
+  const byTeam = [players.filter((player) => player.team === 0), players.filter((player) => player.team === 1)];
+  const ordered: PlayerSlot[] = [];
+  for (let index = 0; index < Math.max(byTeam[0].length, byTeam[1].length); index++) {
+    if (byTeam[0][index]) ordered.push(byTeam[0][index]);
+    if (byTeam[1][index]) ordered.push(byTeam[1][index]);
+  }
+  return ordered;
 }

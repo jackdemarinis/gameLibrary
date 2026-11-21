@@ -4,18 +4,18 @@ import { afterBouleThrow, afterJackThrow, consumeBoule, createMatch, isJackPlace
 const singles: MatchConfig = {
   targetScore: 7,
   players: [
-    { name: "A", characterId: "margot", team: 0, isCpu: false },
-    { name: "B", characterId: "ziggy", team: 1, isCpu: false },
+    { name: "A", characterId: "rafa", team: 0, isCpu: false },
+    { name: "B", characterId: "mina", team: 1, isCpu: false },
   ],
 };
 
 const doubles: MatchConfig = {
   targetScore: 13,
   players: [
-    { name: "A1", characterId: "margot", team: 0, isCpu: false },
-    { name: "B1", characterId: "ziggy", team: 1, isCpu: false },
-    { name: "A2", characterId: "noor", team: 0, isCpu: false },
-    { name: "B2", characterId: "bruno", team: 1, isCpu: false },
+    { name: "A1", characterId: "rafa", team: 0, isCpu: false },
+    { name: "B1", characterId: "mina", team: 1, isCpu: false },
+    { name: "A2", characterId: "zuri", team: 0, isCpu: false },
+    { name: "B2", characterId: "gus", team: 1, isCpu: false },
   ],
 };
 

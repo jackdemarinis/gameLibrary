@@ -23,6 +23,10 @@ function socketUrl(): string {
   return `${protocol}//${window.location.host}/ws/rooms`;
 }
 
+const connectTimeoutMs = 8000;
+const unreachableMessage =
+  "Couldn't reach the room server. Online play needs the JackGames server running (uvicorn app.main:app) — open the game from that server's address.";
+
 export class RoomClient {
   private socket: WebSocket | null = null;
   private listener: (message: ServerMessage) => void = () => {};
@@ -49,6 +53,13 @@ export class RoomClient {
       const socket = new WebSocket(socketUrl());
       this.socket = socket;
       let settled = false;
+      // A socket that never opens (server down behind a proxy) shouldn't hang the menu.
+      const timeout = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(unreachableMessage));
+        socket.close();
+      }, connectTimeoutMs);
 
       socket.addEventListener("open", () => {
         socket.send(
@@ -70,9 +81,11 @@ export class RoomClient {
         if (!settled) {
           if (message.type === "joined") {
             settled = true;
+            window.clearTimeout(timeout);
             resolve(message);
           } else if (message.type === "error") {
             settled = true;
+            window.clearTimeout(timeout);
             reject(new Error(message.error.message));
             this.close();
           }
@@ -84,7 +97,8 @@ export class RoomClient {
       socket.addEventListener("close", () => {
         if (!settled) {
           settled = true;
-          reject(new Error("Couldn't reach the game server."));
+          window.clearTimeout(timeout);
+          reject(new Error(unreachableMessage));
           return;
         }
         if (this.socket === socket) this.socket = null;

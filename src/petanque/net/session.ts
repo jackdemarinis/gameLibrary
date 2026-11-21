@@ -1,7 +1,8 @@
 // An online room: who's in it, the pre-match lobby, and relaying game payloads.
 // The host owns the lobby and is the referee for the match.
 
-import { match as matchRules } from "../config/rules";
+import { cpuLevels, defaultCpuLevel, match as matchRules, type CpuLevel } from "../config/rules";
+import { getCourt, type CourtId } from "../content/courts";
 import { characters, getCharacter } from "../content/characters";
 import type { MatchConfig } from "../simulation/match";
 import { isGamePayload, type GamePayload, type LobbySlot, type LobbyState } from "./protocol";
@@ -20,7 +21,7 @@ const slotTeams = [0, 1, 0, 1];
 
 function cpuSlot(index: number): LobbySlot {
   const character = characters[(index + 1) % characters.length];
-  return { controllerId: null, name: `${character.name} (CPU)`, characterId: character.id, team: slotTeams[index] };
+  return { controllerId: null, name: `${character.name} (CPU)`, characterId: character.id, team: slotTeams[index], cpuLevel: defaultCpuLevel };
 }
 
 export class OnlineSession {
@@ -88,8 +89,11 @@ export class OnlineSession {
     this.lobby = {
       playerCount: 2,
       targetScore: matchRules.defaultTargetScore,
+      courtId: getCourt(undefined).id,
       slots: [{ controllerId: this.myId, name, characterId, team: 0 }, cpuSlot(1)],
     };
+    const free = this.freeCharacter(1);
+    this.lobby.slots[1] = { ...this.lobby.slots[1], characterId: free.id, name: `${free.name} (CPU)` };
     this.publishLobby();
   }
 
@@ -136,6 +140,14 @@ export class OnlineSession {
     humans.forEach((human, order) => {
       slots[order] = { ...human, team: slotTeams[order] };
     });
+    // CPUs take characters nobody else is using.
+    slots.forEach((slot, index) => {
+      if (slot.controllerId !== null) return;
+      const used = new Set(slots.filter((_, other) => other !== index).map((other) => other.characterId));
+      if (!used.has(slot.characterId)) return;
+      const free = characters.find((character) => !used.has(character.id)) ?? characters[0];
+      slots[index] = { ...slot, characterId: free.id, name: `${free.name} (CPU)` };
+    });
     this.lobby = { ...this.lobby, playerCount: count, slots };
     this.publishLobby();
   }
@@ -146,12 +158,25 @@ export class OnlineSession {
     this.publishLobby();
   }
 
-  cycleCpuCharacter(slotIndex: number, step: number): void {
+  setCourt(courtId: CourtId): void {
+    if (!this.lobby) return;
+    this.lobby = { ...this.lobby, courtId: getCourt(courtId).id };
+    this.publishLobby();
+  }
+
+  setCpuCharacter(slotIndex: number, characterId: string): void {
     const slot = this.lobby?.slots[slotIndex];
     if (!this.lobby || !slot || slot.controllerId !== null) return;
-    const current = characters.findIndex((character) => character.id === slot.characterId);
-    const next = characters[(current + step + characters.length) % characters.length];
+    const next = getCharacter(characterId);
+    if (this.lobby.slots.some((other, otherIndex) => otherIndex !== slotIndex && other.characterId === next.id)) return;
     this.lobby.slots[slotIndex] = { ...slot, characterId: next.id, name: `${next.name} (CPU)` };
+    this.publishLobby();
+  }
+
+  setCpuLevel(slotIndex: number, level: CpuLevel): void {
+    const slot = this.lobby?.slots[slotIndex];
+    if (!this.lobby || !slot || slot.controllerId !== null || !(level in cpuLevels)) return;
+    this.lobby.slots[slotIndex] = { ...slot, cpuLevel: level };
     this.publishLobby();
   }
 
@@ -166,7 +191,11 @@ export class OnlineSession {
     if (index < 0) return;
     const slot = { ...this.lobby.slots[index] };
     if (typeof edit.name === "string") slot.name = edit.name.trim().slice(0, 16) || slot.name;
-    if (typeof edit.characterId === "string") slot.characterId = getCharacter(edit.characterId).id;
+    if (typeof edit.characterId === "string") {
+      const wanted = getCharacter(edit.characterId).id;
+      // Everyone plays a different character; a taken pick is ignored.
+      if (!this.lobby.slots.some((other, otherIndex) => otherIndex !== index && other.characterId === wanted)) slot.characterId = wanted;
+    }
     this.lobby.slots[index] = slot;
     this.publishLobby();
   }
@@ -179,16 +208,27 @@ export class OnlineSession {
       index = this.lobby.slots.findIndex((slot) => slot.controllerId === null);
     }
     if (index < 0) return;
-    const character = characters[(index + 2) % characters.length];
+    const character = this.freeCharacter(index);
     this.lobby.slots[index] = { controllerId: member.clientId, name: member.name, characterId: character.id, team: slotTeams[index] };
     this.publishLobby();
+  }
+
+  // First character, starting from a slot-based offset, that no other slot uses.
+  private freeCharacter(index: number) {
+    const used = new Set(this.lobby?.slots.filter((_, otherIndex) => otherIndex !== index).map((slot) => slot.characterId));
+    for (let step = 0; step < characters.length; step++) {
+      const candidate = characters[(index + 2 + step) % characters.length];
+      if (!used.has(candidate.id)) return candidate;
+    }
+    return characters[0];
   }
 
   private unseatMember(clientId: string): void {
     if (!this.lobby) return;
     const index = this.lobby.slots.findIndex((slot) => slot.controllerId === clientId);
     if (index < 0) return;
-    this.lobby.slots[index] = cpuSlot(index);
+    this.lobby.slots[index] = { ...cpuSlot(index), characterId: this.freeCharacter(index).id };
+    this.lobby.slots[index].name = `${getCharacter(this.lobby.slots[index].characterId).name} (CPU)`;
     this.publishLobby();
   }
 
@@ -196,11 +236,13 @@ export class OnlineSession {
     if (!this.lobby) return null;
     return {
       targetScore: this.lobby.targetScore,
+      courtId: getCourt(this.lobby.courtId).id,
       players: this.lobby.slots.map((slot) => ({
         name: slot.name,
         characterId: slot.characterId,
         team: slot.team,
         isCpu: slot.controllerId === null,
+        cpuLevel: slot.controllerId === null ? (slot.cpuLevel ?? defaultCpuLevel) : undefined,
         controllerId: slot.controllerId,
       })),
     };

@@ -8,9 +8,10 @@
 
 import "./petanque.css";
 import * as THREE from "three";
-import { cpu, physics, pitch, throwing, type ThrowStyle } from "./config/rules";
+import { cpuLevels, defaultCpuLevel, physics, pitch, throwing, type ThrowStyle } from "./config/rules";
 import { applyThemeVariables, worldTheme } from "./config/theme";
-import { characters, getCharacter, teamNames } from "./content/characters";
+import { characters, getCharacter, teamNames, type CharacterDefinition } from "./content/characters";
+import { getCourt, type CourtId } from "./content/courts";
 import type { GamePayload, LobbyState, Outcome, OutcomeEvent } from "./net/protocol";
 import { OnlineSession } from "./net/session";
 import {
@@ -25,10 +26,10 @@ import {
   type MatchConfig,
   type MatchState,
 } from "./simulation/match";
+import { cpuThrow } from "./simulation/cpu";
 import { createMeter, pressMeter, updateMeter, type MeterState } from "./simulation/meter";
 import {
   createWorld,
-  distanceToPower,
   forceSettle,
   horizontalDistance,
   isLive,
@@ -46,6 +47,7 @@ import { registerOffline } from "../shared/offline";
 import { Hud } from "./ui/hud";
 import { createCharacter, throwTiming, type CharacterView } from "./view/characterModel";
 import { createAimGuide, createBallMesh, createScoreRing, rollMesh } from "./view/props";
+import { portraitFor } from "./view/portraits";
 import { createStage } from "./view/scene";
 
 type Mode = "menu" | "aim" | "swing" | "throwing" | "flight" | "review" | "endSummary" | "matchOver";
@@ -96,14 +98,37 @@ const cameraLookGoal = new THREE.Vector3();
 
 const hud = new Hud(uiRoot);
 
-// Onlookers around the terrain, wearing either team's colours.
-const spectators: CharacterView[] = stage.spectatorSpots.map((spot, index) => {
-  const view = createCharacter(characters[(index * 3 + 2) % characters.length], teamColors[index % 2]);
-  view.root.position.copy(spot.position);
-  view.root.rotation.y = spot.facing;
-  stage.scene.add(view.root);
-  return view;
-});
+hud.setPortraitSource(portraitFor);
+
+// Onlookers around the terrain: the cast in different shirts, wearing either
+// team's wristbands. Rebuilt whenever the court changes.
+let spectators: CharacterView[] = [];
+
+function crowdDefinition(index: number): CharacterDefinition {
+  const base = characters[(index * 3 + 2) % characters.length];
+  const tops = worldTheme.crowdTops;
+  return {
+    ...base,
+    id: `${base.id}Crowd${index}`,
+    top: { ...base.top, style: base.top.style === "jersey" ? "tee" : base.top.style, color: tops[index % tops.length] },
+  };
+}
+
+function setCourt(id: CourtId | undefined): void {
+  const courtId = getCourt(id).id;
+  if (courtId === stage.courtId && spectators.length > 0) return;
+  stage.setCourt(courtId);
+  for (const view of spectators) stage.scene.remove(view.root);
+  spectators = stage.spectatorSpots.map((spot, index) => {
+    const view = createCharacter(crowdDefinition(index), teamColors[index % 2]);
+    view.root.position.copy(spot.position);
+    view.root.rotation.y = spot.facing;
+    stage.scene.add(view.root);
+    return view;
+  });
+}
+
+setCourt(undefined);
 
 function setCrowdMood(scoringTeam: number | null): void {
   spectators.forEach((view, index) => {
@@ -178,7 +203,7 @@ function showTitle(notice = ""): void {
   clearCharacters();
   aimGuide.setVisible(false);
   hud.showTitle(savedName(), {
-    onLocal: () => hud.showSetup(localConfig, startLocalMatch, () => showTitle()),
+    onLocal: () => hud.showSetup(localConfig, { onStart: startLocalMatch, onBack: () => showTitle(), onPreviewCourt: setCourt }),
     onHost: (name) => void enterOnline(() => session.host(name, characters[0].id), name),
     onJoin: (code, name) => void enterOnline(() => session.join(code, name), name),
   }, notice);
@@ -199,22 +224,21 @@ async function enterOnline(connect: () => Promise<void>, name: string): Promise<
 
 function renderLobby(lobby: LobbyState): void {
   if (session.inMatch) return;
+  setCourt(lobby.courtId);
   hud.showLobby(session.code, lobby, session.myId, session.isHost, {
     onPlayerCount: (count) => session.setPlayerCount(count),
     onTargetScore: (score) => session.setTargetScore(score),
+    onCourt: (courtId) => session.setCourt(courtId),
     onEditName(name) {
       rememberName(name);
       session.editMine({ name });
     },
-    onPickCharacter(slotIndex, step) {
+    onPickCharacter(slotIndex, characterId) {
       const slot = lobby.slots[slotIndex];
-      if (slot.controllerId === session.myId) {
-        const current = characters.findIndex((character) => character.id === slot.characterId);
-        session.editMine({ characterId: characters[(current + step + characters.length) % characters.length].id });
-      } else {
-        session.cycleCpuCharacter(slotIndex, step);
-      }
+      if (slot.controllerId === session.myId) session.editMine({ characterId });
+      else session.setCpuCharacter(slotIndex, characterId);
     },
+    onCpuLevel: (slotIndex, level) => session.setCpuLevel(slotIndex, level),
     onStart: startOnlineMatch,
     onLeave: () => showTitle(),
   });
@@ -243,7 +267,7 @@ function withCpuTakeovers(match: MatchState): MatchState {
   if (leaversToCpu.size === 0) return match;
   const players = match.config.players.map((player) =>
     player.controllerId && leaversToCpu.has(player.controllerId)
-      ? { ...player, isCpu: true, controllerId: null, name: `${player.name} (CPU)` }
+      ? { ...player, isCpu: true, cpuLevel: defaultCpuLevel, controllerId: null, name: `${player.name} (CPU)` }
       : player,
   );
   return { ...match, config: { ...match.config, players } };
@@ -270,6 +294,7 @@ function applyOutcome(outcome: Outcome, flow: "resume" | "keepScreen" = "resume"
   matchState = outcome.match;
   if (isOnline()) session.inMatch = true;
 
+  setCourt(outcome.match.config.courtId);
   syncPitch(outcome);
   ensureCast();
   if (outcome.toast) hud.toast(outcome.toast.text, outcome.toast.team, outcome.event === "start" ? 2.2 : 1.8);
@@ -279,6 +304,7 @@ function applyOutcome(outcome: Outcome, flow: "resume" | "keepScreen" = "resume"
     return;
   }
   if (outcome.event === "start" || outcome.event === "newEnd") {
+    startIntroShot();
     hud.closeScreen();
     hud.showHud(isOnline() ? session.code : null);
   }
@@ -579,6 +605,9 @@ function releaseBall(): void {
   const isJack = matchState.phase === "jack";
   characterViews[matchState.currentPlayer]?.hold(null);
   const ball = throwBall(world, isJack ? "jack" : "boule", isJack ? null : thrower.team, pendingThrow);
+  const expectedAim = pendingThrow.aimRadians + pendingThrow.accuracyError * throwing.maxAccuracyErrorDegrees * degrees;
+  const expectedDistance = powerToDistance(pendingThrow.power);
+  throwTarget.set(-Math.sin(expectedAim) * expectedDistance, 0, -Math.cos(expectedAim) * expectedDistance);
   const mesh = createBallMesh(ball.kind, ball.team);
   mesh.position.set(ball.position.x, ball.position.y, ball.position.z);
   stage.scene.add(mesh);
@@ -591,36 +620,13 @@ function releaseBall(): void {
   if (pendingOutcome) applyOutcome(pendingOutcome);
 }
 
-function cpuThrow(): ThrowInput {
-  const jack = jackBall();
-  const noise = () => Math.random() * 2 - 1;
-  if (!matchState || matchState.phase === "jack" || !jack) {
-    const distance = 6.8 + Math.random() * 2.4;
-    return { aimRadians: noise() * 4 * degrees, power: distanceToPower(distance), style: "roll", accuracyError: noise() * 0.15 };
-  }
+function currentCpuLevel() {
+  return matchState?.config.players[matchState.currentPlayer].cpuLevel ?? defaultCpuLevel;
+}
 
-  const myTeam = matchState.config.players[matchState.currentPlayer].team;
-  const rivalBest = fieldSnapshot()
-    .boules.filter((ball) => ball.team !== myTeam)
-    .sort((a, b) => a.distanceToJack - b.distanceToJack)[0];
-
-  let target = jack.position;
-  let style: ThrowStyle = "roll";
-  // Rival is sitting right on the jack: try to blast it with a high toss.
-  if (rivalBest && rivalBest.distanceToJack < 0.3 && Math.random() < 0.55) {
-    const rivalBall = world.balls.find((ball) => ball.id === rivalBest.id);
-    if (rivalBall) {
-      target = rivalBall.position;
-      style = "lob";
-    }
-  }
-  const distance = Math.hypot(target.x, target.z);
-  return {
-    aimRadians: clampAim(Math.atan2(-target.x, -target.z) + noise() * cpu.aimNoiseDegrees * degrees),
-    power: Math.max(0, Math.min(1, distanceToPower(distance) + noise() * cpu.powerNoise)),
-    style,
-    accuracyError: 0,
-  };
+function cpuInput(): ThrowInput {
+  const player = matchState!.config.players[matchState!.currentPlayer];
+  return cpuThrow({ balls: world.balls, team: player.team, throwingJack: matchState!.phase === "jack", level: currentCpuLevel() });
 }
 
 // ---------- after the balls stop (referee only) ----------
@@ -722,40 +728,117 @@ function damp(rate: number, dt: number): number {
   return 1 - Math.exp(-rate * dt);
 }
 
+// ---------- camera director ----------
+// TV-sports style: hard cuts between a handful of set-ups rather than one
+// floating camera. Intro crane at the start of each end, over-the-shoulder
+// while aiming, a chase then a low trackside "landing" camera while the ball
+// runs, a measuring shot over the jack, and a reaction shot of the players.
+
+type Shot = "orbit" | "intro" | "behind" | "chase" | "landing" | "measure" | "reaction";
+let shot: Shot = "orbit";
+let shotTime = 0;
+let snapCamera = false;
+const throwTarget = new THREE.Vector3(0, 0, -8);
+
+function cutTo(next: Shot): void {
+  if (shot === next) return;
+  shot = next;
+  shotTime = 0;
+  snapCamera = true;
+}
+
+function startIntroShot(): void {
+  shot = "intro";
+  shotTime = 0;
+  // Start high over the far end of the terrain and crane down behind the thrower.
+  cameraPosition.set(9, 9, -22);
+  cameraLook.set(0, 0, -7);
+}
+
 function updateCamera(dt: number): void {
   const forward = new THREE.Vector3(-Math.sin(aimRadians), 0, -Math.cos(aimRadians));
+  const right = new THREE.Vector3(Math.cos(aimRadians), 0, -Math.sin(aimRadians));
   const jack = jackBall();
+  const ball = followBallId === null ? undefined : world.balls.find((candidate) => candidate.id === followBallId);
   let rate = 3;
+  shotTime += dt;
 
   if (mode === "menu") {
-    menuOrbit += dt * 0.25;
-    const sweep = Math.sin(menuOrbit) * 0.6;
-    cameraPositionGoal.set(Math.sin(sweep) * 10, 5.5, -6 + Math.cos(sweep) * 10);
-    cameraLookGoal.set(0, 0.4, -6);
-    rate = 1.5;
+    shot = "orbit";
   } else if (mode === "aim" || mode === "swing" || mode === "throwing") {
-    // Over the thrower's right shoulder (the thrower stands a little left of the line).
-    const right = new THREE.Vector3(Math.cos(aimRadians), 0, -Math.sin(aimRadians));
-    cameraPositionGoal.copy(forward).multiplyScalar(-3.1).addScaledVector(right, 0.55).setY(2.3);
-    cameraLookGoal.copy(forward).multiplyScalar(8).setY(0);
-  } else if (mode === "flight" && followBallId !== null) {
-    const ball = world.balls.find((candidate) => candidate.id === followBallId);
-    if (ball && ball.state !== "out") {
-      const ballPosition = new THREE.Vector3(ball.position.x, ball.position.y, ball.position.z);
-      cameraPositionGoal.copy(ballPosition).addScaledVector(forward, -3.6).setY(Math.max(2.5, ball.position.y + 1.4));
-      cameraPositionGoal.x += 0.35;
-      cameraLookGoal.copy(ballPosition).addScaledVector(forward, 1.5);
-      rate = 4;
-    }
-  } else if (jack) {
-    const close = mode === "endSummary" || mode === "matchOver";
-    cameraPositionGoal.set(jack.position.x + 0.2, close ? 2.3 : 2.8, jack.position.z + (close ? 1.6 : 2.6));
-    cameraLookGoal.set(jack.position.x, 0, jack.position.z - 0.2);
-    rate = 2.5;
+    if (shot !== "intro") cutTo("behind");
+  } else if (mode === "flight") {
+    const travelled = ball ? Math.hypot(ball.position.x, ball.position.z) : 0;
+    const going = throwTarget.length();
+    if (shot !== "landing" && (shot !== "chase" || (going > 3 && travelled > going * 0.45))) cutTo(shot === "chase" ? "landing" : "chase");
+  } else if (mode === "review") {
+    cutTo("measure");
+  } else if (mode === "endSummary" || mode === "matchOver") {
+    if (shot !== "measure" && shot !== "reaction") cutTo("measure");
+    if (shot === "measure" && shotTime > 2.2) cutTo("reaction");
   }
 
-  cameraPosition.lerp(cameraPositionGoal, damp(rate, dt));
-  cameraLook.lerp(cameraLookGoal, damp(rate, dt));
+  switch (shot) {
+    case "orbit": {
+      menuOrbit += dt * 0.12;
+      // Slow crane down the terrain, kept inside the avenue of trees.
+      cameraPositionGoal.set(Math.sin(menuOrbit) * 2.4, 3.6 + Math.sin(menuOrbit * 0.7) * 0.5, 5.5 + Math.cos(menuOrbit * 0.8) * 1.2);
+      cameraLookGoal.set(Math.sin(menuOrbit) * -1.2, 0.6, -10);
+      rate = 1.2;
+      break;
+    }
+    case "intro":
+    case "behind": {
+      // Low over the thrower's right shoulder, looking down the aim line.
+      cameraPositionGoal.copy(forward).multiplyScalar(-2.7).addScaledVector(right, 0.62).setY(1.85);
+      const lookDistance = jack && matchState?.phase === "boules" ? Math.min(11, Math.hypot(jack.position.x, jack.position.z)) : 8;
+      cameraLookGoal.copy(forward).multiplyScalar(lookDistance).setY(0.25);
+      if (mode === "throwing") cameraPositionGoal.addScaledVector(forward, 0.35).setY(1.7);
+      rate = shot === "intro" ? 1.4 : 3;
+      if (shot === "intro" && (shotTime > 2.6 || cameraPosition.distanceTo(cameraPositionGoal) < 0.15)) shot = "behind";
+      break;
+    }
+    case "chase": {
+      if (ball && ball.state !== "out") {
+        const position = new THREE.Vector3(ball.position.x, ball.position.y, ball.position.z);
+        cameraPositionGoal.copy(position).addScaledVector(forward, -2.6).addScaledVector(right, 0.4).setY(Math.max(1.6, ball.position.y + 1.1));
+        cameraLookGoal.copy(position).addScaledVector(forward, 2);
+      }
+      rate = 5;
+      break;
+    }
+    case "landing": {
+      // Trackside, low, beside where the ball should end up; pans to follow it.
+      const side = throwTarget.x > 0.8 ? -1 : 1;
+      cameraPositionGoal.set(throwTarget.x + side * 2.7, 0.75, throwTarget.z + 2.2);
+      if (ball && ball.state !== "out") cameraLookGoal.set(ball.position.x, Math.max(0.1, ball.position.y * 0.6), ball.position.z - 0.4);
+      rate = 6;
+      break;
+    }
+    case "measure": {
+      const centre = jack && isLive(jack) ? jack.position : ball?.position ?? { x: 0, y: 0, z: -8 };
+      cameraPositionGoal.set(centre.x + 0.55, 2.4, centre.z + 1.25);
+      cameraLookGoal.set(centre.x, 0, centre.z - 0.15);
+      rate = 2.2;
+      break;
+    }
+    case "reaction": {
+      // From the terrain looking back at the players and the crowd.
+      cameraPositionGoal.set(0.4, 1.45, -6.2);
+      cameraLookGoal.set(0, 1.05, -1.6);
+      rate = 1.5;
+      break;
+    }
+  }
+
+  if (snapCamera) {
+    cameraPosition.copy(cameraPositionGoal);
+    cameraLook.copy(cameraLookGoal);
+    snapCamera = false;
+  } else {
+    cameraPosition.lerp(cameraPositionGoal, damp(rate, dt));
+    cameraLook.lerp(cameraLookGoal, damp(rate, dt));
+  }
   stage.camera.position.copy(cameraPosition);
   stage.camera.lookAt(cameraLook);
 }
@@ -791,7 +874,7 @@ function tick(dt: number): void {
 
   if (mode === "aim" || mode === "swing") {
     if (currentPlayerIsCpu()) {
-      if (isReferee() && modeTimer > cpu.thinkSeconds) sendThrow(cpuThrow());
+      if (isReferee() && modeTimer > cpuLevels[currentCpuLevel()].thinkSeconds) sendThrow(cpuInput());
     } else if (currentPlayerIsMine()) {
       const aimInput = readAimInput();
       if (mode === "aim" && aimInput !== 0) {
@@ -801,18 +884,14 @@ function tick(dt: number): void {
       }
       if (mode === "swing") {
         meterState = updateMeter(meterState, dt);
-        if (meterState.phase === "cancelled") {
-          meterState = createMeter();
-          mode = "aim";
-          hud.toast("Swing cancelled", null, 1);
-        } else if (meterState.phase === "done") {
+        if (meterState.phase === "done") {
           sendThrow({ aimRadians, power: meterState.power, style: throwStyle, accuracyError: meterState.accuracyError });
         }
       }
       sendAim(dt);
     }
     aimGuide.setAim(aimRadians, throwStyle);
-    const markerPower = meterState.phase === "power" ? meterState.value : meterState.phase === "accuracy" ? meterState.power : null;
+    const markerPower = meterState.phase === "distance" ? meterState.value : meterState.phase === "direction" ? meterState.power : null;
     aimGuide.setPowerMarker(markerPower === null ? null : powerToDistance(markerPower));
     hud.setMeter(meterState);
   }
@@ -864,8 +943,9 @@ function advance(now: number): void {
 
 function frame(now: number): void {
   if (!document.hidden) {
+    const before = lastTime;
     advance(now);
-    stage.render();
+    stage.render((now - before) / 1000);
   }
   requestAnimationFrame(frame);
 }
@@ -882,4 +962,4 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("resize", () => stage.resize());
 showTitle();
 requestAnimationFrame(frame);
-registerOffline("../", ['800 16px "Baloo 2"', '700 16px "Nunito"']);
+registerOffline("../", ['700 16px "IBM Plex Sans"', '600 16px "IBM Plex Mono"']);
