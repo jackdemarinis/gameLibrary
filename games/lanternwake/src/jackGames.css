@@ -139,6 +139,18 @@
   --lw-bar-shine: inset 0 3px 0 rgba(255, 255, 255, 0.28);
   --lw-text-outline: 2px 0 0 #2a1a0e, -2px 0 0 #2a1a0e, 0 2px 0 #2a1a0e, 0 -2px 0 #2a1a0e;
 
+  /* Play-screen stage: the 16:9 game window, framed in carved wood with iron
+     corner brackets, centred on a calm dark dusk field. */
+  --stage-bg: #10151a;
+  --stage-bg-glow: #18212a;
+  --stage-frame: #6b4426;
+  --stage-frame-light: #8a5a33;
+  --stage-frame-dark: #523319;
+  --stage-frame-edge: #24160b;
+  --stage-rivet: #ffc457;
+  --stage-bracket: #3b3f45;
+  --stage-drop: rgba(0, 0, 0, 0.55);
+
   /* Dustline title screen: pixel military-arcade skin over a pixel camo field
      (art colours mirror menuArtTheme / pixelTheme in src/game/config/theme.ts). */
   --font-pixel-display: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;

@@ -3,6 +3,7 @@ import "./jackGames.css";
 import "./styles.css";
 import "./themeAdapter.css";
 import "./lanternwakeHud.css";
+import "./stage.css";
 import Phaser from "phaser";
 import { AdventureScene } from "./phaser/scenes/AdventureScene";
 import { AppChrome } from "./ui/AppChrome";
@@ -15,8 +16,10 @@ if (!appRoot) {
 
 appRoot.innerHTML = `
   <div class="shell-frame">
-    <div id="game-root" class="game-root"></div>
-    <div id="chrome-root" class="chrome-root"></div>
+    <div class="gameStage">
+      <div id="game-root" class="game-root"></div>
+      <div id="chrome-root" class="chrome-root"></div>
+    </div>
   </div>
 `;
 

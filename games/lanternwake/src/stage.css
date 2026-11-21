@@ -1,0 +1,71 @@
+/* The play stage: the game's true 16:9 window, centred with an equal margin on
+   all four sides, inside a carved-wood pixel frame with iron corner brackets.
+   Canvas and HUD both live inside the stage, so the HUD sits on the game.
+   Every colour is a --stage-* token in jackGames.css. */
+
+.shell-frame {
+  --stageGutter: clamp(20px, 4vmin, 56px);
+  --stageFrame: clamp(16px, 1.5vmin, 30px);
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 45%, var(--stage-bg-glow), var(--stage-bg) 72%);
+}
+
+.shell-frame::before {
+  display: none;
+}
+
+.gameStage {
+  --stageInset: calc(var(--stageGutter) + var(--stageFrame));
+  position: relative;
+  width: min(calc(100vw - 2 * var(--stageInset)), calc((100vh - 2 * var(--stageInset)) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  image-rendering: pixelated;
+}
+
+.gameStage > .game-root,
+.gameStage > .chrome-root {
+  z-index: 1;
+}
+
+/* wood frame: pixel grain bands, bevelled edges, dark outline, soft drop */
+.gameStage::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--stageFrame));
+  z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    var(--stage-frame) 0 6px,
+    var(--stage-frame-dark) 6px 8px,
+    var(--stage-frame) 8px 14px,
+    var(--stage-frame-light) 14px 16px
+  );
+  box-shadow:
+    inset 0 0 0 3px var(--stage-frame-edge),
+    inset 0 3px 0 6px var(--stage-frame-light),
+    inset 0 -3px 0 6px var(--stage-frame-dark),
+    0 0 0 3px var(--stage-frame-edge),
+    0 24px 60px 12px var(--stage-drop);
+}
+
+/* iron corner brackets, each with an ember rivet */
+.gameStage::after {
+  --bracket: calc(var(--stageFrame) + 12px);
+  --rivet: 6px;
+  --rivetAt: calc(var(--stageFrame) / 2);
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--stageFrame) - 3px);
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--stage-rivet), var(--stage-rivet)) var(--rivetAt) var(--rivetAt) / var(--rivet) var(--rivet) no-repeat,
+    linear-gradient(var(--stage-rivet), var(--stage-rivet)) calc(100% - var(--rivetAt)) var(--rivetAt) / var(--rivet) var(--rivet) no-repeat,
+    linear-gradient(var(--stage-rivet), var(--stage-rivet)) var(--rivetAt) calc(100% - var(--rivetAt)) / var(--rivet) var(--rivet) no-repeat,
+    linear-gradient(var(--stage-rivet), var(--stage-rivet)) calc(100% - var(--rivetAt)) calc(100% - var(--rivetAt)) / var(--rivet) var(--rivet) no-repeat,
+    linear-gradient(var(--stage-bracket), var(--stage-bracket)) 0 0 / var(--bracket) var(--bracket) no-repeat,
+    linear-gradient(var(--stage-bracket), var(--stage-bracket)) 100% 0 / var(--bracket) var(--bracket) no-repeat,
+    linear-gradient(var(--stage-bracket), var(--stage-bracket)) 0 100% / var(--bracket) var(--bracket) no-repeat,
+    linear-gradient(var(--stage-bracket), var(--stage-bracket)) 100% 100% / var(--bracket) var(--bracket) no-repeat;
+}
