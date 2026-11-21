@@ -1,6 +1,6 @@
-# Game Library
+# JackGames
 
-A small, installable web arcade with a console-style game-select menu. It holds three
+JackGames: a small, installable web arcade with a game-portal home page. It holds three
 original games:
 
 | Game | Path | Players | Engine |
@@ -41,7 +41,9 @@ npm run dev                                    # http://localhost:5173
 ```
 
 To try online play on one machine, open Pétanque in two tabs. Choose **Host a
-room** in one tab and join with the code in the other.
+room** in one tab and join with the code in the other. Online play needs uvicorn
+running: `npm run dev` and `vite preview` both proxy `/ws` to it on :8000, and
+Host/Join say so plainly if it isn't up.
 
 ## Test
 
@@ -75,17 +77,28 @@ scripts/              precache step, theme/standards sync, icon generator
 
 ### Pétanque Park
 
-Sunny-park boules with golf-style controls:
-- Aim with the mouse or arrow keys.
-- Hold Space to fill the power meter and release to throw.
-- Choose a lob, half-lob or roll.
+Boules on two courts (Village Square, Seaside Promenade), with a late-2000s
+console look:
+- **Setup.** Play 1 vs 1 or 2 vs 2. Make each slot Human or CPU (Easy, Normal
+  or Hard), choose its team, and pick from 10 characters. Choose the court and
+  the target score (7 or 13). Presets cover you vs CPU, two players on one PC,
+  and you plus 3 CPUs. Online, the host sets the court and each CPU's difficulty.
+- **Throwing.** Aim with ← →, and use ↑ ↓ to switch between roll and lob.
+  Then press Space three times: start, lock the **distance** sweep, and lock the
+  **straightness** sweep. The closer you stop near the centre, the straighter
+  the throw.
+- **Camera.** Broadcast-style cuts: an intro crane, over-the-shoulder aim, ball
+  chase, a low trackside landing shot, a measuring shot over the jack, and a
+  reaction shot.
 
-Everything you see is generated in code. That covers the clearcoat "toy"
-characters with painted faces that change expression and blink, the park,
-textures and lighting. There are no external models or images.
+Everything you see is generated in code. That includes the characters (rendered
+again as select-screen portraits), both courts, and the canvas textures. The
+3D view renders at 480 lines with bloom and a colour-grade, bleed, grain and
+dither pass (`src/petanque/view/wiiLook.ts`), then CSS stretches it to the
+window. There are no external models or images.
 
-Pétanque has its own Wii-style palette in `src/petanque/config/theme.ts`. See
-MIGRATION.md for why.
+Pétanque's 3D courts keep their own palettes; its menus and HUD use the
+JackGames terminal look (`src/petanque/config/theme.ts`). See MIGRATION.md.
 
 ### Dustline Brigade
 
@@ -116,9 +129,9 @@ server.
 ## Shared standards
 
 Managed by webMaster at `sites/gameLibrary`:
-- Menus, the HUD and the library use the shared navy/orange theme through the
-  vendored `src/theme.css`. Never edit that file by hand. It is vendored by
-  `webmaster/scripts/sync_theme.py`.
+- Menus, the HUD and the home page use the shared token names from the
+  vendored `src/theme.css` (never edit it by hand; `webmaster/scripts/sync_theme.py`
+  owns it). Their values come from `src/jackGames.css`, the JackGames brand layer.
 - The site-specific mapping lives in `src/themeAdapter.css`.
 
 See [STANDARDS.md](STANDARDS.md) and [MIGRATION.md](MIGRATION.md).

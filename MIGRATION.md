@@ -1,9 +1,11 @@
 # Standards integration
 
-Menus, controls, and HUD use webMaster's navy/orange palette, Montserrat/Orbitron,
-and shared shapes through `src/theme.css` and `src/themeAdapter.css`. The adapter
-maps existing selectors without changing the simulation or saved-game schema.
-`uiTheme` aliases shared tokens; it does not replace the shared accent-soft token.
+The site is branded **JackGames**. Menus, controls and HUD use the shared token
+names from the vendored `src/theme.css`, but `src/jackGames.css` re-points their
+values to the JackGames look (see below). `src/themeAdapter.css` maps the older
+Dustline/Lanternwake selectors onto those tokens without changing the simulation
+or saved-game schema. `uiTheme` aliases shared tokens; it does not replace the
+shared accent-soft token.
 
 Phaser + TypeScript + Vite remain deliberate exceptions to the vanilla frontend
 rule: this is a realtime game with an existing tested simulation. Battlefield,
@@ -15,17 +17,34 @@ or established public API requires otherwise.
 
 Validation: `npm run build` and `npm test`.
 
-## Pétanque Park: own art palette (exception, needs your OK)
+## JackGames brand: not the portfolio theme (exception, approved 2026-11-21, restyled the same day)
 
-Pétanque's 3D world and its in-game UI use a bright Wii-style palette
-(`src/petanque/config/theme.ts`, with Baloo 2 and Nunito fonts) instead of the
-navy/orange theme. The reason: you asked for it to look like a Wii sports game.
-The shared theme's dark navy fights that look. The library home page and the
-`‹ Library` link still use shared tokens.
+You asked for a game-portal look instead of the portfolio's navy/orange,
+Orbitron/Montserrat theme. It covers the home page and the game screens around
+gameplay (menus, buttons, HUD); game worlds and art keep their own palettes.
 
-If you'd rather keep everything on the shared theme, the in-game panels
-(`src/petanque/petanque.css`) can switch to `var(--token)` values. The 3D scene
-colours would stay art assets, the same as Dustline's battlefield.
+- **Look:** "homebrew terminal". Near-black, phosphor green accent, amber
+  second colour, ANSI cyan/magenta for categories, IBM Plex Sans for text with
+  IBM Plex Mono for labels and UI bits, slightly rounded 6–14px corners, 1px rules. Flat: no gradients, drop shadows or bounce.
+- **Where it lives:** `src/jackGames.css` is the only file that sets this site's
+  token values. It loads right after the vendored `src/theme.css`, keeps the
+  shared token names, and adds a few (`--accent-ink`, `--accent-edge`,
+  `--highlight`, `--grape`, `--ring-*`, `--title-shadow`). The shared
+  `*-gradient` tokens resolve to solid colours and shadow tokens to `none`.
+  The vendored theme is untouched, so `sync_theme.py` still works.
+- **Rule still holds:** site stylesheets use `var(--token)` only. New values go in
+  `jackGames.css`, not inline.
+- **Pétanque Park**'s 3D courts keep their own palettes (art, in
+  `courtPalettes` in `src/petanque/config/theme.ts`). Its menus and HUD use the
+  same terminal look through that same file. The 3D view deliberately renders
+  at low resolution, with a post-process grade, to get the soft console look.
+- **Icons** come from `scripts/makeIcons.py` (green terminal-window mark).
+- **Game covers** in `public/library/` are AI-generated key art (ChatGPT image
+  generation, 1536×1024, saved as JPG). Each game's crop is `artFocus` in
+  `src/library/games.ts`.
+
+To go back to the portfolio look, stop importing `jackGames.css` and restore the
+Google Fonts link for Montserrat/Orbitron in the three page heads.
 
 ## FastAPI backend (new)
 
