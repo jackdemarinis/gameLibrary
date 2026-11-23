@@ -206,7 +206,7 @@ export class Hud {
     if (kind === "title" || kind === "pause") {
       const help = element("div", "lwMenuHelp", card);
       help.innerHTML =
-        "<b>WASD</b> move · <b>Mouse</b> look · <b>Click/J</b> sword · <b>Q/Right-click</b> lantern flare · <b>F</b> talk/open/use · <b>Tab</b> lock on · <b>Esc</b> pause<br/>Gamepad supported.";
+        "<b>WASD</b> move · <b>Shift</b> sprint · <b>Space</b> jump · <b>Mouse</b> look (click to capture) · <b>Click/J</b> sword · <b>Q/Right-click</b> lantern flare · <b>F</b> talk/open/use · <b>Tab</b> lock on · <b>Esc</b> pause<br/>Gamepad supported.";
       const home = element("a", "lwMenuHome", card);
       home.href = libraryHomeUrl();
       home.textContent = "← JackGames library";

@@ -7,7 +7,7 @@ import type { Action } from "../engine/input";
 import { angleDelta, comboDamage, inSwingArc, yawTowards } from "../game/rules/combat";
 import type { HeroStats } from "../game/rules/progression";
 import { HumanoidRig, heroLook } from "../world/humanoidRig";
-import { attackPose, deathPose, flarePose, hurtPose, idlePose, locomotionPose } from "../world/rigAnimations";
+import { attackPose, deathPose, flarePose, hurtPose, idlePose, landPose, locomotionPose, airPose } from "../world/rigAnimations";
 import { SwordTrail } from "../world/swordTrail";
 import { artPalette } from "../world/artPalette";
 import type { Hittable, PlayContext } from "./context";
@@ -17,6 +17,7 @@ import { RAPIER, groupPlayer, type Physics } from "./physics";
 export interface ControlSource {
   move(): { x: number; y: number };
   wasPressed(action: Action): boolean;
+  sprintHeld(): boolean;
 }
 
 type PlayerState = "move" | "attack" | "hurt" | "flare" | "dead" | "frozen";
@@ -25,6 +26,11 @@ const capsuleHalf = 0.5;
 const capsuleRadius = 0.34;
 const centreToFeet = capsuleHalf + capsuleRadius;
 const runSpeed = 5.6;
+const sprintSpeed = 8.6;
+const jumpSpeed = 7.4;
+const gravity = 22;
+/** Grace after walking off a ledge during which a jump still counts. */
+const coyoteSeconds = 0.12;
 const attackDurations = [0.42, 0.42, 0.58];
 const flareDuration = 0.8;
 
@@ -58,6 +64,12 @@ export class Player {
   private readonly scratch = new THREE.Vector3();
   private readonly scratch2 = new THREE.Vector3();
   moveAmount = 0;
+  sprinting = false;
+  private airTime = 0;
+  private fallSpeed = 0;
+  private landTime = 1;
+  private landWeight = 0;
+  private jumped = false;
 
   constructor() {
     this.rig.root.traverse((object) => (object.userData.player = true));
@@ -165,15 +177,22 @@ export class Player {
     let targetSpeedZ = 0;
     let accel = 14;
 
+    this.sprinting = this.state === "move" && !this.lockTarget && wishLength > 0.3 && input.sprintHeld();
+    if (!this.grounded) accel = 4.5; // light air control
+
     switch (this.state) {
       case "move": {
-        const speed = runSpeed * wishLength * (this.lockTarget ? 0.8 : 1);
+        const speed = (this.sprinting ? sprintSpeed : runSpeed) * wishLength * (this.lockTarget ? 0.8 : 1);
         if (wishLength > 0.05) {
           targetSpeedX = (wishX / wishLength) * speed;
           targetSpeedZ = (wishZ / wishLength) * speed;
         }
-        this.faceView(cameraYaw, 16, dt);
-        if (input.wasPressed("attack")) this.startAttack(0, context);
+        // Sprinting faces the way you run; otherwise face where the mouse looks.
+        if (this.sprinting) this.turnTowards(Math.atan2(wishX, wishZ), 12, dt);
+        else this.faceView(cameraYaw, 16, dt);
+        const canJump = !this.jumped && (this.grounded || this.airTime < coyoteSeconds);
+        if (canJump && input.wasPressed("jump")) this.startJump(context);
+        else if (input.wasPressed("attack")) this.startAttack(0, context);
         else if (input.wasPressed("flare")) this.startFlare(context);
         break;
       }
@@ -216,13 +235,26 @@ export class Player {
     const blend = damp(accel, dt);
     this.velocity.x += (targetSpeedX - this.velocity.x) * blend;
     this.velocity.z += (targetSpeedZ - this.velocity.z) * blend;
-    this.velocity.y = this.grounded && this.velocity.y <= 0 ? -2 : this.velocity.y - 22 * dt;
+    this.velocity.y = this.grounded && this.velocity.y <= 0 ? -2 : this.velocity.y - gravity * dt;
+    const wasGrounded = this.grounded;
 
     const desired = { x: this.velocity.x * dt, y: this.velocity.y * dt, z: this.velocity.z * dt };
     this.controller.computeColliderMovement(this.collider, desired);
     const moved = this.controller.computedMovement();
-    this.grounded = this.controller.computedGrounded();
+    // Don't let ground-snapping cancel the first frames of a jump.
+    this.grounded = this.controller.computedGrounded() && !(this.jumped && this.velocity.y > 0);
+    if (this.velocity.y > 0 && moved.y < desired.y * 0.4) this.velocity.y = 0; // bonked a ceiling
+    if (!this.grounded) {
+      this.airTime += dt;
+      this.fallSpeed = Math.max(this.fallSpeed, -this.velocity.y);
+    } else {
+      if (!wasGrounded && this.airTime > 0.18) this.land(context);
+      this.airTime = 0;
+      this.fallSpeed = 0;
+      this.jumped = false;
+    }
     if (this.grounded && this.velocity.y < 0) this.velocity.y = 0;
+    this.landTime += dt;
     const centre = this.body.translation();
     this.body.setNextKinematicTranslation({ x: centre.x + moved.x, y: centre.y + moved.y, z: centre.z + moved.z });
     this.position.set(centre.x + moved.x, centre.y + moved.y - centreToFeet, centre.z + moved.z);
@@ -242,6 +274,24 @@ export class Player {
 
   private turnTowards(targetYaw: number, rate: number, dt: number): void {
     this.yaw += angleDelta(this.yaw, targetYaw) * damp(rate, dt);
+  }
+
+  private startJump(context: PlayContext): void {
+    this.velocity.y = jumpSpeed;
+    this.grounded = false;
+    this.jumped = true;
+    this.airTime = coyoteSeconds;
+    context.play("jump");
+    context.dust.emit({ count: 6, position: this.position.clone().setY(this.position.y + 0.05), spread: 0.3, speed: 1.2, up: 0.3, gravity: 2, life: 0.45, size: 0.1, color: 0x6a5a48 });
+  }
+
+  private land(context: PlayContext): void {
+    const impact = clamp(this.fallSpeed / 12, 0.25, 1);
+    this.landTime = 0;
+    this.landWeight = impact;
+    context.play("land");
+    if (impact > 0.6) context.shake(0.12 * impact);
+    context.dust.emit({ count: Math.round(6 + impact * 10), position: this.position.clone().setY(this.position.y + 0.05), spread: 0.45, speed: 1.6 + impact * 1.5, up: 0.3, gravity: 2, life: 0.55, size: 0.12, color: 0x6a5a48 });
   }
 
   private startAttack(combo: number, context: PlayContext): void {
@@ -312,7 +362,8 @@ export class Player {
     root.position.lerpVectors(this.previous, this.position, alpha);
     root.rotation.y = this.yaw;
     const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
-    const run = clamp((horizontalSpeed - 2) / 3.5, 0, 1);
+    // 0 walk .. 1 run .. 1.5 sprint (longer stride, deeper lean, pumping arms).
+    const run = clamp((horizontalSpeed - 2) / 3.5, 0, 1) + clamp((horizontalSpeed - runSpeed) / (sprintSpeed - runSpeed), 0, 1) * 0.5;
 
     let target;
     let rate = 14;
@@ -334,7 +385,13 @@ export class Player {
         rate = 20;
         break;
       default:
-        if (horizontalSpeed > 0.4) {
+        if (!this.grounded && this.airTime > 0.06) {
+          target = airPose(clamp(0.5 + this.velocity.y / 9, 0, 1), this.animTime);
+          rate = 16;
+        } else if (this.landTime < 0.22 && horizontalSpeed < 3) {
+          target = landPose(this.landTime / 0.22, this.landWeight);
+          rate = 30;
+        } else if (horizontalSpeed > 0.4) {
           // Backing away (facing the view while moving against it) plays the cycle in reverse.
           const forwardness = (this.velocity.x * Math.sin(this.yaw) + this.velocity.z * Math.cos(this.yaw)) / horizontalSpeed;
           this.stepPhase += dt * (6.5 + run * 4.5) * Math.min(1, horizontalSpeed / 2.5) * (forwardness < -0.3 ? -1 : 1);
@@ -343,7 +400,7 @@ export class Player {
           if (sign !== this.lastStepSign) {
             this.lastStepSign = sign;
             context.play("step");
-            if (run > 0.5) context.dust.emit({ count: 2, position: this.position.clone().setY(this.position.y + 0.05), spread: 0.2, speed: 0.6, up: 0.4, gravity: 1, life: 0.5, size: 0.08, color: 0x5a4d3e });
+            if (run > 0.5 && this.grounded) context.dust.emit({ count: 2, position: this.position.clone().setY(this.position.y + 0.05), spread: 0.2, speed: 0.6, up: 0.4, gravity: 1, life: 0.5, size: 0.08, color: 0x5a4d3e });
           }
         } else {
           target = idlePose(this.animTime);

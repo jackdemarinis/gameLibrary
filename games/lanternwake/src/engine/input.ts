@@ -1,9 +1,10 @@
 // Keyboard + mouse (pointer lock for camera look) + gamepad, read as game actions.
 
-export type Action = "attack" | "interact" | "flare" | "lockOn" | "pause" | "confirm";
+export type Action = "attack" | "jump" | "interact" | "flare" | "lockOn" | "pause" | "confirm";
 
 const keyActions: Record<string, Action[]> = {
   KeyJ: ["attack"],
+  Space: ["jump"],
   KeyF: ["interact", "confirm"],
   KeyE: ["interact", "confirm"],
   Enter: ["interact", "confirm"],
@@ -17,6 +18,7 @@ const keyActions: Record<string, Action[]> = {
 // Standard gamepad mapping: A=0, B=1, X=2, Y=3, LB=4, RB=5, Start=9.
 const padActions: Array<[number, Action[]]> = [
   [0, ["interact", "confirm"]],
+  [1, ["jump"]],
   [2, ["attack"]],
   [3, ["flare"]],
   [5, ["lockOn"]],
@@ -47,7 +49,7 @@ export class Input {
     element.addEventListener("mousedown", (event) => {
       if (!this.captureEnabled) return;
       if (document.pointerLockElement !== element) {
-        void element.requestPointerLock?.();
+        this.capturePointer();
         return;
       }
       if (event.button === 0) this.pressed.add("attack");
@@ -55,8 +57,12 @@ export class Input {
       if (event.button === 1) this.pressed.add("lockOn");
     });
     element.addEventListener("contextmenu", (event) => event.preventDefault());
+    // Locked pointer: unlimited look. If the browser refuses the lock (no click yet,
+    // cooldown after Esc, embedded frames), moving the mouse over the game still turns
+    // the camera, so looking around never silently stops working.
     window.addEventListener("mousemove", (event) => {
-      if (document.pointerLockElement !== element) return;
+      const locked = document.pointerLockElement === element;
+      if (!locked && !(this.captureEnabled && event.target === element)) return;
       this.mouseDx += event.movementX;
       this.mouseDy += event.movementY;
     });
@@ -64,6 +70,17 @@ export class Input {
 
   get pointerLocked(): boolean {
     return document.pointerLockElement === this.element;
+  }
+
+  /** Ask for pointer lock; must run inside a click/key handler to be honoured. */
+  capturePointer(): void {
+    if (document.pointerLockElement === this.element) return;
+    try {
+      const result = this.element.requestPointerLock?.() as unknown;
+      if (result instanceof Promise) result.catch(() => undefined);
+    } catch {
+      // Refused (no user gesture yet); the hover-look fallback still works.
+    }
   }
 
   releasePointer(): void {
@@ -112,6 +129,12 @@ export class Input {
     }
     const length = Math.hypot(x, y);
     return length > 1 ? { x: x / length, y: y / length } : { x, y };
+  }
+
+  /** Sprint is held: Shift, or the left stick click on a gamepad. */
+  sprintHeld(): boolean {
+    if (this.held.has("ShiftLeft") || this.held.has("ShiftRight")) return true;
+    return Boolean(this.pad()?.buttons[10]?.pressed);
   }
 
   /** Camera look delta in radians-ish units for this frame. */

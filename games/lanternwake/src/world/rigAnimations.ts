@@ -1,7 +1,7 @@
 // Procedural animation clips for the humanoid rig: each returns a target pose.
 // Conventions (joint rotation order YXZ): for limbs hanging down, +x swings them back;
 // for the spine, +x leans forward. The rig faces +z; its right side is -x.
-import { hipHeight, keyframePose, restPose, type Pose } from "./humanoidRig";
+import { hipHeight, keyframePose, mixPose, restPose, type Pose } from "./humanoidRig";
 
 export function idlePose(time: number, holdingSword = true): Pose {
   const pose = restPose();
@@ -52,6 +52,73 @@ export function locomotionPose(phase: number, run: number, holdingSword = true):
   pose.shoulderRZ = -0.14;
   if (holdingSword) pose.wristRX = -1.0 - run * 0.3;
   pose.capeLift = 0.2 + run * 0.5;
+  return pose;
+}
+
+/** Airborne. `rise` 1 = leaving the ground (knees tucked, arms lifting),
+ * 0 = falling (legs reaching down for the landing, arms out for balance). */
+export function airPose(rise: number, time: number): Pose {
+  const up = restPose();
+  up.bodyY = hipHeight + 0.02;
+  up.spineX = 0.12;
+  up.neckX = -0.1;
+  up.hipLX = -0.85;
+  up.kneeLX = 1.35;
+  up.footLX = 0.25;
+  up.hipRX = 0.35;
+  up.kneeRX = 0.75;
+  up.footRX = 0.3;
+  up.shoulderLX = -0.7;
+  up.shoulderLZ = 0.35;
+  up.elbowLX = -0.9;
+  up.shoulderRX = -0.9;
+  up.shoulderRZ = -0.3;
+  up.elbowRX = -1.0;
+  up.wristRX = -1.1;
+  up.capeLift = 0.35;
+
+  const down = restPose();
+  down.bodyY = hipHeight;
+  down.spineX = -0.02;
+  down.neckX = 0.12;
+  down.hipLX = -0.35;
+  down.kneeLX = 0.35;
+  down.footLX = -0.15;
+  down.hipRX = 0.1;
+  down.kneeRX = 0.45;
+  down.footRX = -0.1;
+  down.shoulderLX = -0.35;
+  down.shoulderLZ = 0.85;
+  down.elbowLX = -0.4;
+  down.shoulderRX = -0.3;
+  down.shoulderRZ = -0.85;
+  down.elbowRX = -0.5;
+  down.wristRX = -0.9;
+  down.capeLift = 0.95 + Math.sin(time * 18) * 0.06;
+  return mixPose(down, up, Math.max(0, Math.min(1, rise)));
+}
+
+/** Landing squash; progress 0 = touchdown, 1 = recovered. `weight` scales the dip. */
+export function landPose(progress: number, weight: number): Pose {
+  const pose = restPose();
+  const dip = Math.sin(Math.min(1, progress) * Math.PI * 0.5 + Math.PI * 0.5) * weight;
+  pose.bodyY = hipHeight - 0.24 * dip;
+  pose.spineX = 0.08 + 0.4 * dip;
+  pose.neckX = -0.25 * dip;
+  pose.hipLX = -0.2 - 0.75 * dip;
+  pose.hipRX = 0.15 - 0.55 * dip;
+  pose.kneeLX = 0.15 + 1.25 * dip;
+  pose.kneeRX = 0.15 + 1.05 * dip;
+  pose.footLX = 0.45 * dip;
+  pose.footRX = 0.4 * dip;
+  pose.shoulderLX = -0.2 - 0.3 * dip;
+  pose.shoulderLZ = 0.2 + 0.45 * dip;
+  pose.elbowLX = -0.6;
+  pose.shoulderRX = -0.2 - 0.3 * dip;
+  pose.shoulderRZ = -0.2 - 0.45 * dip;
+  pose.elbowRX = -0.6;
+  pose.wristRX = -1.0;
+  pose.capeLift = 0.1 + 0.3 * (1 - progress);
   return pose;
 }
 

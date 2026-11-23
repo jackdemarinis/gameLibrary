@@ -45,6 +45,9 @@ class BufferedControls implements ControlSource {
   wasPressed(action: Action): boolean {
     return this.pending.delete(action);
   }
+  sprintHeld(): boolean {
+    return this.input.sprintHeld();
+  }
   age(dt: number): void {
     for (const [action, left] of this.pending) {
       if (left - dt <= 0) this.pending.delete(action);
@@ -54,6 +57,7 @@ class BufferedControls implements ControlSource {
 }
 
 export class Game {
+  private frameLook = { x: 0, y: 0 };
   private readonly pipeline: RetroPipeline;
   private readonly scene = new THREE.Scene();
   private readonly input: Input;
@@ -256,6 +260,8 @@ export class Game {
 
   private begin(save: SaveData): void {
     sfx.unlock();
+    // Grab the mouse now, while we're still inside the click; after the fade it's too late.
+    this.input.capturePointer();
     this.save = save;
     this.flags.clear();
     for (const flag of save.flags) this.flags.add(flag);
@@ -266,7 +272,7 @@ export class Game {
       this.state = "playing";
       this.hud.setPlaying(true);
       this.input.captureEnabled = true;
-      void this.pipeline.canvas.requestPointerLock?.();
+      this.input.capturePointer();
     });
   }
 
@@ -297,7 +303,7 @@ export class Game {
     this.hud.hideMenu();
     this.state = "playing";
     this.input.captureEnabled = true;
-    void this.pipeline.canvas.requestPointerLock?.();
+    this.input.capturePointer();
   }
 
   private menuKeys(event: KeyboardEvent): void {
@@ -430,6 +436,8 @@ export class Game {
         break;
     }
     if (this.input.wasPressed("pause") && this.state === "playing") this.pause();
+    // Read this frame's mouse/stick look before endFrame() clears the deltas.
+    this.frameLook = this.state === "playing" ? this.input.look(dt) : { x: 0, y: 0 };
     this.input.endFrame();
     this.render(dt);
   }
@@ -462,12 +470,12 @@ export class Game {
   private simulate(dt: number, passive: boolean): void {
     const area = this.area;
     if (!area) return;
-    this.controls.capture(["attack", "flare"]);
+    this.controls.capture(["attack", "jump", "flare"]);
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= dt;
       return;
     }
-    const idle: ControlSource = { move: () => ({ x: 0, y: 0 }), wasPressed: () => false };
+    const idle: ControlSource = { move: () => ({ x: 0, y: 0 }), wasPressed: () => false, sprintHeld: () => false };
     area.physics.step(dt, (step) => {
       this.time += step;
       this.context.time = this.time;
@@ -691,7 +699,7 @@ export class Game {
             this.refreshStats(true);
             this.state = "playing";
             this.input.captureEnabled = true;
-            void this.pipeline.canvas.requestPointerLock?.();
+            this.input.capturePointer();
           });
         },
       },
@@ -759,8 +767,8 @@ export class Game {
 
     const lock = this.player.lockTarget?.position() ?? null;
     if (this.state === "playing" || this.state === "dialogue" || this.state === "dead") {
-      const look = this.state === "playing" ? this.input.look(dt) : { x: 0, y: 0 };
-      this.cameraRig.update(dt, this.player.rig.root.position, look, lock, area.physics);
+      this.cameraRig.update(dt, this.player.rig.root.position, this.frameLook, lock, area.physics);
+      this.cameraRig.setSprint(this.state === "playing" && this.player.sprinting, dt);
     }
     this.hud.setLock(lock ? this.project(lock.clone().setY(lock.y + 1.2)) : null);
 

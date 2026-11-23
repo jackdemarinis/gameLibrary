@@ -17,6 +17,8 @@ export type Sound =
   | "slam"
   | "chest"
   | "ignite"
+  | "jump"
+  | "land"
   | "doorOpen"
   | "locked";
 
@@ -110,6 +112,14 @@ export class Sfx {
       case "break":
         this.noise(0.3, 0.4, 1800, 300);
         this.tone("square", 140, 60, 0.15, 0.1);
+        break;
+      case "jump":
+        this.noise(0.18, 0.16, 600, 2200, "bandpass");
+        this.tone("triangle", 180, 320, 0.12, 0.05);
+        break;
+      case "land":
+        this.noise(0.16, 0.35, 420, 90, "lowpass");
+        this.tone("sine", 110, 55, 0.12, 0.12);
         break;
       case "doorOpen":
         // Latch click, then a slow hinge creak.

@@ -23,6 +23,14 @@ export class CameraRig {
     this.place(this.focus, null);
   }
 
+  /** Widen the view a touch while sprinting. */
+  setSprint(sprinting: boolean, dt: number): void {
+    const target = sprinting ? 60 : 52;
+    if (Math.abs(this.camera.fov - target) < 0.05) return;
+    this.camera.fov += (target - this.camera.fov) * damp(5, dt);
+    this.camera.updateProjectionMatrix();
+  }
+
   shake(amount: number): void {
     this.trauma = Math.min(1, this.trauma + amount);
   }
