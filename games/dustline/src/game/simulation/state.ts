@@ -1,6 +1,8 @@
-export const SAVE_VERSION = 3;
+import { initialWeaponId, weaponOrder, type WeaponKind } from "../content/weaponCatalog";
+
+export const SAVE_VERSION = 4;
 export const initialLevelId = "training-yard";
-export const initialWeaponId = "starter-cannon";
+export { initialWeaponId };
 
 export const difficultyOrder = ["rookie", "normal", "ace"] as const;
 export type Difficulty = (typeof difficultyOrder)[number];
@@ -32,7 +34,6 @@ export const difficultyDefinitions: readonly DifficultyDefinition[] = [
 export interface UpgradeState {
   maxHealth: number;
   movementSpeed: number;
-  weaponDamage: number;
   visibilityRadius: number;
   fireRate: number;
   turretRotationSpeed: number;
@@ -48,7 +49,10 @@ export interface SaveData {
   difficulty: Difficulty;
   hasSelectedDifficulty: boolean;
   upgrades: UpgradeState;
-  unlockedWeapons: string[];
+  /** Cannons the player owns, in catalog order. */
+  unlockedWeapons: WeaponKind[];
+  /** Damage level bought for each cannon (0 = base). */
+  weaponLevels: Record<WeaponKind, number>;
   unlockedLevelIds: string[];
   completedLevelIds: string[];
 }
@@ -65,11 +69,14 @@ export function createInitialUpgrades(): UpgradeState {
   return {
     maxHealth: 0,
     movementSpeed: 0,
-    weaponDamage: 0,
     visibilityRadius: 0,
     fireRate: 0,
     turretRotationSpeed: 0,
   };
+}
+
+export function createInitialWeaponLevels(): Record<WeaponKind, number> {
+  return Object.fromEntries(weaponOrder.map((kind) => [kind, 0])) as Record<WeaponKind, number>;
 }
 
 export function isDifficulty(value: unknown): value is Difficulty {
@@ -103,6 +110,7 @@ export function createInitialSave(
     hasSelectedDifficulty: overrides.difficulty !== undefined,
     upgrades: createInitialUpgrades(),
     unlockedWeapons: [initialWeaponId],
+    weaponLevels: createInitialWeaponLevels(),
     unlockedLevelIds: [initialLevelId],
     completedLevelIds: [],
   };

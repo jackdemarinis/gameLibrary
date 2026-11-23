@@ -4,10 +4,16 @@ import {
   getNextBattleLevelId,
 } from "../../game/content/levelCatalog";
 import type { BattleLevelData } from "../../game/content/levelTypes";
-import { getWeaponLabel, levelWeaponUnlocks } from "../../game/content/weaponCatalog";
+import { getWeaponLabel, type WeaponKind } from "../../game/content/weaponCatalog";
 import type { BattleResultSummary } from "../../game/simulation/battle/types";
 import type { Difficulty, SaveData } from "../../game/simulation/state";
-import { canPurchaseUpgrade, purchaseUpgrade, type UpgradeKey } from "../../game/simulation/shop";
+import {
+  canPurchaseUpgrade,
+  purchaseUpgrade,
+  purchaseWeapon,
+  purchaseWeaponUpgrade,
+  type UpgradeKey,
+} from "../../game/simulation/shop";
 import { createInitialSave } from "../../game/simulation/state";
 import type { SaveStore } from "../../game/simulation/saveStore";
 import type {
@@ -29,7 +35,6 @@ export interface BattleFlowResult {
   currentLevel: BattleLevelData;
   shopUnlocked: boolean;
   loopedCampaign: boolean;
-  newWeaponUnlocks: string[];
 }
 
 export class SceneBridge {
@@ -139,7 +144,6 @@ export class SceneBridge {
         currentLevel,
         shopUnlocked: false,
         loopedCampaign: false,
-        newWeaponUnlocks: [],
       };
     }
 
@@ -148,15 +152,12 @@ export class SceneBridge {
     const loopedCampaign = nextLevelId === battleLevelOrder[0].id && currentLevel.id !== nextLevelId;
     const unlockedLevelIds = mergeCampaignIds(save.unlockedLevelIds, [save.currentLevelId, nextLevelId]);
     const completedLevelIds = mergeCampaignIds(save.completedLevelIds, [save.currentLevelId]);
-    const weaponUnlocks = levelWeaponUnlocks[currentLevel.id] ?? [];
-    const newWeaponUnlocks = weaponUnlocks.filter((weaponId) => !save.unlockedWeapons.includes(weaponId));
 
     this.saveStore.write({
       ...baseSave,
       currentLevelId: nextLevelId,
       unlockedLevelIds,
       completedLevelIds,
-      unlockedWeapons: [...new Set([...save.unlockedWeapons, ...newWeaponUnlocks])],
     });
 
     return {
@@ -164,7 +165,6 @@ export class SceneBridge {
       currentLevel,
       shopUnlocked: true,
       loopedCampaign,
-      newWeaponUnlocks: newWeaponUnlocks.map((weaponId) => getWeaponLabel(weaponId)),
     };
   }
 
@@ -176,6 +176,18 @@ export class SceneBridge {
     }
 
     const updated = purchaseUpgrade(save, key);
+    this.saveStore.write(updated);
+    return updated;
+  }
+
+  purchaseWeapon(kind: WeaponKind): SaveData {
+    const updated = purchaseWeapon(this.loadOrCreateSave(), kind);
+    this.saveStore.write(updated);
+    return updated;
+  }
+
+  upgradeWeapon(kind: WeaponKind): SaveData {
+    const updated = purchaseWeaponUpgrade(this.loadOrCreateSave(), kind);
     this.saveStore.write(updated);
     return updated;
   }

@@ -1,4 +1,5 @@
 import type { EnemyArchetype, PickupKind, Rect, BattleLevelData, SupplyDrop } from "../../content/levelTypes";
+import type { WeaponKind } from "../../content/weaponCatalog";
 import type { NavGrid } from "./navigation";
 
 export type BattleStatus = "active" | "won" | "lost";
@@ -65,9 +66,17 @@ export interface TankState {
   moveSpeed: number;
   turretTurnSpeed: number;
   fireCooldownMs: number;
+  /** The cannon it carries; drives shell behaviour, art and sound. */
+  weapon: WeaponKind;
   /** Shells per volley and the fan they spread across. */
   shotCount: number;
   spreadRadians: number;
+  /** Random wobble per shell, how far shells fly, their size, wall bounces and tanks pierced. */
+  aimJitterRadians: number;
+  projectileRangePx: number;
+  projectileRadius: number;
+  projectileBounces: number;
+  projectilePierce: number;
   /** Next grid waypoint when chasing around corners, and when to recompute it. */
   navWaypoint: Vector2 | null;
   navRefreshMs: number;
@@ -132,6 +141,31 @@ export interface ProjectileState {
   radius: number;
   damage: number;
   ttlMs: number;
+  kind: WeaponKind;
+  /** Wall rebounds left (ricochet shells). */
+  bouncesLeft: number;
+  /** Extra tanks it can still pass through (laser bolts), and the ones it already hit. */
+  pierceLeft: number;
+  hitTankIds: string[];
+}
+
+/** One cannon in the player's inventory, with upgrades already applied. */
+export interface PlayerWeapon {
+  kind: WeaponKind;
+  name: string;
+  shortName: string;
+  level: number;
+  damage: number;
+  cooldownMs: number;
+  projectileSpeed: number;
+  rangePx: number;
+  shotCount: number;
+  spreadRadians: number;
+  jitterRadians: number;
+  bounces: number;
+  pierce: number;
+  radius: number;
+  recoilKick: number;
 }
 
 export interface PickupState {
@@ -143,8 +177,40 @@ export interface PickupState {
   scoreValue: number;
 }
 
+/** What the audio layer plays for an effect. The simulation decides; the scene just plays it. */
+export type SoundCue =
+  | "playerShot"
+  | "enemyShot"
+  | "heavyShot"
+  | "autoShot"
+  | "scatterShot"
+  | "ricochetShot"
+  | "laserShot"
+  | "ricochet"
+  | "weaponSwitch"
+  | "hitEnemy"
+  | "hitWall"
+  | "hitCrate"
+  | "hitMetal"
+  | "playerHurt"
+  | "tankDestroyed"
+  | "playerDestroyed"
+  | "crateBreak"
+  | "wallBreak"
+  | "spawnerDestroyed"
+  | "spawn"
+  | "coin"
+  | "repair"
+  | "rapidFire"
+  | "freeze";
+
 export interface SimulationEffect {
-  type: "impact" | "explosion" | "pickup" | "muzzleFlash" | "debris";
+  /** "sound" plays its cue with no visual. */
+  type: "impact" | "explosion" | "pickup" | "muzzleFlash" | "debris" | "sound";
+  sound?: SoundCue;
+  /** Muzzle flashes: which cannon fired, so the blast sprite matches it. */
+  weapon?: WeaponKind;
+  faction?: TankFaction;
   x: number;
   y: number;
   color: number;
@@ -174,6 +240,9 @@ export interface BattleState {
   breakableObstacles: BreakableObstacleState[];
   visibility: BattleVisibilityState;
   player: TankState;
+  /** The player's cannons (inventory slots 1..n) and which one is in hand. */
+  playerLoadout: PlayerWeapon[];
+  activeWeaponIndex: number;
   enemies: TankState[];
   projectiles: ProjectileState[];
   pickups: PickupState[];
@@ -211,6 +280,7 @@ export interface TankSnapshot {
   health: number;
   maxHealth: number;
   recoilOffset: number;
+  weapon: WeaponKind;
   showHealthBar: boolean;
   /** Held by a freeze power-up: the renderer tints it icy. */
   frozen: boolean;
@@ -232,9 +302,20 @@ export interface BreakableObstacleSnapshot extends Rect {
 export interface ProjectileSnapshot {
   id: string;
   faction: TankFaction;
+  kind: WeaponKind;
   x: number;
   y: number;
+  /** Direction of travel, for the shell sprite. */
+  rotation: number;
   radius: number;
+}
+
+export interface HudWeaponSlot {
+  slot: number;
+  kind: WeaponKind;
+  shortName: string;
+  level: number;
+  active: boolean;
 }
 
 export interface PickupSnapshot {
@@ -275,6 +356,7 @@ export interface BattleHudSnapshot {
   /** Whole seconds of enemy freeze left (0 = none). */
   freezeSeconds: number;
   spawnersRemaining: number;
+  weapons: HudWeaponSlot[];
   controls: string[];
 }
 

@@ -12,6 +12,7 @@ export function createEnemyTank(
   difficultyTuning: DifficultyTuning,
 ): TankState {
   const profile = battleConfig.enemy.archetypes[archetype];
+  const weapon = battleConfig.weapons[profile.weapon];
   const maxHealth = Math.round(profile.maxHealth * difficultyTuning.enemyHealthMultiplier);
   const projectileDamage = Math.round(profile.projectileDamage * difficultyTuning.enemyDamageMultiplier);
   const fireCooldownMs = Math.round(
@@ -32,8 +33,14 @@ export function createEnemyTank(
     turretTurnSpeed: 0,
     fireCooldownMs,
     fireCooldownRemainingMs: 220 + (hashString(id) % 360),
+    weapon: profile.weapon,
     shotCount: profile.shotCount,
     spreadRadians: profile.spreadRadians,
+    aimJitterRadians: weapon.jitterRadians,
+    projectileRangePx: weapon.rangePx,
+    projectileRadius: weapon.radius,
+    projectileBounces: Math.min(weapon.bounces, battleConfig.enemyMaxBounces),
+    projectilePierce: 0,
     navWaypoint: null,
     navRefreshMs: 0,
     projectileSpeed: profile.projectileSpeed,

@@ -1,8 +1,10 @@
 import Phaser from "phaser";
 import { pixelTheme } from "../../game/config/theme";
+import type { WeaponKind } from "../../game/content/weaponCatalog";
 import {
   artPixel,
   ensureHullTextures,
+  tankArtPixel,
   ensureTurretTexture,
   treadFrames,
   type TankArtPalette,
@@ -18,6 +20,8 @@ export interface TankSprite {
   healthBar: Phaser.GameObjects.Graphics;
   hullKeys: string[];
   travel: number;
+  palette: TankArtPalette;
+  weapon: WeaponKind;
 }
 
 const treadStepWorld = 6;
@@ -27,22 +31,34 @@ export function createTankSprite(
   x: number,
   y: number,
   palette: TankArtPalette,
+  weapon: WeaponKind,
 ): TankSprite {
   const hullKeys = ensureHullTextures(scene, palette);
-  const turretTexture = ensureTurretTexture(scene, palette);
+  const turretTexture = ensureTurretTexture(scene, palette, weapon);
 
-  const shadow = scene.add.image(artPixel, artPixel * 1.5, hullKeys[0]).setTintFill(0x000000).setAlpha(0.32);
+  const shadow = scene.add.image(tankArtPixel, tankArtPixel * 1.5, hullKeys[0]).setTintFill(0x000000).setAlpha(0.32);
   const hull = scene.add.image(0, 0, hullKeys[0]);
   const turret = scene.add
     .image(0, 0, turretTexture.key)
     .setOrigin(turretTexture.originX, turretTexture.originY);
   const healthBar = scene.add.graphics();
-  healthBar.setPosition(0, -palette.length * artPixel * 0.5 - 18);
+  healthBar.setPosition(0, -palette.length * tankArtPixel * 0.5 - 18);
 
   const container = scene.add.container(x, y, [shadow, hull, turret, healthBar]);
   container.setDepth(3);
 
-  return { container, shadow, hull, turret, healthBar, hullKeys, travel: 0 };
+  return { container, shadow, hull, turret, healthBar, hullKeys, travel: 0, palette, weapon };
+}
+
+/** Swaps the turret to the barrel of another cannon. */
+export function setTankWeapon(scene: Phaser.Scene, sprite: TankSprite, weapon: WeaponKind): void {
+  if (sprite.weapon === weapon) {
+    return;
+  }
+
+  const turretTexture = ensureTurretTexture(scene, sprite.palette, weapon);
+  sprite.turret.setTexture(turretTexture.key).setOrigin(turretTexture.originX, turretTexture.originY);
+  sprite.weapon = weapon;
 }
 
 /** Moves the tank, turns hull and turret, rolls the treads and kicks the turret back on recoil. */

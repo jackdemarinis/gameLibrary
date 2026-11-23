@@ -34,7 +34,7 @@ export const worldTheme = {
 
 /**
  * Pixel-art palette for the Dustline battlefield (art, not UI chrome).
- * Every battle texture is painted from these colours at 4 world px per art pixel.
+ * Terrain is painted at 4 world px per art pixel, tanks at 3, shells and blasts at 2.
  */
 export const pixelTheme = {
   grass: 0x2f6b34,
@@ -98,6 +98,32 @@ export const pixelTheme = {
   hazardStripe: 0xf1c24c,
   spawnerCore: 0xe0573a,
   spawnerCoreLight: 0xffa36b,
+  /** Tank details: headlights, exhausts, bolts. */
+  headlight: 0xfff3b0,
+  exhaust: 0x2b2e2a,
+  bolt: 0xd8dccf,
+  /** Shells: player gold, enemy orange. */
+  shotPlayer: 0xf1c24c,
+  shotPlayerLight: 0xfff0a0,
+  shotPlayerDim: 0x9a6a14,
+  shotEnemy: 0xe97d31,
+  shotEnemyLight: 0xffc48a,
+  shotEnemyDim: 0x8a3a10,
+  /** Rebound shells and their barrel coils: violet for the player, gold for the boss. */
+  ricochetGlow: 0xd59cff,
+  ricochetCore: 0xf6e8ff,
+  ricochetEnemyGlow: 0xe8b43a,
+  /** Laser bolts and emitters: cyan for the player, pink for lancers. */
+  laserGlow: 0x8fe8ff,
+  laserCore: 0xeafcff,
+  laserEnemyGlow: 0xff5f8a,
+  laserEnemyCore: 0xffd6e2,
+  /** Muzzle blast, hottest to coolest, then smoke. */
+  flashCore: 0xfff6cc,
+  flashHot: 0xffd24a,
+  flashMid: 0xf6851f,
+  flashEdge: 0x8a3a10,
+  flashSmoke: 0x8f8a6a,
 } as const;
 
 /**

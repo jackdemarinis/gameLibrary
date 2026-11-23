@@ -27,6 +27,7 @@ export function damageTank(
   const effects: SimulationEffect[] = [
     {
       type: "explosion",
+      sound: target.faction === "player" ? "playerDestroyed" : "tankDestroyed",
       x: target.position.x,
       y: target.position.y,
       color: target.faction === "player" ? 0xf27f48 : 0xf1c24c,

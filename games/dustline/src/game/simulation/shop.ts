@@ -1,4 +1,5 @@
 import { battleConfig } from "../config/battleConfig";
+import { getWeaponDefinition, type WeaponKind } from "../content/weaponCatalog";
 import type { SaveData, UpgradeState } from "./state";
 
 export type UpgradeKey = keyof UpgradeState;
@@ -6,7 +7,6 @@ export type UpgradeKey = keyof UpgradeState;
 export const shopUpgradeOrder: UpgradeKey[] = [
   "maxHealth",
   "movementSpeed",
-  "weaponDamage",
   "visibilityRadius",
   "fireRate",
   "turretRotationSpeed",
@@ -47,17 +47,6 @@ const definitions: Record<UpgradeKey, UpgradeDefinition> = {
     growth: 1.6,
     maxLevel: battleConfig.shop.maxUpgradeLevel,
   },
-  weaponDamage: {
-    key: "weaponDamage",
-    iconLabel: "DMG",
-    category: "Core",
-    title: "Weapon Damage",
-    body: "Hotter shell loads make every hit matter more.",
-    nextBonus: `+${battleConfig.upgrades.weaponDamagePerLevel} damage`,
-    baseCost: 70,
-    growth: 1.62,
-    maxLevel: battleConfig.shop.maxUpgradeLevel,
-  },
   visibilityRadius: {
     key: "visibilityRadius",
     iconLabel: "VIS",
@@ -74,8 +63,8 @@ const definitions: Record<UpgradeKey, UpgradeDefinition> = {
     iconLabel: "ROF",
     category: "Bonus",
     title: "Fire Rate",
-    body: "Trim the reload cycle for faster follow-up shots.",
-    nextBonus: `-${battleConfig.upgrades.fireRateReductionMsPerLevel}ms cooldown`,
+    body: "Trim the reload cycle on every cannon you carry.",
+    nextBonus: `-${Math.round(battleConfig.upgrades.fireRateReductionPerLevel * 100)}% reload, every cannon`,
     baseCost: 80,
     growth: 1.68,
     maxLevel: battleConfig.shop.maxUpgradeLevel,
@@ -128,6 +117,56 @@ export function purchaseUpgrade(save: SaveData, key: UpgradeKey): SaveData {
       [key]: save.upgrades[key] + 1,
     },
   };
+}
+
+/** Price to buy a cannon, or null if it's already owned. */
+export function getWeaponPrice(save: SaveData, kind: WeaponKind): number | null {
+  return save.unlockedWeapons.includes(kind) ? null : getWeaponDefinition(kind).price;
+}
+
+export function purchaseWeapon(save: SaveData, kind: WeaponKind): SaveData {
+  const price = getWeaponPrice(save, kind);
+
+  if (price === null || save.credits < price) {
+    return save;
+  }
+
+  return {
+    ...save,
+    credits: save.credits - price,
+    unlockedWeapons: [...save.unlockedWeapons, kind],
+  };
+}
+
+/** Price of the next damage level, or null if the cannon isn't owned or is maxed. */
+export function getWeaponUpgradePrice(save: SaveData, kind: WeaponKind): number | null {
+  const level = save.weaponLevels[kind];
+
+  if (!save.unlockedWeapons.includes(kind) || level >= battleConfig.weaponUpgrades.maxLevel) {
+    return null;
+  }
+
+  const definition = getWeaponDefinition(kind);
+  return roundShopPrice(definition.upgradeBaseCost * Math.pow(definition.upgradeGrowth, level));
+}
+
+export function purchaseWeaponUpgrade(save: SaveData, kind: WeaponKind): SaveData {
+  const price = getWeaponUpgradePrice(save, kind);
+
+  if (price === null || save.credits < price) {
+    return save;
+  }
+
+  return {
+    ...save,
+    credits: save.credits - price,
+    weaponLevels: { ...save.weaponLevels, [kind]: save.weaponLevels[kind] + 1 },
+  };
+}
+
+/** A cannon's damage per shell at a given upgrade level. */
+export function getWeaponDamage(kind: WeaponKind, level: number): number {
+  return Math.round(battleConfig.weapons[kind].damage * (1 + level * battleConfig.weaponUpgrades.damagePerLevel));
 }
 
 function roundShopPrice(value: number): number {

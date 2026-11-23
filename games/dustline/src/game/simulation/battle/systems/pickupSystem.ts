@@ -47,6 +47,7 @@ export function runPickupSystem(state: BattleState): SimulationEffect[] {
     state.totalScore += pickup.scoreValue;
     effects.push({
       type: "pickup",
+      sound: pickup.kind,
       x: pickup.position.x,
       y: pickup.position.y,
       color: pickupColors[pickup.kind],

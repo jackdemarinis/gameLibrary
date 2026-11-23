@@ -1,3 +1,15 @@
+/* Digits (and $ : + %) in every pixel font come from Jersey 10: Pixelify's
+   8, 3 and 5 are hard to read at HUD sizes. Self-hosted so it works offline.
+   License: src/fonts/jersey10OFL.txt (SIL OFL 1.1). */
+@font-face {
+  font-family: 'Dustline Digits';
+  src: url('./fonts/jersey10Latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  size-adjust: 128%;
+  unicode-range: U+0024, U+0025, U+002B, U+0030-003A;
+}
+
 /* ------------------------------------------------------------------
  * JackGames brand layer — the ONE place this site sets token values.
  *
@@ -106,10 +118,10 @@
 
   /* Dustline title screen: pixel military-arcade skin over a pixel camo field
      (art colours mirror menuArtTheme / pixelTheme in src/game/config/theme.ts). */
-  --font-pixel: 'Pixelify Sans', ui-monospace, monospace;
+  --font-pixel: 'Dustline Digits', 'Pixelify Sans', ui-monospace, monospace;
   /* Pixel scale for the menus: borders, notches, bevels and outlines are drawn at
      2x resolution (2px lines, 1px outlines). Silkscreen is kept for the title logo only. */
-  --font-pixel-display: 'Pixelify Sans', ui-monospace, monospace;
+  --font-pixel-display: 'Dustline Digits', 'Pixelify Sans', ui-monospace, monospace;
   --font-pixel-logo: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;
   --dl-line: 2px;
   --dl-line-thin: 1px;
@@ -151,6 +163,12 @@
   --dl-health: #8fe07a;
   --dl-health-dark: #3a7a34;
   --dl-meter-back: #0e140b;
+  /* One colour per cannon: HUD inventory and shop armory. */
+  --dl-weapon-cannon: #f6c744;
+  --dl-weapon-autocannon: #f26a1b;
+  --dl-weapon-scattergun: #c4482f;
+  --dl-weapon-ricochet: #d59cff;
+  --dl-weapon-laser: #8fe8ff;
 
   /* Play-screen stage: the 16:9 game window, framed in riveted olive steel,
      centred on a calm dark field. */

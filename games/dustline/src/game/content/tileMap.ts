@@ -25,8 +25,9 @@ import { battleConfig } from "../config/battleConfig";
  *   b  brick wall (breakable)                B  reinforced brick (breakable, tougher)
  *   c  crate                                 $  gold crate (pays out when broken)
  *   o  coin                                  O  coin stash
- *   +  repair kit                            !  rapid-fire charge
  *   H  supply crate: repair    F  supply crate: freeze    R  supply crate: rapid fire
+ *   Power-ups only ever come out of crates: supply crates show what's inside,
+ *   and some plain crates hide one (see battleConfig.destructible.crateDrops).
  *   X  enemy spawner (raiders + skirmishers)   Y  heavy spawner (bulwarks + lancers)
  *   P  player start
  *   r  raider   s  skirmisher   h  bulwark   l  lancer   W  warden (boss)
@@ -44,8 +45,6 @@ const enemyByChar: Record<string, EnemyArchetype> = {
 const pickupByChar: Record<string, { kind: PickupKind; value: number }> = {
   o: { kind: "coin", value: 35 },
   O: { kind: "coin", value: 90 },
-  "+": { kind: "repair", value: 0 },
-  "!": { kind: "rapidFire", value: 0 },
 };
 
 const supplyDropByChar: Record<string, SupplyDrop> = {

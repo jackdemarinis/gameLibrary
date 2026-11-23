@@ -25,7 +25,9 @@ export interface StartViewModel {
 
 export interface ShopOfferViewModel {
   iconLabel: string;
-  category: "Core" | "Bonus";
+  category: string;
+  /** Cannon id, for the armory cards' colour stripe. */
+  weaponKind?: string;
   title: string;
   summary: string;
   nextBonus: string;
@@ -45,6 +47,10 @@ export interface ShopViewModel {
   difficultyOptions: DifficultyChoiceViewModel[];
   unlockedWeapons: string[];
   offers: ShopOfferViewModel[];
+  /** Cannons to buy and upgrade, shown on the Armory tab. */
+  armory: ShopOfferViewModel[];
+  activeTab: "upgrades" | "armory";
+  tabs: { id: "upgrades" | "armory"; label: string; onPress: () => void }[];
   actions: UiAction[];
 }
 
@@ -89,6 +95,17 @@ export interface HudKpi {
   };
 }
 
+/** One slot of the cannon inventory in the battle HUD. */
+export interface HudWeaponSlotViewModel {
+  slot: number;
+  label: string;
+  /** Damage upgrade level, shown as pips. */
+  level: number;
+  kind: string;
+  active: boolean;
+  onPress: () => void;
+}
+
 export interface HudViewModel {
   layout: "active" | "result";
   title: string;
@@ -100,6 +117,7 @@ export interface HudViewModel {
   helpAction?: UiAction;
   helpBackAction?: UiAction;
   helpOpen?: boolean;
+  weapons?: HudWeaponSlotViewModel[];
 }
 
 export class AppChrome {
@@ -164,11 +182,13 @@ export class AppChrome {
         </button>
       `;
     };
-    const renderOffer = (offer: ShopOfferViewModel, index: number): string => {
+    const renderOffer = (offer: ShopOfferViewModel, index: number | string): string => {
       const priceLabel = offer.priceValue === null ? "MAX" : `$${offer.priceValue}`;
 
       return `
-        <article class="shop-upgrade-card${offer.priceValue === null ? " shop-upgrade-card-maxed" : ""}">
+        <article class="shop-upgrade-card${offer.priceValue === null ? " shop-upgrade-card-maxed" : ""}${
+          offer.weaponKind ? ` shopWeaponCard shopWeaponCard-${offer.weaponKind}` : ""
+        }">
           <div class="shop-upgrade-head">
             <div class="shop-upgrade-badge">${offer.iconLabel}</div>
             <div class="shop-upgrade-heading">
@@ -200,13 +220,25 @@ export class AppChrome {
                     <h1 class="shop-board-title">${model.title}</h1>
                     <p class="shop-board-copy">${model.subtitle}</p>
                   </div>
+                  <div class="shopTabs" role="tablist">
+                    ${model.tabs
+                      .map((tab) => {
+                        actionMap.set(`shop-tab-${tab.id}`, { label: tab.label, tone: "secondary", onPress: tab.onPress });
+                        return `<button class="shopTab${tab.id === model.activeTab ? " shopTabActive" : ""}" role="tab" aria-selected="${tab.id === model.activeTab}" data-action-id="shop-tab-${tab.id}">${tab.label}</button>`;
+                      })
+                      .join("")}
+                  </div>
                   <div class="shop-board-status">
                     <span class="shop-board-status-label">Difficulty</span>
                     <strong>${model.difficultyLabel}</strong>
                   </div>
                 </div>
                 <div class="shop-grid">
-                  ${model.offers.map((offer, index) => renderOffer(offer, index)).join("")}
+                  ${
+                    model.activeTab === "armory"
+                      ? model.armory.map((offer, index) => renderOffer(offer, `armory-${index}`)).join("")
+                      : model.offers.map((offer, index) => renderOffer(offer, index)).join("")
+                  }
                 </div>
               </section>
               <aside class="shop-sidebar">
@@ -216,10 +248,10 @@ export class AppChrome {
                   <span class="shop-credit-subvalue">Total score: ${model.totalScore}</span>
                 </div>
                 <article class="shop-side-card arcade-card">
-                  <p class="shop-side-label">Unlocked Weapons</p>
+                  <p class="shop-side-label">Loadout · keys 1-5</p>
                   <div class="shop-weapon-stack">
                     ${model.unlockedWeapons
-                      .map((weapon) => `<span class="shop-weapon-pill">${weapon}</span>`)
+                      .map((weapon, index) => `<span class="shop-weapon-pill">${index + 1} ${weapon}</span>`)
                       .join("")}
                   </div>
                 </article>
@@ -401,6 +433,30 @@ export class AppChrome {
       : "";
 
     if (model.layout === "active") {
+      const weaponSlots = model.weapons ?? [];
+      const inventory = weaponSlots.length
+        ? `
+            <nav class="hudInventory" aria-label="Cannons">
+              ${weaponSlots
+                .map(
+                  (weapon) => `
+                    <button
+                      class="hudWeaponSlot hudWeaponSlot-${weapon.kind}${weapon.active ? " hudWeaponSlotActive" : ""}"
+                      data-weapon-slot="${weapon.slot}"
+                      aria-pressed="${weapon.active}"
+                    >
+                      <span class="hudWeaponKey">${weapon.slot}</span>
+                      <span class="hudWeaponName">${weapon.label}</span>
+                      <span class="hudWeaponPips" aria-label="Damage level ${weapon.level}">
+                        ${Array.from({ length: 4 }, (_, pip) => `<span class="hudWeaponPip${pip < weapon.level ? " hudWeaponPipOn" : ""}"></span>`).join("")}
+                      </span>
+                    </button>
+                  `,
+                )
+                .join("")}
+            </nav>
+          `
+        : "";
       const mainHud = `
             <article class="hud-bar">
               <div class="hud-bar-kpis">
@@ -411,6 +467,7 @@ export class AppChrome {
           `;
       this.root.innerHTML = `
         <section class="hud-bar-screen">
+          ${inventory}
           ${mainHud}
           ${
             model.helpOpen
@@ -476,6 +533,17 @@ export class AppChrome {
     }
 
     this.bindActionMap(actionMap);
+    // pointerdown, not click: the HUD redraws every second for the clock and
+    // a click split across a redraw would be lost.
+    this.root.querySelectorAll<HTMLButtonElement>("[data-weapon-slot]").forEach((button) => {
+      const weapon = model.weapons?.find((slot) => `${slot.slot}` === button.dataset.weaponSlot);
+      if (weapon) {
+        button.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          weapon.onPress();
+        });
+      }
+    });
   }
 
   private renderActionButton(

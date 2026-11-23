@@ -29,14 +29,12 @@ describe("SceneBridge", () => {
     expect(flow.currentLevel.id).toBe("training-yard");
     expect(flow.nextLevel.id).toBe("relay-station");
     expect(flow.shopUnlocked).toBe(true);
-    expect(flow.newWeaponUnlocks).toEqual(["Burst Cannon"]);
     expect(bridge.loadOrCreateSave().currentLevelId).toBe("relay-station");
     expect(bridge.loadOrCreateSave().unlockedLevelIds).toEqual([
       "training-yard",
       "relay-station",
     ]);
     expect(bridge.loadOrCreateSave().completedLevelIds).toEqual(["training-yard"]);
-    expect(bridge.loadOrCreateSave().unlockedWeapons).toContain("burst-cannon");
   });
 });
 

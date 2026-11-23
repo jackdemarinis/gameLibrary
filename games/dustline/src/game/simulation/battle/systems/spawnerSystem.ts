@@ -61,7 +61,7 @@ export function runSpawnerSystem(state: BattleState, deltaMs: number): Simulatio
     spawner.liveSpawnIds.push(id);
     spawner.rosterIndex += 1;
     spawner.cooldownMs = battleConfig.spawner.spawnIntervalMs;
-    effects.push({ type: "explosion", x: spawnPoint.x, y: spawnPoint.y, color: spawnFlashColor, size: 26 });
+    effects.push({ type: "explosion", sound: "spawn", x: spawnPoint.x, y: spawnPoint.y, color: spawnFlashColor, size: 26 });
   });
 
   return effects;

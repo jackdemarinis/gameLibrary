@@ -19,6 +19,7 @@ import { createFogOfWarLayer, type FogOfWarLayer } from "../view/createFogOfWarL
 import {
   createTankSprite,
   drawPixelHealthBar,
+  setTankWeapon,
   syncTankPose,
   type TankArtPalette,
   type TankSprite,
@@ -28,10 +29,11 @@ import {
   ensureCoinTexture,
   ensureFreezeTexture,
   ensureRapidFireTexture,
+  ensureProjectileTexture,
   ensureRepairTexture,
-  ensureShotTexture,
 } from "../view/dustlinePixelArt";
 import { spawnSimulationEffect } from "../view/spawnSimulationEffect";
+import { isSoundMuted, playSound, toggleSoundMuted, unlockSound } from "../audio/dustlineSound";
 
 export class BattleScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -55,6 +57,7 @@ export class BattleScene extends Phaser.Scene {
   private currentSnapshot!: BattleSnapshot;
   private currentHud!: BattleHudSnapshot;
   private helpModalOpen = false;
+  private lastWheelSwitchAt = 0;
   private resultsQueued = false;
 
   constructor(bridge: SceneBridge) {
@@ -92,6 +95,11 @@ export class BattleScene extends Phaser.Scene {
     this.renderHud(hud);
 
     this.input.mouse?.disableContextMenu();
+    // The level was started by a click or key press, so audio is allowed now;
+    // the listeners cover browsers that want the gesture inside the scene.
+    unlockSound();
+    this.input.on("pointerdown", unlockSound);
+    this.input.keyboard?.on("keydown", unlockSound);
     const keyboard = this.input.keyboard;
     if (keyboard) {
       this.movementKeys = {
@@ -103,6 +111,23 @@ export class BattleScene extends Phaser.Scene {
       this.arrowKeys = keyboard.createCursorKeys();
     }
 
+    // Inventory: number keys pick a slot, the mouse wheel steps through them.
+    ["ONE", "TWO", "THREE", "FOUR", "FIVE"].forEach((keyName, index) => {
+      keyboard?.on(`keydown-${keyName}`, () => this.simulation.selectWeapon(index));
+    });
+    this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, deltaY: number) => {
+      const now = this.time.now;
+      // Trackpads send a burst of wheel events per swipe: one step per 120ms.
+      if (deltaY === 0 || now - this.lastWheelSwitchAt < 120) {
+        return;
+      }
+      this.lastWheelSwitchAt = now;
+      this.simulation.cycleWeapon(deltaY > 0 ? 1 : -1);
+    });
+    keyboard?.on("keydown-M", () => {
+      toggleSoundMuted();
+      this.renderHud(this.currentHud);
+    });
     keyboard?.on("keydown-ESC", () => {
       if (this.helpModalOpen) {
         this.setHelpModalOpen(false);
@@ -125,8 +150,12 @@ export class BattleScene extends Phaser.Scene {
     this.currentSnapshot = result.snapshot;
     this.currentHud = result.hud;
 
+    const listener = result.snapshot.player;
     result.effects.forEach((effect) => {
       spawnSimulationEffect(this, effect);
+      if (effect.sound) {
+        playSound(effect.sound, effect, listener);
+      }
     });
 
     this.syncSnapshot(result.snapshot);
@@ -152,7 +181,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private createSprites(snapshot: BattleSnapshot): void {
-    this.playerSprite = createTankSprite(this, snapshot.player.x, snapshot.player.y, playerPalette);
+    this.playerSprite = createTankSprite(this, snapshot.player.x, snapshot.player.y, playerPalette, snapshot.player.weapon);
 
     snapshot.enemies.forEach((enemy) => {
       if (!enemy.alive) {
@@ -161,7 +190,7 @@ export class BattleScene extends Phaser.Scene {
 
       this.enemySprites.set(
         enemy.id,
-        createTankSprite(this, enemy.x, enemy.y, getEnemyPalette(enemy)),
+        createTankSprite(this, enemy.x, enemy.y, getEnemyPalette(enemy), enemy.weapon),
       );
     });
   }
@@ -190,7 +219,7 @@ export class BattleScene extends Phaser.Scene {
       if (!existing) {
         this.enemySprites.set(
           enemy.id,
-          createTankSprite(this, enemy.x, enemy.y, getEnemyPalette(enemy)),
+          createTankSprite(this, enemy.x, enemy.y, getEnemyPalette(enemy), enemy.weapon),
         );
       }
 
@@ -218,12 +247,10 @@ export class BattleScene extends Phaser.Scene {
       const existing = this.projectileSprites.get(projectile.id);
 
       if (!existing) {
-        const key =
-          projectile.faction === "player"
-            ? ensureShotTexture(this, "player", worldTheme.accentSoft)
-            : ensureShotTexture(this, "enemy", worldTheme.enemyGlow);
+        const key = ensureProjectileTexture(this, projectile.kind, projectile.faction);
         const shot = this.add.image(projectile.x, projectile.y, key);
-        shot.setDepth(5);
+        // The nose of the sprite sits on the shell's position, the trail behind it.
+        shot.setOrigin(0.75, 0.5).setDepth(5);
         this.projectileSprites.set(projectile.id, shot);
       }
 
@@ -231,6 +258,7 @@ export class BattleScene extends Phaser.Scene {
 
       if (sprite) {
         sprite.setPosition(projectile.x, projectile.y);
+        sprite.setRotation(projectile.rotation);
       }
     });
   }
@@ -277,6 +305,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private syncTankSprite(sprite: TankSprite, tank: TankSnapshot): void {
+    setTankWeapon(this, sprite, tank.weapon);
     syncTankPose(sprite, tank.x, tank.y, tank.hullRotation, tank.turretRotation, tank.recoilOffset);
     sprite.container.setAlpha(tank.alive ? 1 : 0.28);
     if (tank.frozen) {
@@ -332,7 +361,15 @@ export class BattleScene extends Phaser.Scene {
       copy: hud.summary,
       objective: hud.objective,
       kpis: activeKpis,
-      notes: hud.controls,
+      notes: [...hud.controls, isSoundMuted() ? "M to turn sound on" : "M to mute sound"],
+      weapons: hud.weapons.map((weapon) => ({
+        slot: weapon.slot,
+        label: weapon.shortName,
+        level: weapon.level,
+        kind: weapon.kind,
+        active: weapon.active,
+        onPress: () => this.simulation.selectWeapon(weapon.slot - 1),
+      })),
       helpOpen: this.helpModalOpen,
       helpAction: {
         label: "?",
@@ -447,96 +484,103 @@ function formatTime(elapsedMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+/** Tank art is in tank art pixels (3 world px each). */
 const playerPalette: TankArtPalette = {
   name: "player",
+  faction: "player",
   hull: tankTheme.playerHull,
   turret: tankTheme.playerTurret,
   accent: tankTheme.playerTurret,
-  width: 16,
-  length: 18,
-  treadWidth: 4,
+  width: 21,
+  length: 24,
+  treadWidth: 5,
   hullStyle: "standard",
   turretStyle: "dome",
-  domeRadius: 4,
-  barrelLength: 9,
+  domeRadius: 5,
+  barrelLength: 12,
   barrelCount: 1,
 };
 
 /**
- * One look per enemy type: colour first, then silhouette.
- * Raider: red, cross stripe. Skirmisher: teal, small, arrow chevron.
- * Bulwark: slate, wide with armour skirts, square twin-barrel turret.
- * Lancer: purple, long hull and long barrel. Warden: black and gold, triple barrel.
+ * One look per enemy type: colour first, then silhouette, then the cannon on top.
+ * Raider: red, cross stripe, cannon. Skirmisher: teal, small, chevron, autocannon.
+ * Bulwark: slate, wide with skirts, square turret, twin scatterguns.
+ * Lancer: purple, long hull, laser. Warden: black and gold, triple rebound cannons.
  */
 const enemyPalettes: Record<NonNullable<TankSnapshot["archetype"]>, TankArtPalette> = {
   raider: {
     name: "raider",
+    faction: "enemy",
     hull: tankTheme.raiderHull,
     turret: tankTheme.raiderTurret,
     accent: tankTheme.raiderAccent,
-    width: 14,
-    length: 16,
-    treadWidth: 4,
+    width: 19,
+    length: 21,
+    treadWidth: 5,
     hullStyle: "standard",
     turretStyle: "dome",
-    domeRadius: 4,
-    barrelLength: 8,
+    domeRadius: 5,
+    barrelLength: 11,
     barrelCount: 1,
   },
   skirmisher: {
     name: "skirmisher",
+    faction: "enemy",
     hull: tankTheme.skirmisherHull,
     turret: tankTheme.skirmisherTurret,
     accent: tankTheme.skirmisherAccent,
-    width: 12,
-    length: 13,
-    treadWidth: 3,
+    width: 16,
+    length: 17,
+    treadWidth: 4,
     hullStyle: "light",
     turretStyle: "dome",
-    domeRadius: 3,
-    barrelLength: 7,
+    domeRadius: 4,
+    barrelLength: 10,
     barrelCount: 1,
   },
   bulwark: {
     name: "bulwark",
+    faction: "enemy",
     hull: tankTheme.bulwarkHull,
     turret: tankTheme.bulwarkTurret,
     accent: tankTheme.bulwarkAccent,
-    width: 18,
-    length: 18,
-    treadWidth: 5,
+    width: 24,
+    length: 24,
+    treadWidth: 6,
     hullStyle: "armoured",
     turretStyle: "square",
-    domeRadius: 5,
-    barrelLength: 8,
+    domeRadius: 6,
+    barrelLength: 15,
     barrelCount: 2,
   },
   lancer: {
     name: "lancer",
+    faction: "enemy",
     hull: tankTheme.lancerHull,
     turret: tankTheme.lancerTurret,
     accent: tankTheme.lancerAccent,
-    width: 12,
-    length: 18,
-    treadWidth: 3,
+    width: 16,
+    length: 24,
+    treadWidth: 4,
     hullStyle: "long",
     turretStyle: "dome",
-    domeRadius: 3,
-    barrelLength: 14,
+    domeRadius: 4,
+    barrelLength: 16,
     barrelCount: 1,
   },
   warden: {
     name: "warden",
+    faction: "enemy",
     hull: tankTheme.wardenHull,
     turret: tankTheme.wardenTurret,
     accent: tankTheme.wardenAccent,
-    width: 22,
-    length: 22,
-    treadWidth: 5,
+    width: 29,
+    length: 29,
+    treadWidth: 7,
     hullStyle: "fortress",
     turretStyle: "square",
-    domeRadius: 6,
-    barrelLength: 10,
+    domeRadius: 8,
+    barrelLength: 13,
     barrelCount: 3,
   },
 };

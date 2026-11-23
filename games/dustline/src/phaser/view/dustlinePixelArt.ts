@@ -1,19 +1,32 @@
 import Phaser from "phaser";
 import { pixelTheme as p } from "../../game/config/theme";
 import type { Rect, SupplyDrop } from "../../game/content/levelTypes";
-import type { BreakableObstacleKind } from "../../game/simulation/battle/types";
+import type { WeaponKind } from "../../game/content/weaponCatalog";
+import type { BreakableObstacleKind, TankFaction } from "../../game/simulation/battle/types";
 
-/** World pixels per art pixel. A 64px grid cell is 16x16 art pixels. */
+/** World pixels per art pixel for terrain. A 64px grid cell is 16x16 art pixels. */
 export const artPixel = 4;
+/** Tanks are painted a little finer, for more detail on the units. */
+export const tankArtPixel = 3;
+/** Shells and muzzle blasts are finer still. */
+export const shotArtPixel = 2;
 const tileArt = 16;
 
 type ColorAt = (x: number, y: number) => number | null;
 
 /**
  * Paints a texture at art resolution, then scales it up with no smoothing so every
- * art pixel is a crisp 4x4 block. Built once per key and reused across scene restarts.
+ * art pixel is a crisp pixelSize x pixelSize block. Built once per key and reused
+ * across scene restarts.
  */
-function paintTexture(scene: Phaser.Scene, key: string, artWidth: number, artHeight: number, colorAt: ColorAt): string {
+function paintTexture(
+  scene: Phaser.Scene,
+  key: string,
+  artWidth: number,
+  artHeight: number,
+  colorAt: ColorAt,
+  pixelSize = artPixel,
+): string {
   if (scene.textures.exists(key)) {
     return key;
   }
@@ -42,13 +55,13 @@ function paintTexture(scene: Phaser.Scene, key: string, artWidth: number, artHei
   }
   sourceContext.putImageData(image, 0, 0);
 
-  const texture = scene.textures.createCanvas(key, artWidth * artPixel, artHeight * artPixel);
+  const texture = scene.textures.createCanvas(key, artWidth * pixelSize, artHeight * pixelSize);
   if (!texture) {
     throw new Error(`Dustline could not create texture ${key}.`);
   }
   const context = texture.getContext();
   context.imageSmoothingEnabled = false;
-  context.drawImage(source, 0, 0, artWidth * artPixel, artHeight * artPixel);
+  context.drawImage(source, 0, 0, artWidth * pixelSize, artHeight * pixelSize);
   texture.refresh();
   texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
   return key;
@@ -350,6 +363,7 @@ function crateColor(x: number, y: number, width: number, height: number, stage: 
 export type HullStyle = "standard" | "light" | "armoured" | "long" | "fortress";
 export type TurretStyle = "dome" | "square";
 
+/** Tank art is measured in tank art pixels (tankArtPixel world px each). */
 export interface TankArtPalette {
   name: string;
   hull: number;
@@ -365,6 +379,8 @@ export interface TankArtPalette {
   domeRadius: number;
   barrelLength: number;
   barrelCount: 1 | 2 | 3;
+  /** Enemy tanks glow pink/gold on their lasers and rebound coils; the player cyan/violet. */
+  faction: TankFaction;
 }
 
 export const treadFrames = 3;
@@ -381,7 +397,9 @@ function shade(color: number, amount: number): number {
  * Hull points down (+y) to match the simulation's rotation convention. Each
  * hullStyle adds its own marking so the types read apart even in the fog:
  * standard = cross stripe, light = arrow chevron, armoured = side skirts,
- * long = spine line, fortress = gold trim and skirts.
+ * long = spine line, fortress = gold trim and skirts. Every hull gets road-wheel
+ * hubs in the treads, corner bolts, an engine grille and exhausts at the back,
+ * and headlights at the front.
  */
 export function ensureHullTextures(scene: Phaser.Scene, palette: TankArtPalette): string[] {
   const { width, length, treadWidth: tread, hullStyle, accent } = palette;
@@ -389,48 +407,73 @@ export function ensureHullTextures(scene: Phaser.Scene, palette: TankArtPalette)
   const dark = shade(palette.hull, -0.35);
   const hasSkirts = hullStyle === "armoured" || hullStyle === "fortress";
   const centerX = (width - 1) / 2;
+  const hubX = Math.floor((tread - 1) / 2);
 
   return Array.from({ length: treadFrames }, (_, frame) =>
-    paintTexture(scene, `dlHull-${palette.name}-${frame}`, width, length, (x, y) => {
-      const inLeftTread = x < tread;
-      const inRightTread = x >= width - tread;
+    paintTexture(
+      scene,
+      `dlHull-${palette.name}-${frame}`,
+      width,
+      length,
+      (x, y) => {
+        const inLeftTread = x < tread;
+        const inRightTread = x >= width - tread;
 
-      if (inLeftTread || inRightTread) {
-        const localX = inLeftTread ? x : x - (width - tread);
-        if ((y === 0 || y === length - 1) && (localX === 0 || localX === tread - 1)) return null;
-        if (localX === 0 || localX === tread - 1 || y === 0 || y === length - 1) return p.outline;
-        // Armour skirts hide the middle of the tread behind bolted plates.
-        if (hasSkirts && y > 2 && y < length - 3) {
-          if ((y - 3) % 5 === 4) return p.outline;
-          if (hullStyle === "fortress" && localX === (inLeftTread ? 1 : tread - 2)) return accent;
-          return (y - 3) % 5 === 0 ? light : palette.hull;
+        if (inLeftTread || inRightTread) {
+          const localX = inLeftTread ? x : x - (width - tread);
+          if ((y === 0 || y === length - 1) && (localX === 0 || localX === tread - 1)) return null;
+          if (localX === 0 || localX === tread - 1 || y === 0 || y === length - 1) return p.outline;
+          // Armour skirts hide the middle of the tread behind bolted plates.
+          if (hasSkirts && y > 2 && y < length - 3) {
+            if ((y - 3) % 6 === 5) return p.outline;
+            if ((y - 3) % 6 === 2 && localX === hubX) return p.bolt;
+            if (hullStyle === "fortress" && localX === (inLeftTread ? 1 : tread - 2)) return accent;
+            return (y - 3) % 6 === 0 ? light : palette.hull;
+          }
+          // Road-wheel hubs stay put while the links roll past them.
+          if (localX === hubX && y % 4 === 2 && y > 1 && y < length - 2) return p.treadLight;
+          return (y + frame) % treadFrames === 0 ? p.treadDark : localX === 1 ? p.treadLight : p.treadMid;
         }
-        return (y + frame) % treadFrames === 0 ? p.treadDark : localX === 1 ? p.treadLight : p.treadMid;
-      }
 
-      const bodyTop = hullStyle === "light" ? 1 : 2;
-      const bodyBottom = length - 3;
-      if (y < bodyTop || y > bodyBottom) return null;
-      if (y === bodyTop || y === bodyBottom || x === tread || x === width - tread - 1) return p.outline;
-      if (hullStyle === "fortress" && (y === bodyTop + 1 || y === bodyBottom - 1 || x === tread + 1 || x === width - tread - 2)) {
-        return accent;
-      }
-      if (y === bodyTop + 1 || x === tread + 1) return light;
-      if (y === bodyBottom - 1 || x === width - tread - 2) return dark;
+        const bodyTop = hullStyle === "light" ? 1 : 2;
+        const bodyBottom = length - 3;
+        const left = tread;
+        const right = width - tread - 1;
 
-      const middle = Math.round((bodyTop + bodyBottom) / 2);
-      if (hullStyle === "standard" && (y === middle - 3 || y === middle - 2)) return accent;
-      if (hullStyle === "light") {
-        // Arrow chevron pointing forward (+y).
-        const arrowY = bodyBottom - 4 - Math.round(Math.abs(x - centerX));
-        if (y === arrowY || y === arrowY + 1) return accent;
-      }
-      if (hullStyle === "long" && Math.abs(x - centerX) < 1 && y > bodyTop + 2 && y < bodyBottom - 2) return accent;
-      // Engine grille at the back, armoured lip at the front.
-      if (y === bodyTop + 3 && x % 2 === 0) return dark;
-      if (y === bodyBottom - 2) return shade(palette.hull, -0.15);
-      return palette.hull;
-    }),
+        // Twin exhaust stubs poke out of the back of the hull.
+        if (y === bodyTop - 1 && (x === left + 2 || x === right - 2)) return p.exhaust;
+        if (y < bodyTop || y > bodyBottom) return null;
+        if (y === bodyTop || y === bodyBottom || x === left || x === right) return p.outline;
+        // Headlights at the front corners.
+        if (y === bodyBottom - 1 && (x === left + 2 || x === right - 2)) return p.headlight;
+        if (hullStyle === "fortress" && (y === bodyTop + 1 || y === bodyBottom - 1 || x === left + 1 || x === right - 1)) {
+          return accent;
+        }
+        // Corner bolts.
+        if ((y === bodyTop + 2 || y === bodyBottom - 3) && (x === left + 2 || x === right - 2)) return p.bolt;
+        if (y === bodyTop + 1 || x === left + 1) return light;
+        if (y === bodyBottom - 1 || x === right - 1) return dark;
+
+        const middle = Math.round((bodyTop + bodyBottom) / 2);
+        if (hullStyle === "standard" && (y === middle - 3 || y === middle - 2)) return accent;
+        if (hullStyle === "light") {
+          // Arrow chevron pointing forward (+y).
+          const arrowY = bodyBottom - 5 - Math.round(Math.abs(x - centerX));
+          if (y === arrowY || y === arrowY + 1) return accent;
+        }
+        if (hullStyle === "long" && Math.abs(x - centerX) < 1 && y > bodyTop + 3 && y < bodyBottom - 3) return accent;
+        if (hullStyle === "armoured" && (x === left + 3 || x === right - 3) && y > bodyTop + 3 && y < bodyBottom - 3) {
+          return accent;
+        }
+        // Engine grille at the back, armoured lip at the front.
+        if ((y === bodyTop + 3 || y === bodyTop + 4) && x > left + 3 && x < right - 3) {
+          return (x + y) % 2 === 0 ? dark : shade(palette.hull, -0.15);
+        }
+        if (y === bodyBottom - 2) return shade(palette.hull, -0.15);
+        return palette.hull;
+      },
+      tankArtPixel,
+    ),
   );
 }
 
@@ -440,68 +483,317 @@ export interface TurretTexture {
   originY: number;
 }
 
+/** How each cannon's barrel is shaped, so you can tell what a tank carries. */
+const barrelLengthFactor: Record<WeaponKind, number> = {
+  cannon: 1,
+  autocannon: 1.05,
+  scattergun: 0.88,
+  ricochet: 1,
+  laser: 1.2,
+};
+
 /**
  * Dome or square turret with one to three barrels pointing down (+y). The pivot
- * sits at the turret centre. Long barrels (lancer) get a muzzle brake.
+ * sits at the turret centre. The barrel shows the cannon:
+ * cannon = muzzle brake, autocannon = ribbed cooling jacket, scattergun = short
+ * flared bore, ricochet = glowing coils and an orb tip, laser = thin barrel with
+ * cooling fins and a lit lens.
  */
-export function ensureTurretTexture(scene: Phaser.Scene, palette: TankArtPalette): TurretTexture {
+export function ensureTurretTexture(scene: Phaser.Scene, palette: TankArtPalette, weapon: WeaponKind): TurretTexture {
   const radius = palette.domeRadius;
-  const width = radius * 2 + 2;
+  const width = radius * 2 + 4;
   const centerX = width / 2;
   const centerY = radius + 1;
-  const height = centerY + palette.barrelLength + 1;
+  const barrelLength = Math.round(palette.barrelLength * barrelLengthFactor[weapon]);
+  const height = centerY + barrelLength + 1;
   const light = shade(palette.turret, 0.35);
   const dark = shade(palette.turret, -0.32);
-  const barrelOffsets = palette.barrelCount === 1 ? [0] : palette.barrelCount === 2 ? [-2, 2] : [-3, 0, 3];
-  const longBarrel = palette.barrelLength >= 12;
+  const spacing = Math.max(3, Math.round(radius * 0.6));
+  const barrelOffsets =
+    palette.barrelCount === 1 ? [0] : palette.barrelCount === 2 ? [-spacing / 2, spacing / 2] : [-spacing, 0, spacing];
+  const enemy = palette.faction === "enemy";
+  const glow =
+    weapon === "laser"
+      ? enemy ? p.laserEnemyGlow : p.laserGlow
+      : enemy ? p.ricochetEnemyGlow : p.ricochetGlow;
+  const glowCore = weapon === "laser" ? (enemy ? p.laserEnemyCore : p.laserCore) : p.ricochetCore;
 
-  const key = paintTexture(scene, `dlTurret-${palette.name}`, width, height, (x, y) => {
-    const dx = x + 0.5 - centerX;
-    const dy = y + 0.5 - centerY;
-
-    if (palette.turretStyle === "square") {
-      const edge = Math.max(Math.abs(dx), Math.abs(dy));
-      if (edge <= radius - 0.5) {
-        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return palette.accent;
-        if (dy < -radius + 1.5 || dx < -radius + 1.5) return light;
-        if (dy > radius - 1.5 || dx > radius - 1.5) return dark;
-        return palette.turret;
+  /** Barrel half-width and colour at distance t (1..barrelLength) out from the pivot, |dx| from its axis. */
+  const barrelAt = (t: number, dx: number): number | null => {
+    const fromTip = barrelLength - t;
+    switch (weapon) {
+      case "autocannon": {
+        const jacket = t > radius - 1 && t < radius + barrelLength * 0.5;
+        const halfWidth = jacket ? 2 : 1;
+        if (dx >= halfWidth) return null;
+        if (jacket) return t % 2 === 0 ? dark : palette.turret;
+        if (fromTip === 0) return light;
+        return dx < 0.6 ? light : palette.turret;
       }
-      if (edge <= radius + 0.5) return p.outline;
-    } else {
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance <= radius - 0.6) {
-        if (dx + dy < -radius * 0.6) return light;
-        if (dx + dy > radius * 0.7) return dark;
-        return palette.turret;
+      case "scattergun": {
+        const halfWidth = fromTip <= 1 ? 3 : 2;
+        if (dx >= halfWidth) return null;
+        if (fromTip <= 1 && dx < 1) return p.outline;
+        if (t === Math.round(radius + (barrelLength - radius) / 2)) return palette.accent;
+        return dx < 0.6 ? light : dx > halfWidth - 1 ? dark : palette.turret;
       }
-      if (distance <= radius + 0.4) return p.outline;
+      case "ricochet": {
+        if (fromTip <= 2) {
+          const orbDistance = Math.hypot(dx, fromTip - 1);
+          if (orbDistance > 2.2) return null;
+          return orbDistance < 1 ? glowCore : glow;
+        }
+        const coil = t > radius && (t - radius) % 3 === 0;
+        const halfWidth = coil ? 2 : 1;
+        if (dx >= halfWidth) return null;
+        if (coil) return glow;
+        return dx < 0.6 ? light : palette.turret;
+      }
+      case "laser": {
+        const fin = t === Math.round(barrelLength * 0.5) || t === Math.round(barrelLength * 0.65);
+        if (fin) return dx < 3 ? dark : null;
+        if (fromTip <= 1) {
+          if (dx >= 1.5) return null;
+          return fromTip === 0 && dx < 0.6 ? glowCore : glow;
+        }
+        if (dx >= 1) return null;
+        return dx < 0.6 ? light : palette.turret;
+      }
+      case "cannon":
+      default: {
+        const brake = fromTip <= 2;
+        const halfWidth = brake ? 2 : 1;
+        if (dx >= halfWidth) return null;
+        if (brake && fromTip === 1) return dark;
+        return dx < 0.6 && !brake ? light : palette.turret;
+      }
     }
+  };
 
-    if (y <= centerY || y >= height) return null;
-    let outline = false;
-    for (const offset of barrelOffsets) {
-      const barrelX = Math.abs(dx - offset);
-      const isMuzzle = palette.barrelCount === 1 && (y >= height - 3 || (longBarrel && y >= height - 6 && y <= height - 5));
-      const halfWidth = isMuzzle ? 2 : 1;
-      if (barrelX < halfWidth) {
-        if (y === height - 1) return p.outline;
-        return barrelX < 0.6 && !isMuzzle ? light : palette.turret;
+  const key = paintTexture(
+    scene,
+    `dlTurret-${palette.name}-${weapon}`,
+    width,
+    height,
+    (x, y) => {
+      const dx = x + 0.5 - centerX;
+      const dy = y + 0.5 - centerY;
+
+      if (palette.turretStyle === "square") {
+        const edge = Math.max(Math.abs(dx), Math.abs(dy));
+        if (edge <= radius - 0.5) {
+          if (Math.abs(dx) < 1 && Math.abs(dy + radius * 0.35) < 1) return palette.accent;
+          if ((Math.abs(dx) === radius - 1.5 || Math.abs(dx) === radius - 2.5) && Math.abs(dy) === radius - 1.5) return p.bolt;
+          if (dy < -radius + 1.5 || dx < -radius + 1.5) return light;
+          if (dy > radius - 1.5 || dx > radius - 1.5) return dark;
+          return palette.turret;
+        }
+        if (edge <= radius + 0.5) return p.outline;
+      } else {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= radius - 0.6) {
+          // Commander's hatch, set back from the barrel.
+          const hatch = Math.hypot(dx, dy + radius * 0.4);
+          if (hatch < 0.9) return light;
+          if (hatch < 1.8) return dark;
+          if (dx + dy < -radius * 0.6) return light;
+          if (dx + dy > radius * 0.7) return dark;
+          return palette.turret;
+        }
+        if (distance <= radius + 0.4) return p.outline;
       }
-      if (barrelX < halfWidth + 1) outline = true;
-    }
-    return outline ? p.outline : null;
-  });
+
+      if (y <= centerY || y >= height) return null;
+      const t = y - centerY;
+      let nearBarrel = false;
+      for (const offset of barrelOffsets) {
+        const barrelX = Math.abs(dx - offset);
+        const color = barrelAt(t, barrelX);
+        if (color !== null) return y === height - 1 && weapon === "cannon" ? p.outline : color;
+        if (barrelAt(t, Math.max(0, barrelX - 1)) !== null || (t < barrelLength && barrelAt(t + 1, barrelX) !== null)) {
+          nearBarrel = true;
+        }
+      }
+      return nearBarrel ? p.outline : null;
+    },
+    tankArtPixel,
+  );
 
   return { key, originX: centerX / width, originY: centerY / height };
 }
 
-export function ensureShotTexture(scene: Phaser.Scene, name: string, color: number): string {
-  return paintTexture(scene, `dlShot-${name}`, 3, 3, (x, y) => {
-    if (x === 1 && y === 1) return p.white;
-    if (x === 1 || y === 1) return color;
-    return null;
-  });
+interface ShotColors {
+  body: number;
+  light: number;
+  dim: number;
+}
+
+function shotColors(kind: WeaponKind, faction: TankFaction): ShotColors {
+  const enemy = faction === "enemy";
+  if (kind === "laser") {
+    return enemy
+      ? { body: p.laserEnemyGlow, light: p.laserEnemyCore, dim: shade(p.laserEnemyGlow, -0.4) }
+      : { body: p.laserGlow, light: p.laserCore, dim: shade(p.laserGlow, -0.4) };
+  }
+  if (kind === "ricochet") {
+    return enemy
+      ? { body: p.ricochetEnemyGlow, light: p.ricochetCore, dim: shade(p.ricochetEnemyGlow, -0.4) }
+      : { body: p.ricochetGlow, light: p.ricochetCore, dim: shade(p.ricochetGlow, -0.4) };
+  }
+  return enemy
+    ? { body: p.shotEnemy, light: p.shotEnemyLight, dim: p.shotEnemyDim }
+    : { body: p.shotPlayer, light: p.shotPlayerLight, dim: p.shotPlayerDim };
+}
+
+/** Shell sprite for a cannon, pointing along +x (rotate it to the direction of travel). */
+export function ensureProjectileTexture(scene: Phaser.Scene, kind: WeaponKind, faction: TankFaction): string {
+  const c = shotColors(kind, faction);
+  const key = `dlShot-${kind}-${faction}`;
+
+  switch (kind) {
+    case "autocannon":
+      // Thin tracer streak.
+      return paintTexture(scene, key, 9, 1, (x) => (x === 8 ? p.white : x >= 6 ? c.light : x >= 3 ? c.body : x >= 1 ? c.dim : null), shotArtPixel);
+    case "scattergun":
+      // Round pellet.
+      return paintTexture(scene, key, 3, 3, (x, y) => {
+        if (x === 1 && y === 1) return p.white;
+        if (x === 1 || y === 1) return c.body;
+        return null;
+      }, shotArtPixel);
+    case "ricochet":
+      // Glowing orb with a short tail.
+      return paintTexture(scene, key, 8, 5, (x, y) => {
+        const distance = Math.hypot(x - 5, y - 2);
+        if (distance < 0.9) return p.white;
+        if (distance < 1.6) return c.light;
+        if (distance < 2.5) return c.body;
+        if (y === 2 && x < 3) return x === 0 ? c.dim : c.body;
+        return null;
+      }, shotArtPixel);
+    case "laser":
+      // Long bolt: white-hot core, coloured glow, tapered ends.
+      return paintTexture(scene, key, 16, 3, (x, y) => {
+        if (y === 1) return x >= 14 ? p.white : x >= 2 ? c.light : c.body;
+        if (x >= 3 && x <= 13) return c.body;
+        return null;
+      }, shotArtPixel);
+    case "cannon":
+    default:
+      // Shell with a bright nose and a fading trail.
+      return paintTexture(scene, key, 10, 3, (x, y) => {
+        if (y === 1) {
+          if (x === 9) return p.white;
+          if (x >= 4) return c.light;
+          if (x >= 2) return c.body;
+          return x === 1 ? c.dim : null;
+        }
+        if (x >= 4 && x <= 8) return x === 8 ? c.light : c.body;
+        if (x === 3) return c.dim;
+        return null;
+      }, shotArtPixel);
+  }
+}
+
+interface BlastSpec {
+  width: number;
+  height: number;
+  core: number;
+  /** angle (0 = straight out of the barrel), length (share of width), thickness in art px. */
+  rays: { angle: number; length: number; thickness: number }[];
+  colors: [number, number, number, number];
+}
+
+function blastSpec(weapon: WeaponKind, faction: TankFaction): BlastSpec {
+  const fire: [number, number, number, number] = [p.flashCore, p.flashHot, p.flashMid, p.flashEdge];
+  const enemy = faction === "enemy";
+  switch (weapon) {
+    case "autocannon":
+      return {
+        width: 9, height: 7, core: 1.6, colors: fire,
+        rays: [{ angle: 0, length: 1, thickness: 1.4 }, { angle: 0.7, length: 0.45, thickness: 0.8 }, { angle: -0.7, length: 0.45, thickness: 0.8 }],
+      };
+    case "scattergun":
+      return {
+        width: 15, height: 15, core: 2.6, colors: fire,
+        rays: [-0.75, -0.4, 0, 0.4, 0.75].map((angle) => ({ angle, length: angle === 0 ? 1 : 0.8, thickness: 1.8 })),
+      };
+    case "ricochet":
+      return {
+        width: 15, height: 15, core: 3.4,
+        colors: [p.ricochetCore, enemy ? p.ricochetEnemyGlow : p.ricochetGlow, shade(enemy ? p.ricochetEnemyGlow : p.ricochetGlow, -0.3), p.outline],
+        rays: [0, 1.05, -1.05, 2.1, -2.1, Math.PI].map((angle) => ({ angle, length: 1, thickness: 1.3 })),
+      };
+    case "laser":
+      return {
+        width: 15, height: 15, core: 2.6,
+        colors: enemy
+          ? [p.laserEnemyCore, p.laserEnemyGlow, shade(p.laserEnemyGlow, -0.3), p.outline]
+          : [p.laserCore, p.laserGlow, shade(p.laserGlow, -0.3), p.outline],
+        rays: [0, Math.PI / 2, -Math.PI / 2, Math.PI].map((angle) => ({ angle, length: angle === 0 ? 1 : 0.6, thickness: 1.1 })),
+      };
+    case "cannon":
+    default:
+      return {
+        width: 13, height: 11, core: 2.4, colors: fire,
+        rays: [
+          { angle: 0, length: 1, thickness: 2.2 },
+          { angle: 0.6, length: 0.55, thickness: 1.3 },
+          { angle: -0.6, length: 0.55, thickness: 1.3 },
+          { angle: 1.4, length: 0.3, thickness: 1 },
+          { angle: -1.4, length: 0.3, thickness: 1 },
+        ],
+      };
+  }
+}
+
+export const muzzleBlastFrames = 3;
+
+/**
+ * Muzzle blast: three frames (flare, full burst, fading smoke) drawn out of the
+ * barrel along +x from the left-middle edge. Each cannon has its own shape.
+ */
+export function ensureMuzzleBlastTextures(scene: Phaser.Scene, weapon: WeaponKind, faction: TankFaction): string[] {
+  const spec = blastSpec(weapon, faction);
+  const originY = spec.height / 2;
+  const scales = [0.6, 1, 0.85];
+
+  return scales.map((scale, frame) =>
+    paintTexture(
+      scene,
+      `dlBlast-${weapon}-${faction}-${frame}`,
+      spec.width,
+      spec.height,
+      (x, y) => {
+        // Round shapes (ricochet, laser) centre on the muzzle; cones start at it.
+        const round = weapon === "ricochet" || weapon === "laser";
+        const dx = x + 0.5 - (round ? spec.width / 2 : 0);
+        const dy = y + 0.5 - originY;
+        const distance = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        const reach = (round ? spec.width / 2 : spec.width) * scale;
+        let heat = -1;
+
+        if (distance < spec.core * scale) heat = distance / (spec.core * scale) * 0.3;
+        for (const ray of spec.rays) {
+          const length = ray.length * reach;
+          let difference = Math.abs(angle - ray.angle);
+          if (difference > Math.PI) difference = Math.PI * 2 - difference;
+          const across = Math.sin(Math.min(difference, Math.PI / 2)) * distance;
+          if (difference < Math.PI / 2 && distance < length && across < ray.thickness * (1 - distance / length) + 0.5) {
+            const rayHeat = distance / length;
+            heat = heat < 0 ? rayHeat : Math.min(heat, rayHeat);
+          }
+        }
+        if (heat < 0) return null;
+        // The last frame cools: the whole blast shifts down the palette and smoke breaks it up.
+        const level = Math.min(3, Math.floor(heat * 3) + (frame === 2 ? 1 : 0));
+        if (frame === 2 && hash(x, y, 91) < 0.3) return round ? null : p.flashSmoke;
+        return spec.colors[level];
+      },
+      shotArtPixel,
+    ),
+  );
 }
 
 export function ensureCoinTexture(scene: Phaser.Scene): string {

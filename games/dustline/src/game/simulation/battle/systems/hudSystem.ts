@@ -21,10 +21,18 @@ export function buildBattleHudSnapshot(state: BattleState): BattleHudSnapshot {
     rapidFireSeconds: Math.ceil(state.rapidFireRemainingMs / 1000),
     freezeSeconds: Math.ceil(state.freezeRemainingMs / 1000),
     spawnersRemaining,
+    weapons: state.playerLoadout.map((weapon, index) => ({
+      slot: index + 1,
+      kind: weapon.kind,
+      shortName: weapon.shortName,
+      level: weapon.level,
+      active: index === state.activeWeaponIndex,
+    })),
     controls: [
       "WASD or arrow keys to move",
       "Mouse to aim the turret",
-      "Left click to fire",
+      "Left click to fire (hold for the autocannon)",
+      "1-5, the mouse wheel or a click on the inventory to switch cannons",
     ],
   };
 }

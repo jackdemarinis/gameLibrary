@@ -1,10 +1,11 @@
 import { battleConfig } from "../config/battleConfig";
 import { battleLevelOrder, getBattleLevelById } from "../content/levelCatalog";
-import { getWeaponDefinition } from "../content/weaponCatalog";
+import { isWeaponKind, weaponOrder, type WeaponKind } from "../content/weaponCatalog";
 import {
   SAVE_VERSION,
   createInitialSave,
   createInitialUpgrades,
+  createInitialWeaponLevels,
   initialLevelId,
   initialWeaponId,
   normalizeDifficulty,
@@ -96,6 +97,7 @@ function normalizeSaveData(value: unknown): SaveData | null {
   const unlockedLevelIds = normalizeUnlockedLevelIds(candidate.unlockedLevelIds, currentLevelId, completedLevelIds);
   const unlockedWeapons = normalizeUnlockedWeapons(candidate.unlockedWeapons);
   const upgrades = normalizeUpgrades(candidate.upgrades);
+  const weaponLevels = normalizeWeaponLevels(candidate.weaponLevels, candidate.upgrades);
 
   return {
     version: SAVE_VERSION,
@@ -114,6 +116,7 @@ function normalizeSaveData(value: unknown): SaveData | null {
     hasSelectedDifficulty: normalizeHasSelectedDifficulty(candidate),
     upgrades,
     unlockedWeapons,
+    weaponLevels,
     unlockedLevelIds,
     completedLevelIds,
   };
@@ -198,17 +201,50 @@ function normalizeUnlockedLevelIds(
     .map((level) => level.id);
 }
 
-function normalizeUnlockedWeapons(value: unknown): string[] {
-  const explicit =
-    Array.isArray(value)
-      ? value.filter((entry): entry is string => typeof entry === "string" && Boolean(getWeaponDefinition(entry)))
-      : [];
+/** Weapon ids from before cannons were real items: the stock gun becomes the Field Cannon. */
+const legacyWeaponIds: Record<string, WeaponKind> = { "starter-cannon": "cannon" };
 
-  if (explicit.length > 0) {
-    return sortWeaponIds([...new Set([initialWeaponId, ...explicit])]);
+function normalizeUnlockedWeapons(value: unknown): WeaponKind[] {
+  const owned = new Set<WeaponKind>([initialWeaponId]);
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      const kind = typeof entry === "string" ? legacyWeaponIds[entry] ?? entry : entry;
+      if (isWeaponKind(kind)) {
+        owned.add(kind);
+      }
+    });
   }
 
-  return [initialWeaponId];
+  return weaponOrder.filter((kind) => owned.has(kind));
+}
+
+/** Old saves had one global Weapon Damage upgrade: it carries over to the Field Cannon. */
+function normalizeWeaponLevels(value: unknown, legacyUpgrades: unknown): Record<WeaponKind, number> {
+  const levels = createInitialWeaponLevels();
+  const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+
+  if (candidate) {
+    weaponOrder.forEach((kind) => {
+      levels[kind] = normalizeWeaponLevel(candidate[kind]);
+    });
+    return levels;
+  }
+
+  if (legacyUpgrades && typeof legacyUpgrades === "object") {
+    const legacy = legacyUpgrades as Record<string, unknown>;
+    levels.cannon = normalizeWeaponLevel(legacy.weaponDamage ?? legacy.turret);
+  }
+
+  return levels;
+}
+
+function normalizeWeaponLevel(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(battleConfig.weaponUpgrades.maxLevel, Math.floor(value)));
 }
 
 function normalizeUpgrades(value: unknown): UpgradeState {
@@ -224,7 +260,6 @@ function normalizeUpgrades(value: unknown): UpgradeState {
   return {
     maxHealth: normalizeUpgradeLevel(candidate.maxHealth ?? candidate.armor),
     movementSpeed: normalizeUpgradeLevel(candidate.movementSpeed ?? candidate.movement),
-    weaponDamage: normalizeUpgradeLevel(candidate.weaponDamage ?? candidate.turret),
     visibilityRadius: normalizeUpgradeLevel(candidate.visibilityRadius ?? candidate.optics),
     fireRate: normalizeUpgradeLevel(candidate.fireRate ?? candidate.turret),
     turretRotationSpeed: normalizeUpgradeLevel(
@@ -266,12 +301,4 @@ function sortCampaignIds(levelIds: string[]): string[] {
       seen.add(levelId);
       return true;
     });
-}
-
-function sortWeaponIds(weaponIds: string[]): string[] {
-  const priority = new Map(
-    [initialWeaponId, "burst-cannon", "longshot-cannon"].map((id, index) => [id, index]),
-  );
-
-  return [...weaponIds].sort((left, right) => (priority.get(left) ?? 999) - (priority.get(right) ?? 999));
 }

@@ -4,6 +4,8 @@ import { compileTileLevel } from "../../content/tileMap";
 import type { BattleLevelData } from "../../content/levelTypes";
 import { createInitialSave } from "../state";
 import { BattleSimulation } from "./BattleSimulation";
+import { battleLevelOrder } from "../../content/levelCatalog";
+import { hiddenCrateDrop } from "./systems/destructibleSystem";
 
 const idle = { movementX: 0, movementY: 0, aim: { x: 0, y: 0 }, firing: false };
 
@@ -158,5 +160,118 @@ describe("enemy movement", () => {
       });
       previous = current;
     }
+  });
+});
+
+describe("sound cues", () => {
+  it("tags shots, hits and supply breaks with sounds", () => {
+    const simulation = new BattleSimulation(
+      {
+        id: "test-sound",
+        name: "Sound Test",
+        briefing: "",
+        playerSpawn: { x: 120, y: 120 },
+        enemySpawns: [{ id: "far-raider", x: 1400, y: 1400, archetype: "raider" }],
+        indestructibleWalls: [],
+        weakWalls: [],
+        crates: [],
+        supplyCrates: [{ id: "supply-repair", x: 280, y: 88, width: 64, height: 64, maxHealth: 60, drop: "repair" }],
+        pickups: [],
+      },
+      createInitialSave(),
+    );
+    const sounds = new Set<string>();
+
+    for (let elapsed = 0; elapsed < 900; elapsed += 16) {
+      const result = simulation.advance(16, { movementX: 0, movementY: 0, aim: { x: 312, y: 120 }, firing: true });
+      result.effects.forEach((effect) => effect.sound && sounds.add(effect.sound));
+    }
+
+    expect(sounds).toContain("playerShot");
+    expect(sounds).toContain("hitCrate");
+    expect(sounds).toContain("crateBreak");
+  });
+});
+
+describe("crates hide power-ups", () => {
+  it("about a third of plain crates across the campaign hold one, gold crates never", () => {
+    const plain = battleLevelOrder.flatMap((level) => level.crates.filter((crate) => !crate.rewardCredits));
+    const gold = battleLevelOrder.flatMap((level) => level.crates.filter((crate) => crate.rewardCredits));
+    const drops = plain.map(hiddenCrateDrop).filter((drop) => drop !== null);
+
+    expect(drops.length / plain.length).toBeGreaterThan(0.2);
+    expect(drops.length / plain.length).toBeLessThan(0.5);
+    expect(new Set(drops)).toEqual(new Set(["repair", "rapidFire", "freeze"]));
+    expect(gold.map(hiddenCrateDrop).every((drop) => drop === null)).toBe(true);
+  });
+});
+
+describe("cannons", () => {
+  const range: BattleLevelData = {
+    id: "test-range",
+    name: "Range",
+    briefing: "",
+    playerSpawn: { x: 200, y: 400 },
+    // A far-off enemy keeps the battle running.
+    enemySpawns: [{ id: "far-raider", x: 1400, y: 1400, archetype: "raider" }],
+    indestructibleWalls: [{ x: 600, y: 0, width: 64, height: 800 }],
+    weakWalls: [],
+    crates: [],
+    pickups: [],
+  };
+
+  function armed(level: BattleLevelData, weapon: "ricochet" | "laser" | "scattergun") {
+    const save = createInitialSave();
+    save.unlockedWeapons = ["cannon", weapon];
+    const simulation = new BattleSimulation(level, save);
+    simulation.selectWeapon(1);
+    return simulation;
+  }
+
+  it("ricochet shells bounce back off walls; plain shells stop", () => {
+    const simulation = armed(range, "ricochet");
+    // Turn the turret onto the target first.
+    advanceFor(simulation, 400, { movementX: 0, movementY: 0, aim: { x: 700, y: 400 }, firing: false });
+    simulation.advance(16, { movementX: 0, movementY: 0, aim: { x: 700, y: 400 }, firing: true });
+    advanceFor(simulation, 900);
+
+    const shell = simulation.getSnapshot().projectiles[0];
+    expect(shell.kind).toBe("ricochet");
+    // Flew right into the wall, now heading back left.
+    expect(Math.abs(shell.rotation)).toBeGreaterThan(Math.PI / 2);
+  });
+
+  it("laser bolts pierce through a line of tanks", () => {
+    const line: BattleLevelData = {
+      ...range,
+      indestructibleWalls: [],
+      enemySpawns: [
+        { id: "line-1", x: 400, y: 400, archetype: "raider" },
+        { id: "line-2", x: 520, y: 400, archetype: "raider" },
+        { id: "line-3", x: 640, y: 400, archetype: "raider" },
+      ],
+    };
+    const simulation = armed(line, "laser");
+    // Hold the line still, as a freeze power-up would.
+    (simulation as unknown as { state: { freezeRemainingMs: number } }).state.freezeRemainingMs = 10000;
+    // Turn the turret onto the target first.
+    advanceFor(simulation, 400, { movementX: 0, movementY: 0, aim: { x: 900, y: 400 }, firing: false });
+    simulation.advance(16, { movementX: 0, movementY: 0, aim: { x: 900, y: 400 }, firing: true });
+    advanceFor(simulation, 300);
+
+    const damaged = simulation.getSnapshot().enemies.filter((enemy) => enemy.health < enemy.maxHealth);
+    expect(damaged).toHaveLength(3);
+  });
+
+  it("the scattergun fires a fan of pellets, and switching shows in the snapshot", () => {
+    const simulation = armed(range, "scattergun");
+    // Turn the turret onto the target first.
+    advanceFor(simulation, 400, { movementX: 0, movementY: 0, aim: { x: 500, y: 400 }, firing: false });
+    simulation.advance(16, { movementX: 0, movementY: 0, aim: { x: 500, y: 400 }, firing: true });
+
+    const snapshot = simulation.getSnapshot();
+    expect(snapshot.player.weapon).toBe("scattergun");
+    expect(snapshot.projectiles).toHaveLength(battleConfig.weapons.scattergun.shotCount);
+    expect(simulation.getHudSnapshot().weapons.map((slot) => slot.active)).toEqual([false, true]);
   });
 });

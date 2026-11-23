@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { pixelTheme } from "../../game/config/theme";
 import type { SimulationEffect } from "../../game/simulation/battle/types";
-import { artPixel } from "./dustlinePixelArt";
+import { artPixel, ensureMuzzleBlastTextures, muzzleBlastFrames } from "./dustlinePixelArt";
 
 const effectDepth = 6;
 
@@ -54,6 +54,8 @@ export function spawnSimulationEffect(scene: Phaser.Scene, effect: SimulationEff
   }
 
   switch (effect.type) {
+    case "sound":
+      return;
     case "muzzleFlash":
       spawnMuzzleFlash(scene, effect);
       return;
@@ -104,32 +106,30 @@ function spawnBurst(
   }
 }
 
-/** Three shrinking squares out along the barrel. */
+/**
+ * Muzzle blast: a three-frame pixel sprite (flare, full burst, cooling smoke)
+ * out of the barrel, shaped for the cannon that fired.
+ */
 function spawnMuzzleFlash(scene: Phaser.Scene, effect: SimulationEffect): void {
-  const rotation = effect.rotation ?? 0;
-  const steps = [
-    { distance: 0, size: artPixel * 3, color: pixelTheme.white },
-    { distance: effect.size * 0.4, size: artPixel * 2, color: effect.color },
-    { distance: effect.size * 0.75, size: artPixel, color: effect.color },
-  ];
+  const weapon = effect.weapon ?? "cannon";
+  const frames = ensureMuzzleBlastTextures(scene, weapon, effect.faction ?? "player");
+  // Simulation rotation 0 points down (+y); the blast art points along +x.
+  const worldAngle = (effect.rotation ?? 0) + Math.PI / 2;
+  const round = weapon === "ricochet" || weapon === "laser";
+  const blast = scene.add
+    .image(effect.x, effect.y, frames[0])
+    .setOrigin(round ? 0.5 : 0.1, 0.5)
+    .setRotation(worldAngle)
+    .setDepth(effectDepth + 1);
+  const frameMs = (effect.lifetimeMs ?? 90) / muzzleBlastFrames;
 
-  steps.forEach((step) => {
-    const flash = scene.add
-      .rectangle(
-        snap(effect.x + Math.cos(rotation) * step.distance),
-        snap(effect.y + Math.sin(rotation) * step.distance),
-        step.size,
-        step.size,
-        step.color,
-        1,
-      )
-      .setDepth(effectDepth + 1);
-
-    scene.tweens.add({
-      targets: flash,
-      alpha: { value: 0, ease: "Stepped", easeParams: [2] },
-      duration: effect.lifetimeMs ?? 70,
-      onComplete: () => flash.destroy(),
+  for (let frame = 1; frame <= muzzleBlastFrames; frame += 1) {
+    scene.time.delayedCall(frameMs * frame, () => {
+      if (frame === muzzleBlastFrames) {
+        blast.destroy();
+      } else if (blast.active) {
+        blast.setTexture(frames[frame]);
+      }
     });
-  });
+  }
 }

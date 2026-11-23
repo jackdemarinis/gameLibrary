@@ -35,13 +35,14 @@ describe("save store", () => {
     const store = createSaveStore(storage);
     const save = store.loadOrCreate();
 
-    expect(save.version).toBe(3);
+    expect(save.version).toBe(4);
     expect(save.currentLevelId).toBe("training-yard");
     expect(save.totalScore).toBe(0);
     expect(save.hasSelectedDifficulty).toBe(false);
     expect(save.unlockedLevelIds).toEqual(["training-yard"]);
     expect(save.completedLevelIds).toEqual([]);
-    expect(save.unlockedWeapons).toEqual(["starter-cannon"]);
+    expect(save.unlockedWeapons).toEqual(["cannon"]);
+    expect(save.weaponLevels.cannon).toBe(0);
     expect(store.load()).toEqual(save);
   });
 
@@ -79,7 +80,7 @@ describe("save store", () => {
     const store = createSaveStore(storage);
     const save = store.loadOrCreate();
 
-    expect(save.version).toBe(3);
+    expect(save.version).toBe(4);
     expect(save.currentLevelId).toBe("relay-station");
     expect(save.totalScore).toBe(0);
     expect(save.hasSelectedDifficulty).toBe(true);
@@ -88,10 +89,12 @@ describe("save store", () => {
       maxHealth: 2,
       visibilityRadius: 1,
       movementSpeed: 3,
-      weaponDamage: 2,
       fireRate: 2,
       turretRotationSpeed: 1,
     });
+    // The old global Weapon Damage upgrade carries over to the stock cannon.
+    expect(save.unlockedWeapons).toEqual(["cannon"]);
+    expect(save.weaponLevels.cannon).toBe(2);
   });
 
   it("clears the saved profile cleanly", () => {

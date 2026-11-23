@@ -127,7 +127,7 @@ describe("BattleSimulation", () => {
   it("lets the player destroy the enemy, then collect the dropped credits", () => {
     const simulation = new BattleSimulation(openTestLevel, createInitialSave());
 
-    advanceTrackingEnemy(simulation, 1800);
+    advanceTrackingEnemy(simulation, 2600);
 
     let snapshot = simulation.getSnapshot();
     expect(snapshot.status).toBe("won");
@@ -255,7 +255,7 @@ describe("BattleSimulation", () => {
 
     upgradedSave.upgrades.maxHealth = 1;
     upgradedSave.upgrades.movementSpeed = 1;
-    upgradedSave.upgrades.weaponDamage = 1;
+    upgradedSave.weaponLevels.cannon = 1;
     upgradedSave.upgrades.visibilityRadius = 1;
     upgradedSave.upgrades.fireRate = 1;
     upgradedSave.upgrades.turretRotationSpeed = 1;

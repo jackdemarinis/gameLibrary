@@ -26,15 +26,11 @@ export class ResultsScene extends Phaser.Scene {
 
   private renderChrome(data: ResultsSceneData): void {
     if (data.result.status === "won") {
-      const unlockCopy =
-        data.flow.newWeaponUnlocks.length > 0
-          ? ` New weapon unlocked: ${data.flow.newWeaponUnlocks.join(", ")}.`
-          : "";
 
       this.bridge.showHud({
         layout: "result",
         title: "Level Complete",
-        copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector.${unlockCopy}`,
+        copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector. Spend your coins on new cannons in the garage.`,
         objective: data.flow.loopedCampaign
           ? "Campaign loop complete. The motor pool has cycled back to the opening yard."
           : `Next contract staged: ${data.flow.nextLevel.name}.`,

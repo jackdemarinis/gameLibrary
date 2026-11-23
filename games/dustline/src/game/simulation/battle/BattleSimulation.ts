@@ -8,6 +8,7 @@ import { createBreakableObstacles, rebuildObstacleRects } from "./systems/destru
 import { runEnemyLogicSystem } from "./systems/enemyLogicSystem";
 import { runSpawnerSystem } from "./systems/spawnerSystem";
 import { createEnemyTank } from "./enemyFactory";
+import { applyWeaponToTank, buildPlayerLoadout, selectPlayerWeapon } from "./playerWeapons";
 import { runPickupSystem } from "./systems/pickupSystem";
 import { runPlayerControlSystem } from "./systems/playerControlSystem";
 import { runProjectileSystem } from "./systems/projectileSystem";
@@ -32,6 +33,7 @@ import type {
 export class BattleSimulation {
   private readonly state: BattleState;
   private accumulatorMs = 0;
+  private readonly pendingEffects: SimulationEffect[] = [];
 
   constructor(level: BattleLevelData, save: SaveData) {
     this.state = createBattleState(level, save);
@@ -49,10 +51,23 @@ export class BattleSimulation {
     return createBattleResultSummary(this.state);
   }
 
+  /** Switch to inventory slot `index` (0-based). Its click sound comes out with the next advance. */
+  selectWeapon(index: number): void {
+    this.pendingEffects.push(...selectPlayerWeapon(this.state, index));
+  }
+
+  /** Scroll through the inventory: +1 next cannon, -1 previous, wrapping around. */
+  cycleWeapon(direction: 1 | -1): void {
+    const count = this.state.playerLoadout.length;
+    if (count > 1) {
+      this.selectWeapon((this.state.activeWeaponIndex + direction + count) % count);
+    }
+  }
+
   advance(deltaMs: number, input: BattleInput): BattleAdvanceResult {
     const cappedDelta = Math.min(deltaMs, battleConfig.world.maxSimulationDeltaMs);
     this.accumulatorMs += cappedDelta;
-    const effects: SimulationEffect[] = [];
+    const effects: SimulationEffect[] = this.pendingEffects.splice(0);
 
     while (this.accumulatorMs >= battleConfig.fixedStepMs) {
       effects.push(...this.stepFixed(battleConfig.fixedStepMs, input));
@@ -105,6 +120,7 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
   const breakableObstacles = createBreakableObstacles(level);
   const playerUpgrades = save.upgrades;
   const difficultyTuning = battleConfig.difficulty[save.difficulty];
+  const playerLoadout = buildPlayerLoadout(save);
   const playerMaxHealth =
     battleConfig.player.maxHealth +
     playerUpgrades.maxHealth * battleConfig.upgrades.maxHealthPerLevel;
@@ -124,22 +140,23 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     turretTurnSpeed:
       battleConfig.player.turretTurnSpeedRadiansPerSecond +
       playerUpgrades.turretRotationSpeed * battleConfig.upgrades.turretRotationSpeedPerLevel,
-    fireCooldownMs: Math.max(
-      battleConfig.player.minFireCooldownMs,
-      battleConfig.player.fireCooldownMs -
-        playerUpgrades.fireRate * battleConfig.upgrades.fireRateReductionMsPerLevel,
-    ),
+    // Weapon fields are filled in from the first cannon by applyWeaponToTank below.
+    weapon: "cannon",
+    fireCooldownMs: 0,
     fireCooldownRemainingMs: 0,
     shotCount: 1,
     spreadRadians: 0,
+    aimJitterRadians: 0,
+    projectileRangePx: 0,
+    projectileRadius: 0,
+    projectileBounces: 0,
+    projectilePierce: 0,
     navWaypoint: null,
     navRefreshMs: 0,
-    projectileSpeed: battleConfig.player.projectileSpeed,
-    projectileDamage:
-      battleConfig.player.projectileDamage +
-      playerUpgrades.weaponDamage * battleConfig.upgrades.weaponDamagePerLevel,
+    projectileSpeed: 0,
+    projectileDamage: 0,
     muzzleOffset: battleConfig.player.muzzleOffset,
-    recoilKick: battleConfig.player.recoilKick,
+    recoilKick: 0,
     recoilRecoveryPerSecond: battleConfig.player.recoilRecoveryPerSecond,
     recoilOffset: 0,
     recentDamageMs: 0,
@@ -162,6 +179,7 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     strafeLegEndMs: 0,
     alive: true,
   };
+  applyWeaponToTank(player, playerLoadout[0]);
 
   const worldWidth = level.width ?? gameConfig.worldWidth;
   const worldHeight = level.height ?? gameConfig.worldHeight;
@@ -182,6 +200,8 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
       worldHeight,
     }),
     player,
+    playerLoadout,
+    activeWeaponIndex: 0,
     enemies: level.enemySpawns.map((spawn) =>
       createEnemyTank(
         spawn.id,
@@ -255,8 +275,10 @@ function createBattleSnapshot(state: BattleState): BattleSnapshot {
     projectiles: state.projectiles.map((projectile) => ({
       id: projectile.id,
       faction: projectile.faction,
+      kind: projectile.kind,
       x: projectile.position.x,
       y: projectile.position.y,
+      rotation: Math.atan2(projectile.velocity.y, projectile.velocity.x),
       radius: projectile.radius,
     })),
     pickups: state.pickups.map((pickup) => ({
@@ -290,6 +312,7 @@ function createTankSnapshot(tank: TankState, frozen: boolean): TankSnapshot {
     health: tank.health,
     maxHealth: tank.maxHealth,
     recoilOffset: tank.recoilOffset,
+    weapon: tank.weapon,
     showHealthBar: tank.faction === "enemy" && tank.recentDamageMs > 0 && tank.health < tank.maxHealth,
     frozen: frozen && tank.faction === "enemy",
     aiState: tank.aiState,

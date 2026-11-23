@@ -1,5 +1,6 @@
 import { battleConfig } from "../../../config/battleConfig";
 import type { BattleLevelData, BreakableLayoutRect, SpawnerLayout, SupplyDrop } from "../../../content/levelTypes";
+import { hashString } from "../enemyFactory";
 import { circleIntersectsRect } from "../geometry";
 import type {
   BattleState,
@@ -25,7 +26,7 @@ const debrisColor: Record<BreakableObstacleKind, number> = {
 export function createBreakableObstacles(level: BattleLevelData): BreakableObstacleState[] {
   return [
     ...level.weakWalls.map((layout) => createBreakableObstacle("weakWall", layout)),
-    ...level.crates.map((layout) => createBreakableObstacle("crate", layout)),
+    ...level.crates.map((layout) => createBreakableObstacle("crate", layout, hiddenCrateDrop(layout))),
     ...(level.supplyCrates ?? []).map((layout) =>
       createBreakableObstacle("supplyCrate", layout, layout.drop),
     ),
@@ -76,6 +77,7 @@ export function damageBreakableObstacle(
   const effects: SimulationEffect[] = [
     {
       type: "explosion",
+      sound: isSpawner ? "spawnerDestroyed" : isCrate ? "crateBreak" : "wallBreak",
       x: center.x,
       y: center.y,
       color: debrisColor[obstacle.kind],
@@ -129,6 +131,29 @@ export function getBreakableObstacleCenter(obstacle: BreakableObstacleState): Ve
     x: obstacle.rect.x + obstacle.rect.width / 2,
     y: obstacle.rect.y + obstacle.rect.height / 2,
   };
+}
+
+/** Which power-up a plain crate hides, if any. Gold crates hold coins instead. */
+export function hiddenCrateDrop(layout: BreakableLayoutRect): SupplyDrop | null {
+  if ((layout.rewardCredits ?? 0) > 0) {
+    return null;
+  }
+
+  const { chance, weights } = battleConfig.destructible.crateDrops;
+  const hash = hashString(`${layout.id}:drop`);
+  if ((hash % 1000) / 1000 >= chance) {
+    return null;
+  }
+
+  const total = weights.repair + weights.rapidFire + weights.freeze;
+  let roll = ((Math.floor(hash / 1000) % 1000) / 1000) * total;
+  for (const drop of ["repair", "rapidFire", "freeze"] as const) {
+    roll -= weights[drop];
+    if (roll < 0) {
+      return drop;
+    }
+  }
+  return "freeze";
 }
 
 function createSpawnerObstacle(layout: SpawnerLayout): BreakableObstacleState {

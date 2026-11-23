@@ -13,7 +13,7 @@ describe("tile maps", () => {
       "#######",
       "#P.b.r#",
       "#..$..#",
-      "#+!o.W#",
+      "#HRo.W#",
       "#######",
     ],
   });
@@ -24,7 +24,8 @@ describe("tile maps", () => {
     expect(level.height).toBe(5 * tileSize);
     expect(level.weakWalls[0]).toMatchObject({ x: 3 * tileSize, y: tileSize, width: tileSize, height: tileSize });
     expect(level.crates[0].rewardCredits).toBeGreaterThan(0);
-    expect(level.pickups.map((pickup) => pickup.kind)).toEqual(["repair", "rapidFire", "coin"]);
+    expect(level.pickups.map((pickup) => pickup.kind)).toEqual(["coin"]);
+    expect(level.supplyCrates?.map((crate) => crate.drop)).toEqual(["repair", "rapidFire"]);
     expect(level.enemySpawns.map((enemy) => enemy.archetype)).toEqual(["raider", "warden"]);
   });
 
