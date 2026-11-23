@@ -136,11 +136,14 @@
   --lw-slot-inset: inset 0 3px 0 #24160b, inset 3px 0 0 #24160b;
   --lw-frame-light: inset 0 0 0 2px #c89058;
   --lw-bar-shine: inset 0 3px 0 rgba(255, 255, 255, 0.28);
-  --lw-text-outline: 2px 0 0 #2a1a0e, -2px 0 0 #2a1a0e, 0 2px 0 #2a1a0e, 0 -2px 0 #2a1a0e;
+  --lw-text-outline: 0 1px 0 #2a1a0e, 0 0 3px #2a1a0e, 0 2px 5px rgba(0, 0, 0, 0.65);
   --lw-boss: #b070ff;
   --lw-boss-dark: #3a1e5c;
   --lw-xp: #7fe0ff;
   --lw-night: rgba(6, 8, 18, 0.82);
+  /* HUD type: a readable storybook sans for text, carved capitals for titles. */
+  --lw-font: 'Alegreya Sans', system-ui, sans-serif;
+  --lw-font-title: 'Cinzel', Georgia, serif;
   --lw-title-glow: 0 0 18px rgba(255, 196, 87, 0.55);
 
   /* Play-screen stage: the 16:9 game window, framed in carved wood with iron

@@ -16,7 +16,9 @@ export type Sound =
   | "bossRoar"
   | "slam"
   | "chest"
-  | "ignite";
+  | "ignite"
+  | "doorOpen"
+  | "locked";
 
 export class Sfx {
   private context: AudioContext | null = null;
@@ -108,6 +110,21 @@ export class Sfx {
       case "break":
         this.noise(0.3, 0.4, 1800, 300);
         this.tone("square", 140, 60, 0.15, 0.1);
+        break;
+      case "doorOpen":
+        // Latch click, then a slow hinge creak.
+        this.noise(0.05, 0.3, 3000, 2000, "highpass");
+        this.tone("sawtooth", 210, 150, 0.7, 0.035, 0.18);
+        this.tone("square", 320, 260, 0.5, 0.015, 0.22);
+        this.noise(0.6, 0.08, 500, 200, "lowpass", 0.2);
+        break;
+      case "locked":
+        // Handle jiggle and two dull knocks against the frame.
+        [0, 0.07, 0.14].forEach((delay) => this.noise(0.04, 0.22, 2600, 1800, "highpass", delay));
+        this.noise(0.12, 0.45, 300, 120, "lowpass", 0.05);
+        this.tone("square", 95, 70, 0.1, 0.08, 0.05);
+        this.noise(0.12, 0.4, 300, 120, "lowpass", 0.3);
+        this.tone("square", 90, 65, 0.1, 0.07, 0.3);
         break;
       case "gate":
         this.noise(0.9, 0.25, 200, 80, "lowpass");

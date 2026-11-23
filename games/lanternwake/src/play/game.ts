@@ -304,7 +304,7 @@ export class Game {
     if (!this.hud.menuOpen) return;
     if (event.code === "ArrowUp" || event.code === "KeyW") this.hud.menuMove(-1);
     else if (event.code === "ArrowDown" || event.code === "KeyS") this.hud.menuMove(1);
-    else if (event.code === "Enter" || event.code === "Space" || event.code === "KeyE") {
+    else if (event.code === "Enter" || event.code === "Space" || event.code === "KeyE" || event.code === "KeyF") {
       event.preventDefault();
       this.hud.menuConfirm();
     } else if ((event.code === "Escape" || event.code === "KeyP") && this.state === "paused") {
@@ -544,7 +544,7 @@ export class Game {
     this.hud.setBoss(warden && warden.active && warden.alive ? "The Hollow Warden" : null, warden?.bossProgress ?? 0);
   }
 
-  /** Finds the nearest thing to talk to / open / rest at, shows the prompt, acts on E. */
+  /** Finds the nearest thing to talk to / open / rest at, shows the prompt, acts on F. */
   private updateInteraction(): void {
     const area = this.area!;
     const position = this.player.position;
@@ -553,11 +553,11 @@ export class Game {
       if (distance < range && (!best || distance < best.distance)) best = { distance, label, act };
     };
     for (const npc of area.npcs) {
-      consider(npc.position.distanceTo(position), 2.8, `E  Talk to ${npc.placement.name}`, () => this.openDialogue(npc.dialogue(this.flags), npc));
+      consider(npc.position.distanceTo(position), 2.8, `F  Talk to ${npc.placement.name}`, () => this.openDialogue(npc.dialogue(this.flags), npc));
     }
     for (const chest of area.chests) {
       if (chest.opened) continue;
-      consider(chest.position.distanceTo(position), 2, "E  Open chest", () => {
+      consider(chest.position.distanceTo(position), 2, "F  Open chest", () => {
         chest.opened = true;
         this.flags.add(`opened:${chest.id}`);
         sfx.play("chest");
@@ -567,7 +567,30 @@ export class Game {
     }
     for (const lantern of area.lanterns) {
       if (lantern.great) continue;
-      consider(lantern.position.distanceTo(position), 2.4, lantern.lit ? "E  Rest at the lantern" : "E  Kindle the way-lantern", () => this.restAt(lantern));
+      consider(lantern.position.distanceTo(position), 2.4, lantern.lit ? "F  Rest at the lantern" : "F  Kindle the way-lantern", () => this.restAt(lantern));
+    }
+    for (const door of area.doors) {
+      if (door.open) continue;
+      consider(door.position.distanceTo(position), 1.9, door.enterable ? "F  Open door" : "F  Try the door", () => {
+        if (door.tryOpen()) {
+          sfx.play("doorOpen");
+          this.flags.add(`opened:${door.id}`);
+          this.persist();
+        } else {
+          sfx.play("locked");
+          this.cameraRig.shake(0.06);
+          this.hud.toast(door.lockedText);
+        }
+      });
+    }
+    for (const gate of area.gates) {
+      if (gate.isOpen) continue;
+      consider(gate.distanceTo(position) + 0.3, 2.4, "F  Try the gate", () => {
+        gate.rattle();
+        sfx.play("locked");
+        this.cameraRig.shake(0.08);
+        this.hud.toast(gate.lockedText);
+      });
     }
     const found = best as { distance: number; label: string; act: () => void } | null;
     this.hud.setPrompt(found ? found.label : null);
@@ -731,6 +754,7 @@ export class Game {
     for (const brazier of area.braziers) brazier.render(dt, this.context);
     for (const gate of area.gates) gate.render(dt);
     for (const chest of area.chests) chest.render(dt);
+    for (const door of area.doors) door.render(dt);
     for (const lantern of area.lanterns) lantern.render(dt, this.context);
 
     const lock = this.player.lockTarget?.position() ?? null;

@@ -1,5 +1,5 @@
 // Interactive world objects: physics props (crates, barrels, breakable pots),
-// pressure plates, braziers, gates, chests, waypoint lanterns, pickups and NPCs.
+// pressure plates, braziers, gates, doors, chests, waypoint lanterns, pickups and NPCs.
 import * as THREE from "three";
 import type { LightSource } from "../engine/lightPool";
 import { textures } from "../engine/pixelTextures";
@@ -10,7 +10,7 @@ import { angleDelta, yawTowards } from "../game/rules/combat";
 import { artPalette } from "../world/artPalette";
 import { HumanoidRig, elderLook, smithLook } from "../world/humanoidRig";
 import { villagerPose } from "../world/rigAnimations";
-import { barrelMesh, brazierMesh, chestMesh, crateMesh, gateMesh, glowSprite, plateMesh, potMesh, wayLanternMesh } from "../world/props";
+import { barrelMesh, brazierMesh, chestMesh, crateMesh, gateMesh, glowSprite, plateMesh, potMesh, wayLanternMesh, type DoorBuild } from "../world/props";
 import type { Hittable, PlayContext } from "./context";
 import { RAPIER, groupDebris, groupProp, groupWorld, type Physics } from "./physics";
 
@@ -260,9 +260,12 @@ export class Gate {
   private readonly spec: { x: number; y: number; z: number; rot: number; width: number };
   private openAmount: number;
   private open: boolean;
+  private rattleTime = 0;
+  readonly lockedText: string;
 
-  constructor(id: string, physics: Physics, x: number, y: number, z: number, rot: number, width: number, flag: string | undefined, closedWhile: string | undefined, startOpen: boolean) {
+  constructor(id: string, physics: Physics, x: number, y: number, z: number, rot: number, width: number, flag: string | undefined, closedWhile: string | undefined, startOpen: boolean, lockedText?: string) {
     this.id = id;
+    this.lockedText = lockedText ?? (closedWhile ? "Sealed shut. There's no way out but through." : "The gate is barred shut.");
     this.physics = physics;
     this.flag = flag;
     this.closedWhile = closedWhile;
@@ -310,9 +313,127 @@ export class Gate {
     return true;
   }
 
+  get isOpen(): boolean {
+    return this.open;
+  }
+
+  /** Distance from a point to the gate's span (0 when standing right against the bars). */
+  distanceTo(point: THREE.Vector3): number {
+    const dx = point.x - this.spec.x;
+    const dz = point.z - this.spec.z;
+    const along = dx * Math.cos(this.spec.rot) - dz * Math.sin(this.spec.rot);
+    const across = dx * Math.sin(this.spec.rot) + dz * Math.cos(this.spec.rot);
+    return Math.hypot(Math.max(0, Math.abs(along) - this.spec.width / 2), across);
+  }
+
+  /** Shake the bars: somebody tried a locked gate. */
+  rattle(): void {
+    this.rattleTime = 0.6;
+  }
+
   render(dt: number): void {
     this.openAmount += ((this.open ? 1 : 0) - this.openAmount) * damp(this.open ? 1.6 : 6, dt);
     this.bars.position.y = -this.openAmount * 3.9;
+    this.bars.position.x = 0;
+    if (this.rattleTime > 0) {
+      this.rattleTime = Math.max(0, this.rattleTime - dt);
+      const fade = this.rattleTime / 0.6;
+      this.bars.position.x = Math.sin(this.rattleTime * 70) * 0.06 * fade;
+      this.bars.position.y += Math.abs(Math.sin(this.rattleTime * 35)) * 0.07 * fade;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- doors
+
+function easeOutBack(t: number): number {
+  const c = 1.9;
+  return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
+}
+
+/** A hinged house door. Open ones swing inward with a creak and warm light spilling
+ * out; locked ones jiggle the handle, thump against the frame and stay put. */
+export class Door {
+  readonly id: string;
+  /** Where the player stands to use it (world space). */
+  readonly position: THREE.Vector3;
+  readonly enterable: boolean;
+  readonly lockedText: string;
+  open: boolean;
+  private readonly build: DoorBuild;
+  private readonly physics: Physics;
+  private collider: RAPIER.Collider | null = null;
+  private openTime: number;
+  private rattleTime = 0;
+
+  constructor(id: string, physics: Physics, build: DoorBuild, origin: THREE.Vector3, rot: number, enterable: boolean, lockedText: string, startOpen: boolean) {
+    this.id = id;
+    this.physics = physics;
+    this.build = build;
+    this.enterable = enterable;
+    this.lockedText = lockedText;
+    this.open = startOpen;
+    this.openTime = startOpen ? 10 : -1;
+    const toWorld = (local: THREE.Vector3): THREE.Vector3 =>
+      new THREE.Vector3(origin.x + local.x * Math.cos(rot) + local.z * Math.sin(rot), origin.y + local.y, origin.z - local.x * Math.sin(rot) + local.z * Math.cos(rot));
+    this.position = toWorld(build.doorstep);
+    if (enterable && !startOpen) {
+      const centre = toWorld(build.leafCentre);
+      const half = rot / 2;
+      this.collider = physics.world.createCollider(
+        RAPIER.ColliderDesc.cuboid(build.leafHalf.x, build.leafHalf.y, build.leafHalf.z)
+          .setTranslation(centre.x, centre.y, centre.z)
+          .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) })
+          .setCollisionGroups(groupWorld),
+      );
+    }
+    this.pose(startOpen ? 1 : 0);
+  }
+
+  /** Try the handle. Returns true when the door swings open. */
+  tryOpen(): boolean {
+    if (this.open) return true;
+    if (!this.enterable) {
+      this.rattleTime = 0.7;
+      return false;
+    }
+    this.open = true;
+    this.openTime = 0;
+    if (this.collider) {
+      this.physics.world.removeCollider(this.collider, false);
+      this.collider = null;
+    }
+    return true;
+  }
+
+  private pose(swing: number, handle = 0): void {
+    this.build.leaf.rotation.y = swing * 1.75;
+    this.build.knob.rotation.z = handle;
+    if (this.build.spill) this.build.spill.scale.setScalar(Math.max(0.001, Math.min(1, swing)));
+  }
+
+  render(dt: number): void {
+    if (this.openTime >= 0 && this.openTime < 10) {
+      this.openTime += dt;
+      const t = this.openTime;
+      // Turn the handle, a small shove, then the swing with a little bounce off the stop.
+      const handle = t < 0.3 ? -Math.sin((t / 0.3) * Math.PI) * 0.9 : 0;
+      const nudge = t < 0.22 ? Math.sin((t / 0.22) * Math.PI) * 0.03 : 0;
+      const swing = t < 0.22 ? nudge : easeOutBack(clamp((t - 0.22) / 0.85, 0, 1));
+      this.pose(swing, handle);
+      if (t > 1.2) this.openTime = 10;
+      return;
+    }
+    if (this.rattleTime > 0) {
+      this.rattleTime = Math.max(0, this.rattleTime - dt);
+      const elapsed = 0.7 - this.rattleTime;
+      const fade = this.rattleTime / 0.7;
+      // Handle jiggles hard; the leaf knocks against the frame twice.
+      const handle = Math.sin(elapsed * 48) * 0.55 * fade;
+      const knock = elapsed < 0.45 ? Math.abs(Math.sin(elapsed * 14)) * 0.035 : 0;
+      this.pose(knock, handle);
+      if (this.rattleTime === 0) this.pose(0, 0);
+    }
   }
 }
 

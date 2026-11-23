@@ -27,4 +27,4 @@ void game.start();
 // Dev-only handle for automated play-testing scripts.
 if (import.meta.env.DEV) Object.assign(window, { lanternwake: game });
 
-registerOffline("../", ['16px "Pixelify Sans"', '700 16px "Pixelify Sans"']);
+registerOffline("../", ['500 16px "Alegreya Sans"', '700 16px "Alegreya Sans"', '700 16px "Cinzel"', '900 16px "Cinzel"']);

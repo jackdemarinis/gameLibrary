@@ -4,10 +4,10 @@ export type Action = "attack" | "interact" | "flare" | "lockOn" | "pause" | "con
 
 const keyActions: Record<string, Action[]> = {
   KeyJ: ["attack"],
+  KeyF: ["interact", "confirm"],
   KeyE: ["interact", "confirm"],
   Enter: ["interact", "confirm"],
   KeyQ: ["flare"],
-  KeyF: ["flare"],
   KeyL: ["flare"],
   Tab: ["lockOn"],
   Escape: ["pause"],

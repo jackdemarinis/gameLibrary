@@ -12,7 +12,7 @@ import { PuzzleTracker } from "../game/rules/puzzleLogic";
 import { buildStaticProp } from "../world/props";
 import { buildTerrain, makeGroundSampler, slopeAt } from "../world/terrain";
 import { Foe, Warden, createFoe } from "./foes";
-import { Brazier, Chest, DynamicProp, Gate, Npc, Pickup, Plate, Shards, WayLantern } from "./interactables";
+import { Brazier, Chest, Door, DynamicProp, Gate, Npc, Pickup, Plate, Shards, WayLantern } from "./interactables";
 import { Physics } from "./physics";
 
 export class AreaRuntime {
@@ -24,6 +24,7 @@ export class AreaRuntime {
   readonly plates: Plate[] = [];
   readonly braziers: Brazier[] = [];
   readonly gates: Gate[] = [];
+  readonly doors: Door[] = [];
   readonly chests: Chest[] = [];
   readonly lanterns: WayLantern[] = [];
   readonly foes: Foe[] = [];
@@ -96,7 +97,7 @@ export class AreaRuntime {
   private placeProp(placement: AreaDef["props"][number], flags: ReadonlySet<string>): void {
     const { kind, x, z } = placement;
     const rot = placement.rot ?? 0;
-    const y = this.ground(x, z);
+    const y = this.ground(x, z) + (placement.raise ?? 0);
     const id = placement.id ?? `${kind}@${x},${z}`;
     switch (kind) {
       case "crate":
@@ -123,7 +124,7 @@ export class AreaRuntime {
         break;
       }
       case "gate": {
-        const gate = new Gate(id, this.physics, x, y, z, rot, placement.length ?? 6, placement.flag, placement.closedWhile, this.gateOpen(placement.flag, placement.closedWhile, flags));
+        const gate = new Gate(id, this.physics, x, y, z, rot, placement.length ?? 6, placement.flag, placement.closedWhile, this.gateOpen(placement.flag, placement.closedWhile, flags), placement.lockedText);
         this.gates.push(gate);
         this.root.add(gate.object);
         break;
@@ -144,8 +145,13 @@ export class AreaRuntime {
         break;
       }
       default: {
-        const built = buildStaticProp(kind, Math.floor((x * 73 + z * 31) * 10), placement.scale ?? 1, placement.variant, placement.length);
+        const enterable = Boolean(placement.enterable);
+        const built = buildStaticProp(kind, Math.floor((x * 73 + z * 31) * 10), placement.scale ?? 1, placement.variant, placement.length, enterable);
         if (!built) return;
+        if (built.door) {
+          const door = new Door(id, this.physics, built.door, new THREE.Vector3(x, y, z), rot, enterable, placement.lockedText ?? "It's locked.", flags.has(`opened:${id}`));
+          this.doors.push(door);
+        }
         built.object.position.set(x, y, z);
         built.object.rotation.y = rot;
         this.root.add(built.object);

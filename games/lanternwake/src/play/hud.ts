@@ -81,7 +81,7 @@ export class Hud {
     this.dialogue = element("div", "lwDialogue", this.root);
     this.speaker = element("div", "lwSpeaker", this.dialogue);
     this.line = element("div", "lwLine", this.dialogue);
-    element("div", "lwContinue", this.dialogue).textContent = "E ▸";
+    element("div", "lwContinue", this.dialogue).textContent = "F ▸";
 
     this.menu = element("div", "lwMenu", this.root);
     this.setPlaying(false);
@@ -206,7 +206,7 @@ export class Hud {
     if (kind === "title" || kind === "pause") {
       const help = element("div", "lwMenuHelp", card);
       help.innerHTML =
-        "<b>WASD</b> move · <b>Mouse</b> look · <b>Click/J</b> sword · <b>Q/Right-click</b> lantern flare · <b>E</b> talk/use · <b>Tab</b> lock on · <b>Esc</b> pause<br/>Gamepad supported.";
+        "<b>WASD</b> move · <b>Mouse</b> look · <b>Click/J</b> sword · <b>Q/Right-click</b> lantern flare · <b>F</b> talk/open/use · <b>Tab</b> lock on · <b>Esc</b> pause<br/>Gamepad supported.";
       const home = element("a", "lwMenuHome", card);
       home.href = libraryHomeUrl();
       home.textContent = "← JackGames library";

@@ -27,6 +27,21 @@ export interface PropBuild {
   object: THREE.Object3D;
   colliders: ColliderSpec[];
   lights: LightSpec[];
+  /** A hinged door the runtime turns into an interactable (positions are prop-local). */
+  door?: DoorBuild;
+}
+
+export interface DoorBuild {
+  /** Pivot on the hinge edge; rotate around y to swing (positive = inward). */
+  leaf: THREE.Group;
+  knob: THREE.Object3D;
+  /** Centre of the closed leaf, prop-local. */
+  leafCentre: THREE.Vector3;
+  leafHalf: { x: number; y: number; z: number };
+  /** Where the player stands to use it, prop-local. */
+  doorstep: THREE.Vector3;
+  /** Warm light spilling out of the doorway; scaled up as the door opens. */
+  spill: THREE.Object3D | null;
 }
 
 function m(texture: THREE.Texture, side: THREE.Side = THREE.FrontSide): THREE.MeshLambertMaterial {
@@ -67,7 +82,7 @@ function box(hx: number, hy: number, hz: number, x: number, y: number, z: number
 
 // ---------------------------------------------------------------- buildings
 
-function cottage(variant: string | undefined): PropBuild {
+function cottage(variant: string | undefined, enterable: boolean): PropBuild {
   const tex = textures();
   const group = new THREE.Group();
   const width = 6.4;
@@ -75,7 +90,25 @@ function cottage(variant: string | undefined): PropBuild {
   const wallHeight = 2.9;
   const roofHeight = 2.1;
   group.add(mesh(worldUvBox(width + 0.3, 0.7, depth + 0.3, 1.5), m(tex.stoneBrick), 0, 0.15, 0));
-  group.add(mesh(worldUvBox(width, wallHeight, depth, 3), m(tex.timberWall), 0, 0.5 + wallHeight / 2, 0));
+  // Walls are separate slabs so the front has a real doorway behind the door.
+  const wallMaterial = m(tex.timberWall);
+  const thick = 0.2;
+  const wallY = 0.5 + wallHeight / 2;
+  const doorWidth = 1.15;
+  const doorHeight = 2.05;
+  const doorX = -1.2;
+  const doorLeft = doorX - doorWidth / 2;
+  const doorRight = doorX + doorWidth / 2;
+  const frontZ = depth / 2 - thick / 2;
+  const slabs: Array<[number, number, number, number, number, number]> = [
+    [width, wallHeight, thick, 0, wallY, -depth / 2 + thick / 2],
+    [thick, wallHeight, depth, -width / 2 + thick / 2, wallY, 0],
+    [thick, wallHeight, depth, width / 2 - thick / 2, wallY, 0],
+    [doorLeft + width / 2, wallHeight, thick, (-width / 2 + doorLeft) / 2, wallY, frontZ],
+    [width / 2 - doorRight, wallHeight, thick, (doorRight + width / 2) / 2, wallY, frontZ],
+    [doorWidth, wallHeight - doorHeight, thick, doorX, 0.5 + doorHeight + (wallHeight - doorHeight) / 2, frontZ],
+  ];
+  for (const [sx, sy, sz, px, py, pz] of slabs) group.add(mesh(worldUvBox(sx, sy, sz, 3), wallMaterial, px, py, pz));
 
   // Gable roof: two sloped slabs with overhang, plus gable triangles.
   const roofTexture = variant === "blue" ? tex.roofBlue : variant === "thatch" ? tex.thatch : tex.roofRed;
@@ -106,10 +139,30 @@ function cottage(variant: string | undefined): PropBuild {
     group.add(gable);
   }
 
-  // Door, windows (lit from inside), chimney.
-  group.add(mesh(worldUvBox(1.15, 2.05, 0.12, 1), m(tex.plank), -1.2, 0.5 + 1.02, depth / 2 + 0.05));
-  const doorKnob = mesh(new THREE.OctahedronGeometry(0.05), m(tex.gold), -0.8, 1.5, depth / 2 + 0.13);
-  group.add(doorKnob);
+  // Hinged door: the pivot sits on the left jamb so the leaf swings inward.
+  const leaf = new THREE.Group();
+  leaf.position.set(doorLeft, 0.5, frontZ);
+  leaf.add(mesh(worldUvBox(doorWidth - 0.04, doorHeight - 0.02, 0.1, 1), m(tex.plank), doorWidth / 2, doorHeight / 2, 0));
+  for (const braceY of [0.4, doorHeight - 0.4]) leaf.add(mesh(new THREE.BoxGeometry(doorWidth - 0.1, 0.1, 0.04), m(tex.bark), doorWidth / 2, braceY, 0.07));
+  const knob = new THREE.Group();
+  knob.position.set(doorWidth - 0.2, 1.0, 0.09);
+  knob.add(mesh(new THREE.OctahedronGeometry(0.06), m(tex.gold)));
+  knob.add(mesh(new THREE.BoxGeometry(0.16, 0.035, 0.035), m(tex.gold), 0.05, 0, 0.03));
+  leaf.add(knob);
+  group.add(leaf);
+  // Stone step up onto the plinth.
+  group.add(mesh(worldUvBox(1.5, 0.25, 0.6, 1.5), m(tex.stoneBrick), doorX, 0.125, depth / 2 + 0.45));
+
+  let spill: THREE.Object3D | null = null;
+  if (enterable) {
+    spill = new THREE.Group();
+    spill.position.set(doorX, 1.4, depth / 2 + 0.25);
+    spill.add(glowSprite(artPalette.windowGlow, 3.2, 0.45));
+    spill.scale.setScalar(0.001);
+    group.add(spill);
+    addCottageInterior(group, width, depth, wallHeight, thick);
+  }
+
   const windowGlow = emissive(artPalette.windowGlow);
   const frame = m(tex.plank);
   const windows: Array<[number, number, number, number]> = [
@@ -132,11 +185,78 @@ function cottage(variant: string | undefined): PropBuild {
     group.add(pane);
   }
   group.add(mesh(worldUvBox(0.8, 2.2, 0.8, 1), m(tex.stoneBrick), width / 2 - 1.2, ridgeY - 0.4, -0.9));
+  const door: DoorBuild = {
+    leaf,
+    knob,
+    leafCentre: new THREE.Vector3(doorX, 0.5 + doorHeight / 2, frontZ),
+    leafHalf: { x: doorWidth / 2, y: doorHeight / 2, z: 0.08 },
+    doorstep: new THREE.Vector3(doorX, 0, depth / 2 + 0.9),
+    spill,
+  };
+  const outsideLight: LightSpec = { x: 1.4, y: 2.0, z: depth / 2 + 1.2, color: artPalette.windowGlow, intensity: 2.5, distance: 7, flicker: 0.2 };
+  const stepCollider = box(0.75, 0.125, 0.3, doorX, 0.125, depth / 2 + 0.45);
+  if (!enterable) {
+    return { object: group, colliders: [box(width / 2 + 0.15, (ridgeY + 0.2) / 2, depth / 2 + 0.15, 0, (ridgeY + 0.2) / 2, 0, 0), stepCollider], lights: [outsideLight], door };
+  }
+  // Walk-in cottage: plinth to stand on, wall slabs (the door adds its own leaf
+  // collider), and a ceiling/roof block so the camera stays inside the room.
+  const ceilingY = 0.5 + wallHeight;
+  const colliders = [
+    box(width / 2 + 0.15, 0.35, depth / 2 + 0.15, 0, 0.15, 0),
+    stepCollider,
+    ...slabs.map(([sx, sy, sz, px, py, pz]) => box(sx / 2, sy / 2, sz / 2, px, py, pz)),
+    box(width / 2 + 0.15, (ridgeY - ceilingY) / 2 + 0.1, depth / 2 + 0.15, 0, (ridgeY + ceilingY) / 2, 0),
+  ];
   return {
     object: group,
-    colliders: [box(width / 2 + 0.15, (ridgeY + 0.2) / 2, depth / 2 + 0.15, 0, (ridgeY + 0.2) / 2, 0, 0)],
-    lights: [{ x: 1.4, y: 2.0, z: depth / 2 + 1.2, color: artPalette.windowGlow, intensity: 2.5, distance: 7, flicker: 0.2 }],
+    colliders,
+    lights: [outsideLight, { x: -2.1, y: 1.4, z: -1.4, color: artPalette.ember, intensity: 3.2, distance: 8, flicker: 0.5 }],
+    door,
   };
+}
+
+/** Furnishings for a cottage you can walk into: floor, ceiling, hearth, bed, table, rug. */
+function addCottageInterior(group: THREE.Group, width: number, depth: number, wallHeight: number, thick: number): void {
+  const tex = textures();
+  const innerW = width - thick * 2;
+  const innerD = depth - thick * 2;
+  const floor = mesh(new THREE.PlaneGeometry(innerW, innerD).rotateX(-Math.PI / 2), m(tex.plankFlat), 0, 0.51, 0);
+  scaleUv(floor.geometry, innerW / 2, innerD / 2);
+  group.add(floor);
+  const ceiling = mesh(new THREE.PlaneGeometry(innerW, innerD).rotateX(Math.PI / 2), m(tex.plankFlat), 0, 0.5 + wallHeight - 0.01, 0);
+  scaleUv(ceiling.geometry, innerW / 2, innerD / 2);
+  group.add(ceiling);
+  for (const beamX of [-1.6, 0, 1.6]) group.add(mesh(new THREE.BoxGeometry(0.18, 0.2, innerD), m(tex.bark), beamX, 0.5 + wallHeight - 0.12, 0));
+
+  // Hearth against the back wall, with a fire.
+  const back = -depth / 2 + thick;
+  group.add(mesh(worldUvBox(1.5, 1.3, 0.7, 1), m(tex.stoneBrick), -2.0, 0.5 + 0.65, back + 0.35));
+  group.add(mesh(new THREE.BoxGeometry(0.8, 0.5, 0.1), emissive(0x1a0c06), -2.0, 0.5 + 0.38, back + 0.71));
+  group.add(mesh(new THREE.BoxGeometry(0.5, 0.26, 0.12), emissive(artPalette.ember), -2.0, 0.5 + 0.2, back + 0.72));
+  const fireGlow = glowSprite(artPalette.ember, 1.6, 0.7);
+  fireGlow.position.set(-2.0, 0.5 + 0.4, back + 0.9);
+  group.add(fireGlow);
+  group.add(mesh(worldUvBox(0.7, wallHeight - 1.3, 0.5, 1), m(tex.stoneBrick), -2.0, 0.5 + 1.3 + (wallHeight - 1.3) / 2, back + 0.25));
+
+  // Bed in the back-right corner.
+  const bedX = width / 2 - thick - 0.6;
+  group.add(mesh(worldUvBox(1.0, 0.35, 2.0, 1), m(tex.plank), bedX, 0.5 + 0.2, back + 1.1));
+  group.add(mesh(new THREE.BoxGeometry(0.96, 0.12, 1.5), m(tex.scarf), bedX, 0.5 + 0.42, back + 1.35));
+  group.add(mesh(new THREE.BoxGeometry(0.6, 0.14, 0.35), m(tex.robe), bedX, 0.5 + 0.44, back + 0.35));
+
+  // Table, stools and a candle.
+  group.add(mesh(worldUvBox(1.1, 0.08, 0.7, 1), m(tex.plank), 0.4, 0.5 + 0.78, -0.4));
+  for (const [lx, lz] of [[-0.45, -0.28], [0.45, -0.28], [-0.45, 0.28], [0.45, 0.28]]) group.add(mesh(new THREE.BoxGeometry(0.08, 0.74, 0.08), m(tex.bark), 0.4 + lx, 0.5 + 0.37, -0.4 + lz));
+  for (const sx of [-0.45, 1.25]) group.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.45, 6), m(tex.plank), sx, 0.5 + 0.22, -0.4));
+  group.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.16, 5), emissive(0xfff0d0), 0.5, 0.5 + 0.9, -0.4));
+  const candle = glowSprite(artPalette.windowGlow, 0.6, 0.8);
+  candle.position.set(0.5, 0.5 + 1.02, -0.4);
+  group.add(candle);
+
+  // Rug by the door and a shelf with pots.
+  group.add(mesh(new THREE.PlaneGeometry(1.6, 1.0).rotateX(-Math.PI / 2), m(tex.robe), -1.0, 0.52, 0.9));
+  group.add(mesh(new THREE.BoxGeometry(1.4, 0.08, 0.35), m(tex.plank), 1.2, 0.5 + 1.7, back + 0.2));
+  for (const px of [0.8, 1.2, 1.55]) group.add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.22, 6), m(tex.rock), px, 0.5 + 1.85, back + 0.2));
 }
 
 function well(): PropBuild {
@@ -579,10 +699,10 @@ export function wayLanternMesh(great: boolean): { group: THREE.Group; flame: THR
 // ---------------------------------------------------------------- dispatcher
 
 /** Static props (no runtime behaviour beyond their colliders and lights). */
-export function buildStaticProp(kind: string, seed: number, scale: number, variant?: string, length?: number): PropBuild | null {
+export function buildStaticProp(kind: string, seed: number, scale: number, variant?: string, length?: number, enterable = false): PropBuild | null {
   switch (kind) {
     case "cottage":
-      return cottage(variant);
+      return cottage(variant, enterable);
     case "well":
       return well();
     case "oak":

@@ -56,6 +56,12 @@ export interface PropPlacement {
   contents?: PickupKind;
   /** Gate: closed only while this flag is set (the boss arena seal). */
   closedWhile?: string;
+  /** Cottage: the door opens and you can walk inside. */
+  enterable?: boolean;
+  /** Lift above the terrain, e.g. a chest standing on a cottage floor. */
+  raise?: number;
+  /** Doors and gates: what Wren finds when trying it while it's locked. */
+  lockedText?: string;
 }
 
 export interface ScatterDef {
