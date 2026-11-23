@@ -7,7 +7,7 @@ original games:
 | --- | --- | --- | --- | --- |
 | **Pétanque Park** | `/petanque/` | 1–4, local or online by room code | Three.js | `games/petanque/` |
 | **Dustline Brigade** | `/dustline/` | 1 | Phaser 3 | `games/dustline/` |
-| **Lanternwake** | `/lanternwake/` | 1 | Phaser 3 | `games/lanternwake/` |
+| **Lanternwake** | `/lanternwake/` | 1 | Three.js + Rapier | `games/lanternwake/` |
 
 PC only: every game needs a keyboard and mouse. There are no touch controls.
 
@@ -22,7 +22,7 @@ copy it into the other game; from then on the two copies evolve separately.
 ```
 games/
   dustline/      Dustline Brigade: its own npm project (Phaser)
-  lanternwake/   Lanternwake: its own npm project (Phaser)
+  lanternwake/   Lanternwake: its own npm project (Three.js + Rapier)
   petanque/      Pétanque Park: its own npm project (Three.js)
 library/         the home page + install shell (icons, manifest, service worker)
 app/             FastAPI: serves the built site, relays Pétanque's online rooms
@@ -153,11 +153,14 @@ The save lives in localStorage. Design notes: `games/dustline/PLAN.md`, `TODO.md
 
 ### Lanternwake
 
-Compact pixel-art survival adventure:
-- Gather timber and ironstone.
-- Forge the Ember Lantern.
-- Drive back the shades and defeat the Mirewarden.
+Retro 3D action adventure with a late-90s console look: a 480x270 render with
+vertex snapping, 15-bit dithered colour, fog and lantern-lit darkness.
+- Third-person sword combat (three-hit combo, dodge roll, lock-on) and a lantern
+  flare that stuns Shades and lights braziers.
+- Rapier physics: pushable crates on pressure plates, breakable pots, knockback.
+- XP levels, heart vessels, way-lantern checkpoints that save, boss fights.
 
-WASD to move, Space to swing, E to gather or forge, Esc to return to the
-library. All sprites (player run cycle, cottages, props, HUD icons) are built in
-code from character maps.
+WASD + mouse (pointer lock), click/J sword, Space roll, Q/right-click flare,
+E talk/use, Tab lock on, Esc pause. Gamepad supported. All models, textures and
+sounds are generated in code (`src/world/`, `src/engine/`). Story bible:
+`games/lanternwake/design/storyBible.md`.
