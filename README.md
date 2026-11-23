@@ -77,12 +77,25 @@ Open it in two tabs, host a room in one, and join with the code in the other.
 npm test           # = python3 scripts/testAll.py: isolation check, all game tests, server tests
 ```
 
-## Deploy (Railway)
+## Deploy (Mac mini)
 
-One service, built from the `Dockerfile`: a Node 22 stage runs `npm run build`
-(`buildAll.py --install`, a clean `npm ci` per project), then a slim Python image serves `dist/`. `railway.json`
-starts uvicorn and health-checks `/api/health`. Set any `.env.example` variables
-in Railway; the defaults are fine. Rooms live in memory, so keep one replica.
+games.jackdemarinis.com runs on the Mac mini home server as the `games` service in
+`~/homeserver/docker-compose.yml`, built from the checkout at `~/homeserver/gameLibrary`
+(Cloudflare Tunnel -> Caddy -> `games:8000`).
+
+One image, built from the `Dockerfile`: a Node 22 stage runs `npm run build`
+(`buildAll.py --install`, a clean `npm ci` per project), then a slim Python image
+serves `dist/` with uvicorn. Rooms live in memory, so keep one replica.
+
+**Pushing to `main` deploys automatically.** The launchd job
+`com.homeserver.games-autodeploy` runs `~/homeserver/scripts/gamesAutoDeploy.py`
+every 2 minutes. When `origin/main` is ahead of the last deployed commit it
+fast-forwards the checkout and runs `docker compose up -d --build games`. A failed
+build is retried on the next run. Log: `~/homeserver/data/games-autodeploy/deploy.log`.
+
+Deploy by hand: `cd ~/homeserver/gameLibrary && git pull && cd .. && docker compose up -d --build games`.
+
+`railway.json` is left over from the old Railway deploy and is unused.
 
 ## Offline / install
 
