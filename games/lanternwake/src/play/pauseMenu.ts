@@ -43,6 +43,14 @@ export interface PauseCallbacks {
   previewSound(): void;
 }
 
+interface InfoTile {
+  tile: HTMLElement;
+  fill(box: HTMLElement): void;
+}
+
+/** Item grid size: empty slots hint that there is more to find. */
+const itemSlots = 10;
+
 type Tab = "quests" | "status" | "map" | "controls" | "audio";
 const tabs: Array<[Tab, string]> = [
   ["quests", "Quests"],
@@ -129,7 +137,7 @@ export class PauseMenu {
     const quit = element("button", "lwMenuButton", foot, "Return to title");
     quit.type = "button";
     quit.addEventListener("click", () => this.callbacks.quitToTitle());
-    element("div", "lwPauseHint", foot, "Esc resume · ← → tabs · ↑ ↓ scroll");
+    element("div", "lwPauseHint", foot, "Esc resume · ← → switch tabs · hover or click a tile for details");
     const home = element("a", "lwMenuHome", foot, "← JackGames library");
     home.href = libraryHomeUrl();
   }
@@ -163,10 +171,6 @@ export class PauseMenu {
       this.show(tabs[(index + tabs.length - 1) % tabs.length][0]);
       return true;
     }
-    if (event.code === "ArrowDown" || event.code === "ArrowUp") {
-      this.body.scrollBy({ top: (event.code === "ArrowDown" ? 1 : -1) * this.body.clientHeight * 0.4, behavior: "smooth" });
-      return true;
-    }
     if (event.code === "Escape" || event.code === "KeyP") {
       this.callbacks.resume();
       return true;
@@ -194,63 +198,91 @@ export class PauseMenu {
     const log = status?.quests;
     if (!status || !log) return;
     const columns = element("div", "lwStatusColumns", this.body);
-    const left = element("div", "lwQuestColumn", columns);
-    const right = element("div", "lwQuestColumn", columns);
 
-    // Current mission, with where to go and a hint.
-    const now = element("div", "lwPanel", left);
+    // Left: what to do right now.
+    const now = element("div", "lwPanel", columns);
     element("div", "lwPanelTitle", now, chapterTitle);
-    const current = log.current;
     const card = element("div", "lwNextStep", now);
+    const current = log.current;
     if (current) {
       element("div", "lwNextLabel", card, `Current mission ${current.number} · ${current.where}`);
       element("div", "lwNextTitle", card, current.title);
       element("div", "lwNextText", card, current.text);
-      if (current.hint) {
-        const hint = element("div", "lwMissionHint", now);
-        element("span", "lwHintLabel", hint, "Hint ");
-        element("span", "", hint, current.hint);
-      }
     } else {
-      element("div", "lwNextLabel", card, "Chapter complete");
-      element("div", "lwNextText", card, log.nextStep);
+      card.classList.add("isComplete");
+      element("div", "lwNextLabel", card, "All missions done");
+      element("div", "lwNextTitle", card, "Chapter One complete");
+      element("div", "lwNextText", card, "The great lantern burns again. That's the whole story in this version of Lanternwake, and more of Wren's journey is on the way. Until then, finish any side quests and fill in your map.");
     }
-    if (log.hiddenCount > 0) element("div", "lwQuestText", now, `${log.hiddenCount} more mission${log.hiddenCount > 1 ? "s" : ""} to discover in this chapter.`);
+    if (current?.hint) {
+      const hint = element("div", "lwMissionHint", now);
+      element("span", "lwHintLabel", hint, "Hint ");
+      element("span", "", hint, current.hint);
+    }
+    const latest = element("div", "lwLatestHint", now);
+    element("span", "lwHintLabel", latest, "Latest hint ");
+    element("span", "", latest, status.lastHint ? `“${status.lastHint}”` : "None yet. Explore, and the world will tell you things.");
+    if (status.lastHint && status.lastHintArea) element("span", "lwHintWhere", latest, ` · ${status.lastHintArea}`);
 
-    // The last thing the game hinted at.
-    const latest = element("div", "lwPanel", left);
-    element("div", "lwPanelTitle", latest, "Latest hint");
-    element("div", "lwQuestText", latest, status.lastHint ? `“${status.lastHint}”` : "No hints yet. Explore, and the world will tell you things.");
-    if (status.lastHint && status.lastHintArea) element("div", "lwHintWhere", latest, status.lastHintArea);
+    // Right: the journal as tiles, with details on hover or click.
+    const journal = element("div", "lwPanel", columns);
+    element("div", "lwPanelTitle", journal, "Missions");
+    const missionGrid = element("div", "lwTileGrid lwMissionGrid", journal);
+    const tiles: InfoTile[] = [];
+    let initial = 0;
+    const missions = [...log.completed].reverse();
+    if (current) missions.push(current);
+    missions.forEach((mission) => {
+      const done = mission !== current;
+      const tile = this.tile(missionGrid, `lwMissionTile ${done ? "isDone" : "isCurrent"}`);
+      element("span", "lwTileMark", tile, done ? "✓" : "▸");
+      element("span", "lwTileNumber", tile, String(mission.number));
+      if (!done) initial = tiles.length;
+      tiles.push({
+        tile,
+        fill: (box) => {
+          element("div", "lwInfoLabel", box, `${done ? "Completed" : "Current"} · mission ${mission.number} · ${mission.where}`);
+          element("div", "lwInfoTitle", box, mission.title);
+          element("div", "lwInfoText", box, mission.text);
+        },
+      });
+    });
+    for (let hidden = 0; hidden < log.hiddenCount; hidden += 1) {
+      const tile = this.tile(missionGrid, "lwMissionTile isLocked");
+      element("span", "lwTileMark", tile, "?");
+      tiles.push({
+        tile,
+        fill: (box) => {
+          element("div", "lwInfoLabel", box, "Undiscovered");
+          element("div", "lwInfoTitle", box, "???");
+          element("div", "lwInfoText", box, "Keep following the story to reveal this mission.");
+        },
+      });
+    }
+    if (!current && missions.length) initial = missions.length - 1;
 
-    // Side quests, with what's left and where.
-    const side = element("div", "lwPanel", right);
-    element("div", "lwPanelTitle", side, "Side quests");
+    element("div", "lwPanelTitle", journal, "Side quests");
+    const sideGrid = element("div", "lwSideGrid", journal);
     for (const task of log.side) {
       const finished = task.done >= task.total;
-      const row = element("div", `lwSideTask${finished ? " isDone" : ""}`, side);
-      const head = element("div", "lwSideHead", row);
-      element("span", "lwQuestTitle", head, task.title);
-      element("span", "lwSideCount", head, `${task.done} / ${task.total}`);
-      const bar = element("div", "lwXpBar lwSideBar", row);
-      element("div", "lwXpFill", bar).style.width = `${task.total ? (task.done / task.total) * 100 : 0}%`;
-      element("div", "lwQuestText", row, task.detail);
-      element("div", "lwHintWhere", row, finished ? "Complete!" : task.remaining.join(" · "));
+      const tile = this.tile(sideGrid, `lwSideTile${finished ? " isDone" : ""}`);
+      const head = element("span", "lwSideHead", tile);
+      element("span", "", head, task.title);
+      element("span", "lwSideCount", head, `${task.done}/${task.total}`);
+      const bar = element("span", "lwXpBar lwSideBar", tile);
+      element("span", "lwXpFill", bar).style.width = `${task.total ? (task.done / task.total) * 100 : 0}%`;
+      tiles.push({
+        tile,
+        fill: (box) => {
+          element("div", "lwInfoLabel", box, `Side quest · ${task.done} of ${task.total}`);
+          element("div", "lwInfoTitle", box, task.title);
+          element("div", "lwInfoText", box, task.detail);
+          element("div", "lwHintWhere", box, finished ? "Complete!" : task.remaining.join(" · "));
+        },
+      });
     }
-
-    // Completed missions, newest first.
-    const done = element("div", "lwPanel", right);
-    element("div", "lwPanelTitle", done, `Completed missions · ${log.completed.length}`);
-    if (log.completed.length === 0) element("div", "lwQuestText", done, "Nothing yet. Your story starts in Wickmoor.");
-    const list = element("ol", "lwQuestSteps", done);
-    for (const mission of log.completed) {
-      const item = element("li", "lwQuestStep is-done", list);
-      element("span", "lwQuestMark", item, "✓");
-      const text = element("div", "", item);
-      element("div", "lwQuestTitle", text, `${mission.number}. ${mission.title}`);
-      element("div", "lwHintWhere", text, mission.where);
-      element("div", "lwQuestText", text, mission.text);
-    }
+    const box = element("div", "lwInfoBox", journal);
+    this.linkInfo(box, tiles, initial);
   }
 
   // ------------------------------------------------------------ status
@@ -270,10 +302,9 @@ export class PauseMenu {
     const rows: Array<[string, string]> = [
       ["Health", `${(status.hp / 2).toFixed(status.hp % 2 ? 1 : 0)} / ${status.maxHearts} hearts`],
       ["Sword damage", `${status.swordDamage} per hit`],
-      ["Lantern oil", `${status.maxOil} max · flare costs ${status.flareCost}`],
+      ["Lantern oil", `${status.maxOil} max · flare ${status.flareCost}`],
       ["Total experience", `${status.totalXp} XP`],
-      ["Way-lanterns lit", `${status.lanternsLit}`],
-      ["Chests opened", `${status.chestsOpened}`],
+      ["Lanterns lit · chests", `${status.lanternsLit} · ${status.chestsOpened}`],
       ["Time played", formatTime(status.playSeconds)],
     ];
     const table = element("div", "lwStatTable", hero);
@@ -282,18 +313,52 @@ export class PauseMenu {
       element("span", "lwStatValue", table, value);
     }
 
-    const right = element("div", "lwPanel", columns);
-    element("div", "lwPanelTitle", right, "Items");
-    const list = element("div", "lwItems", right);
+    const bag = element("div", "lwPanel", columns);
+    element("div", "lwPanelTitle", bag, "Items");
+    const grid = element("div", "lwTileGrid lwItemGrid", bag);
+    const tiles: InfoTile[] = [];
     for (const item of status.items) {
-      const row = element("div", "lwItem", list);
-      row.appendChild(pixelIcon(item.icon));
-      const text = element("div", "lwItemText", row);
-      element("div", "lwItemName", text, item.count && item.count > 1 ? `${item.name} ×${item.count}` : item.name);
-      element("div", "lwItemDetail", text, item.detail);
+      const tile = this.tile(grid, "lwItemSlot");
+      tile.appendChild(pixelIcon(item.icon));
+      if (item.count && item.count > 1) element("span", "lwSlotCount", tile, `×${item.count}`);
+      tiles.push({
+        tile,
+        fill: (box) => {
+          element("div", "lwInfoTitle", box, item.count && item.count > 1 ? `${item.name} ×${item.count}` : item.name);
+          element("div", "lwInfoText", box, item.detail);
+        },
+      });
     }
-    element("div", "lwPanelTitle lwPanelTitleGap", right, `Now · ${status.areaName}`);
-    element("div", "lwObjectiveCard", right, status.objective);
+    for (let empty = status.items.length; empty < itemSlots; empty += 1) element("span", "lwTile lwItemSlot isEmpty", grid);
+    const box = element("div", "lwInfoBox", bag);
+    this.linkInfo(box, tiles, 0);
+  }
+
+  /** A focusable tile button. */
+  private tile(parent: HTMLElement, className: string): HTMLButtonElement {
+    const tile = element("button", `lwTile ${className}`, parent);
+    tile.type = "button";
+    return tile;
+  }
+
+  /** Hovering or focusing a tile previews it in `box`; clicking pins it. */
+  private linkInfo(box: HTMLElement, tiles: InfoTile[], initial: number): void {
+    let pinned = Math.min(initial, tiles.length - 1);
+    const show = (index: number): void => {
+      box.innerHTML = "";
+      tiles[index]?.fill(box);
+      tiles.forEach((entry, other) => entry.tile.classList.toggle("isSelected", other === pinned));
+    };
+    tiles.forEach((entry, index) => {
+      entry.tile.addEventListener("mouseenter", () => show(index));
+      entry.tile.addEventListener("focus", () => show(index));
+      entry.tile.addEventListener("mouseleave", () => show(pinned));
+      entry.tile.addEventListener("click", () => {
+        pinned = index;
+        show(index);
+      });
+    });
+    if (tiles.length) show(pinned);
   }
 
   // ------------------------------------------------------------ map
