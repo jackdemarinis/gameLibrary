@@ -112,8 +112,7 @@
   --gameAccentSoft: var(--accent-2);
   --accent-strong: var(--accent);
 
-  /* Lanternwake in-game HUD: carved wood + parchment, matching the canvas
-     objective sign (values mirror src/game/config/adventureTheme.ts). */
+  /* Lanternwake in-game HUD: carved wood + parchment over the retro 3D view. */
   --font-pixel: 'Pixelify Sans', ui-monospace, monospace;
   --lw-wood: #6b4426;
   --lw-wood-dark: #523319;
@@ -138,6 +137,11 @@
   --lw-frame-light: inset 0 0 0 2px #c89058;
   --lw-bar-shine: inset 0 3px 0 rgba(255, 255, 255, 0.28);
   --lw-text-outline: 2px 0 0 #2a1a0e, -2px 0 0 #2a1a0e, 0 2px 0 #2a1a0e, 0 -2px 0 #2a1a0e;
+  --lw-boss: #b070ff;
+  --lw-boss-dark: #3a1e5c;
+  --lw-xp: #7fe0ff;
+  --lw-night: rgba(6, 8, 18, 0.82);
+  --lw-title-glow: 0 0 18px rgba(255, 196, 87, 0.55);
 
   /* Play-screen stage: the 16:9 game window, framed in carved wood with iron
      corner brackets, centred on a calm dark dusk field. */

@@ -1,307 +1,424 @@
-/* Lanternwake HUD skin: carved wood + parchment pixel UI that matches the game art.
-   Portrait plate top-left, inventory hotbar bottom-centre, parchment help/result cards.
-   Scoped to .hudSkin-lanternwake; every value comes from a token in jackGames.css. */
+/* Lanternwake HUD: carved-wood plates and parchment cards over the retro 3D view.
+   Sizes use container units so the HUD scales with the 16:9 stage.
+   Every colour, font and shadow comes from a --lw-* token in jackGames.css. */
 
-.hudSkin-lanternwake {
+.gameStage {
+  container-type: inline-size;
+}
+
+.lwHud {
   --lwNotch: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
-  font-family: var(--font-pixel);
-}
-
-.hudSkin-lanternwake.hud-bar-screen {
-  padding: var(--sp-3);
-}
-
-.hudSkin-lanternwake img {
-  image-rendering: pixelated;
-}
-
-/* ---- portrait plate ---- */
-.hudStatus {
-  position: absolute;
-  top: var(--sp-3);
-  left: var(--sp-3);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 6px 14px 6px 6px;
-  border: 3px solid var(--lw-wood-edge);
-  background: var(--lw-wood);
-  box-shadow: var(--lw-bevel);
-  clip-path: var(--lwNotch);
-  pointer-events: auto;
-}
-
-.hudPortrait {
-  display: grid;
-  place-items: end center;
-  width: 60px;
-  height: 60px;
-  overflow: hidden;
-  border: 3px solid var(--lw-wood-edge);
-  background: var(--lw-sky);
-  box-shadow: var(--lw-frame-light);
-}
-
-.hudPortrait img {
-  display: block;
-  width: 48px;
-  height: 44px;
-}
-
-.hudStatusBody {
-  display: grid;
-  gap: 4px;
-  min-width: 170px;
-}
-
-.hudStatusName {
-  color: var(--lw-parchment);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1;
-  text-shadow: var(--lw-text-outline);
-}
-
-.hudHealth {
-  position: relative;
-  height: 16px;
-  border: 3px solid var(--lw-ink);
-  background: var(--lw-wood-dark);
-}
-
-.hudHealthFill {
-  display: block;
-  height: 100%;
-  background: var(--lw-health);
-  box-shadow: var(--lw-bar-shine);
-  transition: width 120ms steps(4, end);
-}
-
-.hudHealthLow .hudHealthFill {
-  background: var(--lw-health-low);
-  animation: lwPulse 0.8s steps(2, jump-none) infinite;
-}
-
-.hudHealthText {
+  --lwUnit: 1.25cqw;
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  z-index: 3;
+  pointer-events: none;
+  font-family: var(--font-pixel);
+  font-size: var(--lwUnit);
   color: var(--lw-parchment);
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1;
   text-shadow: var(--lw-text-outline);
+  user-select: none;
 }
 
-.hudStatusCaption {
-  color: var(--lw-ember);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-shadow: var(--lw-text-outline);
+.lwHud > :not(.lwMenu) {
+  transition: opacity 0.3s;
 }
 
-@keyframes lwPulse {
-  50% { opacity: 0.45; }
+.lwHud:not(.isPlaying) > :not(.lwMenu):not(.lwBanner) {
+  opacity: 0;
 }
 
-/* ---- hotbar ---- */
-.hudHotbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px;
+/* ---- status plate ---- */
+.lwStatus {
+  position: absolute;
+  top: 2.4%;
+  left: 1.6%;
+  display: grid;
+  gap: 0.35em;
+  padding: 0.5em 0.8em 0.6em;
   border: 3px solid var(--lw-wood-edge);
   background: var(--lw-wood);
   box-shadow: var(--lw-bevel);
   clip-path: var(--lwNotch);
-  pointer-events: auto;
 }
 
-.hudSlot {
+.lwHearts {
+  display: flex;
+  gap: 0.25em;
+}
+
+.lwHeart {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border: 3px solid var(--lw-wood-edge);
+  width: 1.5em;
+  height: 1.35em;
+  background: var(--lw-slot-empty);
+  clip-path: polygon(25% 0, 42% 0, 50% 14%, 58% 0, 75% 0, 100% 22%, 100% 46%, 50% 100%, 0 46%, 0 22%);
+}
+
+.lwHeart::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--lw-health);
+  box-shadow: var(--lw-bar-shine);
+}
+
+.lwHeart.half::after {
+  right: 50%;
+}
+
+.lwHeart.empty::after {
+  display: none;
+}
+
+.lwHearts.isLow .lwHeart::after {
+  background: var(--lw-health-low);
+  animation: lwPulse 0.7s steps(2) infinite;
+}
+
+.lwOil,
+.lwLevel {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.lwOilLabel,
+.lwLevelText {
+  min-width: 2.6em;
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
+.lwOilBar,
+.lwXpBar {
+  position: relative;
+  width: 11em;
+  height: 0.8em;
   background: var(--lw-slot);
   box-shadow: var(--lw-slot-inset);
 }
 
-.hudSlotActive {
-  border-color: var(--lw-ember);
-  box-shadow: var(--lw-slot-inset), var(--lw-ember-glow);
+.lwXpBar {
+  height: 0.45em;
 }
 
-.hudSlotDim .hudSlotIcon {
-  opacity: 0.45;
+.lwOilFill,
+.lwXpFill {
+  height: 100%;
+  background: var(--lw-ember);
+  box-shadow: var(--lw-bar-shine), var(--lw-ember-glow);
+  transition: width 0.15s linear;
 }
 
-.hudSlotEmpty {
-  background: var(--lw-slot-empty);
+.lwOilFill.isLow {
+  background: var(--lw-parchment-dim);
+  box-shadow: none;
 }
 
-.hudSlotKey {
+.lwXpFill {
+  background: var(--lw-xp);
+  box-shadow: none;
+}
+
+.lwOilMark {
   position: absolute;
-  top: 1px;
-  left: 4px;
-  color: var(--lw-parchment-dim);
-  font-size: 0.6rem;
-  line-height: 1;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--lw-parchment);
 }
 
-.hudSlotIcon {
-  display: block;
-  max-width: 36px;
-  max-height: 36px;
-}
-
-.hudSlotCount {
+/* ---- objective sign ---- */
+.lwObjective {
   position: absolute;
-  right: 3px;
-  bottom: 1px;
-  color: var(--lw-parchment);
-  font-size: 0.78rem;
+  top: 2.4%;
+  right: 1.6%;
+  max-width: 30%;
+  padding: 0.6em 0.9em;
+  border: 3px solid var(--lw-wood-edge);
+  background: var(--lw-parchment);
+  color: var(--lw-ink);
+  text-shadow: none;
+  font-size: 0.95em;
+  line-height: 1.3;
+  box-shadow: var(--lw-frame-light);
+  clip-path: var(--lwNotch);
+}
+
+.lwObjective::before {
+  content: "◆ ";
+  color: var(--lw-wood);
+}
+
+/* ---- prompts, toasts, lock-on ---- */
+.lwPrompt,
+.lwToast {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.4em 0.9em;
+  border: 3px solid var(--lw-wood-edge);
+  background: var(--lw-wood);
+  box-shadow: var(--lw-bevel);
+  clip-path: var(--lwNotch);
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.lwPrompt {
+  bottom: 9%;
+}
+
+.lwToast {
+  bottom: 17%;
+  max-width: 70%;
+  white-space: normal;
+  text-align: center;
+}
+
+.lwHud.isPlaying .lwPrompt.isShown,
+.lwHud.isPlaying .lwToast.isShown {
+  opacity: 1;
+}
+
+.lwLock {
+  position: absolute;
+  width: 2.2em;
+  height: 2.2em;
+  margin: -1.1em 0 0 -1.1em;
+  border: 3px solid var(--lw-ember);
+  transform: rotate(45deg);
+  box-shadow: var(--lw-ember-glow);
+  opacity: 0;
+  animation: lwSpin 2.4s linear infinite;
+}
+
+.lwHud.isPlaying .lwLock.isShown {
+  opacity: 1;
+}
+
+/* ---- boss bar ---- */
+.lwBoss {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  width: 46%;
+  transform: translateX(-50%);
+  opacity: 0;
+  text-align: center;
+}
+
+.lwHud.isPlaying .lwBoss.isShown {
+  opacity: 1;
+}
+
+.lwBossName {
+  margin-bottom: 0.3em;
+  font-size: 1.1em;
   font-weight: 700;
-  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.lwBossBar {
+  height: 0.9em;
+  border: 3px solid var(--lw-wood-edge);
+  background: var(--lw-boss-dark);
+}
+
+.lwBossFill {
+  height: 100%;
+  background: var(--lw-boss);
+  box-shadow: var(--lw-bar-shine);
+  transition: width 0.25s steps(6);
+}
+
+/* ---- area banner ---- */
+.lwBanner {
+  position: absolute;
+  top: 24%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.8s;
+}
+
+.lwBanner.isShown {
+  opacity: 1;
+}
+
+.lwBannerTitle {
+  color: var(--lw-ember);
+  font-size: 2.8em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: var(--lw-text-outline), var(--lw-title-glow);
+}
+
+.lwBannerSub {
+  margin-top: 0.3em;
+  font-size: 1.2em;
+}
+
+/* ---- dialogue ---- */
+.lwDialogue {
+  position: absolute;
+  left: 50%;
+  bottom: 5%;
+  width: 62%;
+  min-height: 18%;
+  transform: translateX(-50%);
+  padding: 1em 1.4em 1.4em;
+  border: 4px solid var(--lw-wood-edge);
+  background: var(--lw-parchment);
+  color: var(--lw-ink);
+  text-shadow: none;
+  box-shadow: var(--lw-frame);
+  clip-path: var(--lwNotch);
+  opacity: 0;
+}
+
+.lwHud.isPlaying .lwDialogue.isShown {
+  opacity: 1;
+}
+
+.lwSpeaker {
+  display: inline-block;
+  margin-bottom: 0.5em;
+  padding: 0.15em 0.6em;
+  background: var(--lw-wood);
+  color: var(--lw-parchment);
+  font-weight: 700;
   text-shadow: var(--lw-text-outline);
 }
 
-/* ---- buttons ---- */
-.hudSkin-lanternwake .chrome-button,
-.hudSkin-lanternwake .chrome-button-primary:hover:not(:disabled),
-.hudSkin-lanternwake .chrome-button-secondary:hover:not(:disabled) {
-  border: 3px solid var(--lw-wood-edge);
-  border-radius: 0;
-  background: var(--lw-wood-light);
-  color: var(--lw-parchment);
-  box-shadow: var(--lw-bevel);
-  font-family: var(--font-pixel);
+.lwLine {
+  font-size: 1.15em;
+  line-height: 1.4;
+}
+
+.lwContinue {
+  position: absolute;
+  right: 1em;
+  bottom: 0.6em;
+  color: var(--lw-wood);
+  animation: lwPulse 0.9s steps(2) infinite;
+}
+
+/* ---- menus ---- */
+.lwMenu {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  pointer-events: auto;
+}
+
+.lwMenu.isShown {
+  display: grid;
+}
+
+.lwMenu-pause,
+.lwMenu-dead,
+.lwMenu-victory {
+  background: var(--lw-night);
+}
+
+.lwMenu-title {
+  place-items: center start;
+  padding-left: 7%;
+  background: linear-gradient(90deg, var(--lw-night), transparent 70%);
+}
+
+.lwMenuCard {
+  display: grid;
+  gap: 1em;
+  max-width: 44%;
+  text-align: left;
+}
+
+.lwMenu-title .lwMenuTitle {
+  font-size: 5em;
+  line-height: 1;
+}
+
+.lwMenuTitle {
+  color: var(--lw-ember);
+  font-size: 3em;
   font-weight: 700;
   letter-spacing: 0.04em;
-  text-transform: none;
-  white-space: nowrap;
-  clip-path: var(--lwNotch);
+  text-shadow: var(--lw-text-outline), var(--lw-title-glow);
 }
 
-.hudSkin-lanternwake .chrome-button-primary,
-.hudSkin-lanternwake .chrome-button-primary:hover:not(:disabled) {
-  background: var(--lw-ember);
-  color: var(--lw-ink);
+.lwMenuBody {
+  font-size: 1.15em;
+  line-height: 1.45;
 }
 
-.hudSkin-lanternwake .chrome-button:hover:not(:disabled) {
-  filter: brightness(1.12);
+.lwMenuOptions {
+  display: grid;
+  gap: 0.5em;
+  justify-items: start;
 }
 
-.hudSkin-lanternwake .chrome-button:active:not(:disabled) {
-  box-shadow: var(--lw-bevel-press);
-  transform: translateY(1px);
-}
-
-.hudSkin-lanternwake .hud-help-button {
-  width: 52px;
-  min-width: 52px;
-  min-height: 52px;
-  margin-left: 6px;
-  padding: 0;
-  font-size: 1.3rem;
-}
-
-/* ---- help modal + result card: a parchment notice nailed to wood ---- */
-.hudSkin-lanternwake .hud-modal-backdrop {
-  background: var(--lw-scrim);
-}
-
-.hudSkin-lanternwake .hud-modal-card,
-.hudSkin-lanternwake .hud-result-card {
-  border: 4px solid var(--lw-wood-edge);
-  border-radius: 0;
-  background: var(--lw-parchment);
-  color: var(--lw-ink);
-  box-shadow: var(--lw-frame);
-  padding: var(--sp-5) var(--sp-6);
-  clip-path: var(--lwNotch);
-}
-
-.hudSkin-lanternwake .eyebrow {
-  color: var(--lw-wood);
-  font-family: var(--font-pixel);
-  letter-spacing: 0.06em;
-}
-
-.hudSkin-lanternwake .hud-card-title {
-  margin-top: var(--sp-3);
-  color: var(--lw-ink);
-  font-family: var(--font-pixel);
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
-.hudSkin-lanternwake .hud-copy,
-.hudSkin-lanternwake .hud-copy-secondary,
-.hudSkin-lanternwake .hud-sidebar-list {
-  color: var(--lw-ink);
-}
-
-.hudSkin-lanternwake .hud-copy-secondary {
-  opacity: 0.75;
-}
-
-.hudSkin-lanternwake .hud-kpi {
+.lwMenuButton {
+  min-width: 14em;
+  padding: 0.5em 1.2em;
   border: 3px solid var(--lw-wood-edge);
-  border-radius: 0;
-  background: var(--lw-parchment-2);
+  background: var(--lw-wood);
+  color: var(--lw-parchment);
+  font: inherit;
+  font-size: 1.3em;
+  font-weight: 700;
+  text-align: left;
+  text-shadow: var(--lw-text-outline);
+  box-shadow: var(--lw-bevel);
+  clip-path: var(--lwNotch);
+  cursor: pointer;
 }
 
-.hudSkin-lanternwake .hud-kpi-value {
-  color: var(--lw-ink);
-  font-family: var(--font-pixel);
+.lwMenuButton.isActive {
+  background: var(--lw-wood-light);
+  color: var(--lw-ember);
 }
 
-@media (max-width: 640px) {
-  .hudStatus {
-    padding-right: 10px;
-  }
+.lwMenuButton.isActive::before {
+  content: "▸ ";
+}
 
-  .hudPortrait {
-    width: 46px;
-    height: 46px;
-  }
+.lwMenuButton:active {
+  box-shadow: var(--lw-bevel-press);
+}
 
-  .hudPortrait img {
-    width: 36px;
-    height: 33px;
-  }
+.lwMenuHelp {
+  font-size: 0.9em;
+  line-height: 1.6;
+  color: var(--lw-parchment-2);
+}
 
-  .hudStatusBody {
-    min-width: 120px;
-  }
+.lwMenuHelp b {
+  color: var(--lw-ember);
+}
 
-  .hudHotbar {
-    gap: 2px;
-    padding: 4px;
-  }
+.lwMenuHome {
+  color: var(--lw-parchment-dim);
+  font-size: 0.9em;
+  text-decoration: none;
+}
 
-  .hudSlot,
-  .hudSkin-lanternwake .hud-help-button {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    min-height: 42px;
-  }
+.lwMenuHome:hover {
+  color: var(--lw-ember);
+}
 
-  .hudSlotEmpty {
-    display: none;
+@keyframes lwPulse {
+  50% {
+    opacity: 0.45;
   }
+}
 
-  .hudSlotIcon {
-    max-width: 28px;
-    max-height: 28px;
+@keyframes lwSpin {
+  to {
+    transform: rotate(405deg);
   }
 }

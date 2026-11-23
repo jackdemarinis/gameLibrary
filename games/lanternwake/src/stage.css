@@ -69,3 +69,11 @@
     linear-gradient(var(--stage-bracket), var(--stage-bracket)) 0 100% / var(--bracket) var(--bracket) no-repeat,
     linear-gradient(var(--stage-bracket), var(--stage-bracket)) 100% 100% / var(--bracket) var(--bracket) no-repeat;
 }
+
+/* The 3D view renders at a low internal resolution; scale it up with crisp pixels. */
+.retroCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
