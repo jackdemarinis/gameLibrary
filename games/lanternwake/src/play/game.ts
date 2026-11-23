@@ -8,11 +8,14 @@ import { textures } from "../engine/pixelTextures";
 import { retroUniforms } from "../engine/retroMaterials";
 import { RetroPipeline } from "../engine/retroPipeline";
 import { damp } from "../engine/rng";
+import type { TrackName } from "../engine/music";
 import { sfx, type Sound } from "../engine/sfx";
 import { areas } from "../game/content/areas";
 import type { DialogueDef, PickupKind } from "../game/content/areaTypes";
 import { foeXp, levelForXp, statsFor } from "../game/rules/progression";
+import { ExploreGrid, clearExplored, loadExplored, writeExplored } from "../game/rules/exploration";
 import { clearSave, loadSave, newSave, writeSave, type SaveData } from "../game/rules/saveData";
+import { keyName, loadSettings, writeSettings, type Settings } from "../game/rules/settings";
 import { moodPresets } from "../world/artPalette";
 import { Sky } from "../world/sky";
 import { AreaRuntime } from "./areaRuntime";
@@ -21,6 +24,8 @@ import type { Hittable, PlayContext } from "./context";
 import { Warden } from "./foes";
 import { Hud } from "./hud";
 import { Pickup, Shards } from "./interactables";
+import type { MapPin, MapSnapshot } from "./mapView";
+import { PauseMenu, type PauseItem, type PauseStatus } from "./pauseMenu";
 import { initPhysics } from "./physics";
 import { Player, type ControlSource } from "./player";
 
@@ -56,8 +61,17 @@ class BufferedControls implements ControlSource {
   }
 }
 
+/** Every chest id in the game, so the status page can count opened ones. */
+const chestIds = new Set(Object.values(areas).flatMap((area) => area.props.filter((prop) => prop.kind === "chest" && prop.id).map((prop) => prop.id!)));
+
 export class Game {
   private frameLook = { x: 0, y: 0 };
+  private settings: Settings = loadSettings();
+  private readonly pauseMenu: PauseMenu;
+  private explored: Record<string, string> = loadExplored();
+  private exploreGrid: ExploreGrid | null = null;
+  private exploreDirty = false;
+  private exploreWriteTimer = 0;
   private readonly pipeline: RetroPipeline;
   private readonly scene = new THREE.Scene();
   private readonly input: Input;
@@ -93,6 +107,17 @@ export class Game {
     this.input = new Input(this.pipeline.canvas);
     this.controls = new BufferedControls(this.input);
     this.hud = new Hud(hudRoot);
+    this.pauseMenu = new PauseMenu(this.hud.root, {
+      resume: () => this.resume(),
+      quitToTitle: () => this.quitToTitle(),
+      settingsChanged: (settings) => {
+        this.settings = settings;
+        writeSettings(settings);
+        this.applySettings();
+      },
+      previewSound: () => sfx.play("pickup"),
+    });
+    this.applySettings();
     this.lights = new LightPool(this.scene, 6);
     this.scene.add(this.hemi, this.moon, this.moon.target, this.sky.group, this.fxRoot, this.glow.points, this.dust.points);
     this.scene.add(this.player.rig.root, this.player.trail.mesh, this.player.lanternLight);
@@ -209,6 +234,9 @@ export class Game {
     this.sky.setMood(mood.sky, mood.fog, mood.moon);
     sfx.setAmbient(def.mood);
 
+    this.flushExplored();
+    this.exploreGrid = new ExploreGrid(def.size, this.explored[def.id]);
+
     const spawn = def.spawns[spawnId] ?? Object.values(def.spawns)[0];
     this.player.spawn(this.area.physics, spawn.x, this.area.ground(spawn.x, spawn.z) + 0.05, spawn.z, spawn.yaw);
     this.refreshStats(false);
@@ -252,6 +280,9 @@ export class Game {
       label: saved ? "New Game" : "Begin",
       action: () => {
         clearSave();
+        clearExplored();
+        this.explored = {};
+        this.exploreGrid = this.area ? new ExploreGrid(this.area.def.size) : null;
         this.begin(newSave());
       },
     });
@@ -281,32 +312,40 @@ export class Game {
     this.state = "paused";
     this.input.captureEnabled = false;
     this.input.releasePointer();
-    this.hud.showMenu("pause", "Paused", "", [
-      { label: "Resume", action: () => this.resume() },
-      {
-        label: "Return to title",
-        action: () => {
-          this.hud.hideMenu();
-          this.fadeThen(() => {
-            const saved = loadSave();
-            this.flags.clear();
-            for (const flag of saved?.flags ?? []) this.flags.add(flag);
-            this.loadArea(saved?.areaId ?? "wickmoor", saved?.spawnId ?? "start", false);
-            this.showTitle();
-          });
-        },
-      },
-    ]);
+    this.flushExplored();
+    this.hud.setPlaying(false);
+    this.pauseMenu.open(this.pauseStatus(), () => this.mapSnapshot(), this.settings);
+  }
+
+  private quitToTitle(): void {
+    this.pauseMenu.close();
+    this.fadeThen(() => {
+      const saved = loadSave();
+      this.flags.clear();
+      for (const flag of saved?.flags ?? []) this.flags.add(flag);
+      this.loadArea(saved?.areaId ?? "wickmoor", saved?.spawnId ?? "start", false);
+      this.showTitle();
+    });
   }
 
   private resume(): void {
+    this.pauseMenu.close();
     this.hud.hideMenu();
+    this.hud.setPlaying(true);
     this.state = "playing";
     this.input.captureEnabled = true;
     this.input.capturePointer();
   }
 
   private menuKeys(event: KeyboardEvent): void {
+    if (this.pauseMenu.isOpen) {
+      if (this.pauseMenu.handleKey(event)) {
+        event.preventDefault();
+        // Don't let the same key press re-open the pause menu next frame.
+        this.input.endFrame();
+      }
+      return;
+    }
     if (!this.hud.menuOpen) return;
     if (event.code === "ArrowUp" || event.code === "KeyW") this.hud.menuMove(-1);
     else if (event.code === "ArrowDown" || event.code === "KeyS") this.hud.menuMove(1);
@@ -438,6 +477,7 @@ export class Game {
     if (this.input.wasPressed("pause") && this.state === "playing") this.pause();
     // Read this frame's mouse/stick look before endFrame() clears the deltas.
     this.frameLook = this.state === "playing" ? this.input.look(dt) : { x: 0, y: 0 };
+    if (this.state !== "transition") sfx.music.play(this.pickTrack());
     this.input.endFrame();
     this.render(dt);
   }
@@ -457,6 +497,7 @@ export class Game {
       return;
     }
     this.updateWorld(dt);
+    this.updateExploration(dt);
     this.updateInteraction();
     this.updateTriggers();
     this.updateExits();
@@ -561,11 +602,11 @@ export class Game {
       if (distance < range && (!best || distance < best.distance)) best = { distance, label, act };
     };
     for (const npc of area.npcs) {
-      consider(npc.position.distanceTo(position), 2.8, `F  Talk to ${npc.placement.name}`, () => this.openDialogue(npc.dialogue(this.flags), npc));
+      consider(npc.position.distanceTo(position), 2.8, `${this.interactKey}  Talk to ${npc.placement.name}`, () => this.openDialogue(npc.dialogue(this.flags), npc));
     }
     for (const chest of area.chests) {
       if (chest.opened) continue;
-      consider(chest.position.distanceTo(position), 2, "F  Open chest", () => {
+      consider(chest.position.distanceTo(position), 2, `${this.interactKey}  Open chest`, () => {
         chest.opened = true;
         this.flags.add(`opened:${chest.id}`);
         sfx.play("chest");
@@ -575,11 +616,11 @@ export class Game {
     }
     for (const lantern of area.lanterns) {
       if (lantern.great) continue;
-      consider(lantern.position.distanceTo(position), 2.4, lantern.lit ? "F  Rest at the lantern" : "F  Kindle the way-lantern", () => this.restAt(lantern));
+      consider(lantern.position.distanceTo(position), 2.4, `${this.interactKey}  ${lantern.lit ? "Rest at the lantern" : "Kindle the way-lantern"}`, () => this.restAt(lantern));
     }
     for (const door of area.doors) {
       if (door.open) continue;
-      consider(door.position.distanceTo(position), 1.9, door.enterable ? "F  Open door" : "F  Try the door", () => {
+      consider(door.position.distanceTo(position), 1.9, `${this.interactKey}  ${door.enterable ? "Open door" : "Try the door"}`, () => {
         if (door.tryOpen()) {
           sfx.play("doorOpen");
           this.flags.add(`opened:${door.id}`);
@@ -593,7 +634,7 @@ export class Game {
     }
     for (const gate of area.gates) {
       if (gate.isOpen) continue;
-      consider(gate.distanceTo(position) + 0.3, 2.4, "F  Try the gate", () => {
+      consider(gate.distanceTo(position) + 0.3, 2.4, `${this.interactKey}  Try the gate`, () => {
         gate.rattle();
         sfx.play("locked");
         this.cameraRig.shake(0.08);
@@ -793,6 +834,99 @@ export class Game {
     this.hud.status({ hp: this.player.hp, maxHearts: stats.maxHearts, oil: this.player.oil, maxOil: stats.maxOil, flareCost: stats.flareCost, level: progress.level, xpInto: progress.intoLevel, xpNeeded: progress.needed });
     this.hud.setObjective(area.def.objective(this.flags));
     this.pipeline.render(this.scene, this.cameraRig.camera);
+  }
+
+  // ---------------------------------------------------------------- settings, map, music
+
+  private applySettings(): void {
+    const bindings = this.settings.bindings;
+    this.input.setBindings(bindings);
+    this.input.setLookFeel(this.settings.mouseSensitivity, this.settings.invertY);
+    sfx.setVolumes(this.settings.sfxVolume, this.settings.musicVolume);
+    const key = (code: string): string => keyName(code);
+    this.hud.helpHtml =
+      `<b>${key(bindings.moveForward)}${key(bindings.moveLeft)}${key(bindings.moveBack)}${key(bindings.moveRight)}</b> move · <b>${key(bindings.sprint)}</b> sprint · <b>${key(bindings.jump)}</b> jump · ` +
+      `<b>Mouse</b> look · <b>Click/${key(bindings.attack)}</b> sword · <b>${key(bindings.flare)}/Right-click</b> lantern flare · ` +
+      `<b>${key(bindings.interact)}</b> talk/open/use · <b>${key(bindings.lockOn)}</b> lock on · <b>Esc</b> menu, map & settings<br/>Gamepad supported.`;
+    this.hud.setContinueKey(key(bindings.interact));
+  }
+
+  private get interactKey(): string {
+    return keyName(this.settings.bindings.interact);
+  }
+
+  /** Reveal the map around Wren; write it to storage every couple of seconds. */
+  private updateExploration(dt: number): void {
+    const area = this.area;
+    if (!area || !this.exploreGrid) return;
+    if (this.exploreGrid.reveal(this.player.position.x, this.player.position.z)) {
+      this.explored[area.def.id] = this.exploreGrid.encode();
+      this.exploreDirty = true;
+    }
+    this.exploreWriteTimer += dt;
+    if (this.exploreDirty && this.exploreWriteTimer > 2) this.flushExplored();
+  }
+
+  private flushExplored(): void {
+    this.exploreWriteTimer = 0;
+    if (!this.exploreDirty) return;
+    this.exploreDirty = false;
+    writeExplored(this.explored);
+  }
+
+  private pickTrack(): TrackName {
+    const area = this.area;
+    if (!area) return "none";
+    const warden = area.warden;
+    if (warden && warden.active && warden.alive && this.state !== "title") return "boss";
+    if (area.isIndoors(this.player.position)) return "home";
+    return area.def.mood;
+  }
+
+  private pauseStatus(): PauseStatus {
+    const progress = levelForXp(this.save.xp);
+    const stats = this.player.stats;
+    const items: PauseItem[] = [
+      { icon: "sword", name: "Keeper's Blade", detail: `${stats.swordDamage} damage per hit · three-hit combo` },
+      { icon: "lantern", name: "Ember Lantern", detail: `Flare for ${stats.flareCost} oil: stuns shades, lights braziers` },
+    ];
+    if (this.save.heartContainers > 0) items.push({ icon: "heart", name: "Heart Vessel", detail: "Each one adds a heart", count: this.save.heartContainers });
+    if (this.flags.has("elderBlessing")) items.push({ icon: "key", name: "Maren's Blessing", detail: "Lets you through Wickmoor's east gate" });
+    if (this.flags.has("bossDefeated")) items.push({ icon: "flame", name: "Shrine Ember", detail: "The great lantern burns again" });
+    const flags = [...this.flags];
+    return {
+      areaName: this.area?.def.name ?? "",
+      objective: this.area?.def.objective(this.flags) ?? "",
+      level: progress.level,
+      xpInto: progress.intoLevel,
+      xpNeeded: progress.needed,
+      totalXp: Math.floor(this.save.xp),
+      hp: this.player.hp,
+      maxHearts: stats.maxHearts,
+      swordDamage: stats.swordDamage,
+      maxOil: stats.maxOil,
+      flareCost: stats.flareCost,
+      playSeconds: this.save.playSeconds,
+      lanternsLit: flags.filter((flag) => flag.startsWith("lit:")).length,
+      chestsOpened: flags.filter((flag) => flag.startsWith("opened:") && chestIds.has(flag.slice(7))).length,
+      items,
+    };
+  }
+
+  private mapSnapshot(): MapSnapshot {
+    const area = this.area!;
+    const pins: MapPin[] = [];
+    for (const lantern of area.lanterns) pins.push({ kind: lantern.lit ? "lanternLit" : "lantern", x: lantern.position.x, z: lantern.position.z });
+    for (const npc of area.npcs) pins.push({ kind: "npc", x: npc.position.x, z: npc.position.z });
+    for (const chest of area.chests) if (!chest.opened) pins.push({ kind: "chest", x: chest.position.x, z: chest.position.z });
+    for (const gate of area.gates) if (!gate.isOpen) pins.push({ kind: "gate", x: gate.centre.x, z: gate.centre.z });
+    for (const door of area.doors) if (door.enterable) pins.push({ kind: "door", x: door.position.x, z: door.position.z });
+    return {
+      area,
+      grid: this.exploreGrid ?? new ExploreGrid(area.def.size),
+      player: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
+      pins,
+    };
   }
 
   private project(point: THREE.Vector3): { x: number; y: number } | null {

@@ -1,18 +1,22 @@
 // Keyboard + mouse (pointer lock for camera look) + gamepad, read as game actions.
+// Keyboard keys come from the player's bindings (Settings); menu keys stay fixed.
+import { defaultBindings, type BindAction } from "../game/rules/settings";
 
 export type Action = "attack" | "jump" | "interact" | "flare" | "lockOn" | "pause" | "confirm";
 
-const keyActions: Record<string, Action[]> = {
-  KeyJ: ["attack"],
-  Space: ["jump"],
-  KeyF: ["interact", "confirm"],
-  KeyE: ["interact", "confirm"],
+/** Fixed keys that always work regardless of bindings. */
+const fixedKeyActions: Record<string, Action[]> = {
   Enter: ["interact", "confirm"],
-  KeyQ: ["flare"],
-  KeyL: ["flare"],
-  Tab: ["lockOn"],
   Escape: ["pause"],
   KeyP: ["pause"],
+};
+
+const boundActions: Partial<Record<BindAction, Action[]>> = {
+  jump: ["jump"],
+  attack: ["attack"],
+  flare: ["flare"],
+  interact: ["interact", "confirm"],
+  lockOn: ["lockOn"],
 };
 
 // Standard gamepad mapping: A=0, B=1, X=2, Y=3, LB=4, RB=5, Start=9.
@@ -35,13 +39,18 @@ export class Input {
   private readonly element: HTMLElement;
   /** Set false while menus are open so clicks don't grab the pointer. */
   captureEnabled = false;
+  private bindings: Record<BindAction, string> = { ...defaultBindings };
+  private keyActions: Record<string, Action[]> = {};
+  private sensitivity = 1;
+  private invertY = false;
 
   constructor(element: HTMLElement) {
     this.element = element;
+    this.setBindings(this.bindings);
     window.addEventListener("keydown", (event) => {
       if (event.code === "Tab") event.preventDefault();
       if (event.code === "Space" && event.target === document.body) event.preventDefault();
-      if (!event.repeat) for (const action of keyActions[event.code] ?? []) this.pressed.add(action);
+      if (!event.repeat) for (const action of this.keyActions[event.code] ?? []) this.pressed.add(action);
       this.held.add(event.code);
     });
     window.addEventListener("keyup", (event) => this.held.delete(event.code));
@@ -66,6 +75,22 @@ export class Input {
       this.mouseDx += event.movementX;
       this.mouseDy += event.movementY;
     });
+  }
+
+  setBindings(bindings: Record<BindAction, string>): void {
+    this.bindings = { ...bindings };
+    const map: Record<string, Action[]> = {};
+    for (const [bind, actions] of Object.entries(boundActions) as Array<[BindAction, Action[]]>) {
+      const code = this.bindings[bind];
+      map[code] = [...(map[code] ?? []), ...actions];
+    }
+    for (const [code, actions] of Object.entries(fixedKeyActions)) map[code] = [...(map[code] ?? []), ...actions];
+    this.keyActions = map;
+  }
+
+  setLookFeel(sensitivity: number, invertY: boolean): void {
+    this.sensitivity = sensitivity;
+    this.invertY = invertY;
   }
 
   get pointerLocked(): boolean {
@@ -114,10 +139,11 @@ export class Input {
   move(): { x: number; y: number } {
     let x = 0;
     let y = 0;
-    if (this.held.has("KeyW") || this.held.has("ArrowUp")) y += 1;
-    if (this.held.has("KeyS") || this.held.has("ArrowDown")) y -= 1;
-    if (this.held.has("KeyD")) x += 1;
-    if (this.held.has("KeyA")) x -= 1;
+    const bound = this.bindings;
+    if (this.held.has(bound.moveForward) || this.held.has("ArrowUp")) y += 1;
+    if (this.held.has(bound.moveBack) || this.held.has("ArrowDown")) y -= 1;
+    if (this.held.has(bound.moveRight)) x += 1;
+    if (this.held.has(bound.moveLeft)) x -= 1;
     const pad = this.pad();
     if (pad) {
       const px = pad.axes[0] ?? 0;
@@ -131,16 +157,16 @@ export class Input {
     return length > 1 ? { x: x / length, y: y / length } : { x, y };
   }
 
-  /** Sprint is held: Shift, or the left stick click on a gamepad. */
+  /** Sprint is held: the bound key (Shift by default), or the left stick click on a gamepad. */
   sprintHeld(): boolean {
-    if (this.held.has("ShiftLeft") || this.held.has("ShiftRight")) return true;
+    if (this.held.has(this.bindings.sprint)) return true;
     return Boolean(this.pad()?.buttons[10]?.pressed);
   }
 
   /** Camera look delta in radians-ish units for this frame. */
   look(dt: number): { x: number; y: number } {
-    let x = this.mouseDx * 0.0032;
-    let y = this.mouseDy * 0.0028;
+    let x = this.mouseDx * 0.0032 * this.sensitivity;
+    let y = this.mouseDy * 0.0028 * this.sensitivity * (this.invertY ? -1 : 1);
     if (this.held.has("ArrowLeft")) x -= 2.2 * dt;
     if (this.held.has("ArrowRight")) x += 2.2 * dt;
     const pad = this.pad();

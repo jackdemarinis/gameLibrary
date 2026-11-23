@@ -51,6 +51,9 @@ export class Hud {
   private shownChars = 0;
   private menuOptions: MenuOption[] = [];
   private menuIndex = 0;
+  private readonly continueMark: HTMLDivElement;
+  /** Controls summary shown on the title screen (built from the player's bindings). */
+  helpHtml = "";
 
   constructor(parent: HTMLElement) {
     this.root = element("div", "lwHud", parent);
@@ -81,10 +84,15 @@ export class Hud {
     this.dialogue = element("div", "lwDialogue", this.root);
     this.speaker = element("div", "lwSpeaker", this.dialogue);
     this.line = element("div", "lwLine", this.dialogue);
-    element("div", "lwContinue", this.dialogue).textContent = "F ▸";
+    this.continueMark = element("div", "lwContinue", this.dialogue);
+    this.continueMark.textContent = "F ▸";
 
     this.menu = element("div", "lwMenu", this.root);
     this.setPlaying(false);
+  }
+
+  setContinueKey(key: string): void {
+    this.continueMark.textContent = `${key} ▸`;
   }
 
   setPlaying(playing: boolean): void {
@@ -203,10 +211,9 @@ export class Hud {
       });
       button.addEventListener("mouseenter", () => this.highlight(index));
     });
-    if (kind === "title" || kind === "pause") {
+    if (kind === "title") {
       const help = element("div", "lwMenuHelp", card);
-      help.innerHTML =
-        "<b>WASD</b> move · <b>Shift</b> sprint · <b>Space</b> jump · <b>Mouse</b> look (click to capture) · <b>Click/J</b> sword · <b>Q/Right-click</b> lantern flare · <b>F</b> talk/open/use · <b>Tab</b> lock on · <b>Esc</b> pause<br/>Gamepad supported.";
+      help.innerHTML = this.helpHtml;
       const home = element("a", "lwMenuHome", card);
       home.href = libraryHomeUrl();
       home.textContent = "← JackGames library";

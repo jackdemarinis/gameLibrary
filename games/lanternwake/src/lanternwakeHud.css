@@ -8,24 +8,26 @@
 
 .lwHud {
   --lwNotch: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
-  --lwUnit: 1.4cqw;
+  --lwUnit: 1.6cqw;
   position: absolute;
   inset: 0;
   z-index: 3;
   pointer-events: none;
   font-family: var(--lw-font);
-  font-weight: 500;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0.03em;
   font-size: var(--lwUnit);
   color: var(--lw-parchment);
   text-shadow: var(--lw-text-outline);
   user-select: none;
 }
 
-.lwHud > :not(.lwMenu) {
+.lwHud > :not(.lwMenu):not(.lwPause) {
   transition: opacity 0.3s;
 }
 
-.lwHud:not(.isPlaying) > :not(.lwMenu):not(.lwBanner) {
+.lwHud:not(.isPlaying) > :not(.lwMenu):not(.lwBanner):not(.lwPause) {
   opacity: 0;
 }
 
@@ -425,4 +427,401 @@
   to {
     transform: rotate(405deg);
   }
+}
+
+/* ---- pause menu (Esc): status, items, map, controls, audio ---- */
+.lwPause {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: var(--lw-night);
+  pointer-events: auto;
+}
+
+.lwPause.isShown {
+  display: grid;
+}
+
+.lwPauseCard {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 90%;
+  height: 88%;
+  padding: 1em 1.3em;
+  border: 3px solid var(--lw-wood-edge);
+  background: var(--lw-wood);
+  box-shadow: var(--lw-bevel), var(--lw-frame);
+  clip-path: var(--lwNotch);
+}
+
+.lwPauseHead {
+  display: flex;
+  align-items: end;
+  gap: 1.4em;
+  border-bottom: 3px solid var(--lw-wood-edge);
+}
+
+.lwPauseTitle {
+  padding-bottom: 0.15em;
+  color: var(--lw-ember);
+  font-family: var(--lw-font-title);
+  font-size: 2.6em;
+  line-height: 1;
+  text-shadow: var(--lw-text-outline), var(--lw-title-glow);
+}
+
+.lwTabs {
+  display: flex;
+  gap: 0.3em;
+}
+
+.lwTab {
+  padding: 0.25em 1em 0.15em;
+  border: 3px solid var(--lw-wood-edge);
+  border-bottom: 0;
+  background: var(--lw-tab);
+  color: var(--lw-parchment-dim);
+  font: inherit;
+  font-size: 1.35em;
+  text-shadow: var(--lw-text-outline);
+  cursor: pointer;
+}
+
+.lwTab.isActive {
+  background: var(--lw-wood-light);
+  color: var(--lw-ember);
+}
+
+.lwPauseBody {
+  min-height: 0;
+  padding: 0.9em 0;
+  overflow: auto;
+}
+
+.lwPauseFoot {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+}
+
+.lwPauseFoot .lwMenuButton {
+  min-width: 0;
+  font-size: 1.15em;
+}
+
+.lwPauseResume {
+  color: var(--lw-ember);
+}
+
+.lwPauseHint {
+  margin-left: auto;
+  color: var(--lw-parchment-2);
+}
+
+.lwStatusColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1em;
+  align-items: start;
+}
+
+.lwPanel {
+  display: grid;
+  gap: 0.45em;
+  padding: 0.6em 1em;
+  background: var(--lw-slot);
+  box-shadow: var(--lw-slot-inset);
+}
+
+.lwPanelTitle {
+  color: var(--lw-ember);
+  font-size: 1.35em;
+}
+
+.lwPanelTitleGap {
+  margin-top: 0.4em;
+}
+
+.lwStatLevel {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+}
+
+.lwStatLevelNumber {
+  color: var(--lw-xp);
+  font-family: var(--lw-font-title);
+  font-size: 2.4em;
+  line-height: 1;
+}
+
+.lwStatXp {
+  display: grid;
+  flex: 1;
+  gap: 0.2em;
+}
+
+.lwStatXpBar {
+  width: 100%;
+}
+
+.lwStatXpText {
+  color: var(--lw-parchment-2);
+}
+
+.lwStatTable,
+.lwBindTable {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15em 1em;
+  align-items: center;
+  font-size: 1.1em;
+  line-height: 1.25;
+}
+
+.lwStatLabel,
+.lwBindLabel {
+  color: var(--lw-parchment-2);
+}
+
+.lwStatValue {
+  text-align: right;
+}
+
+.lwItems {
+  display: grid;
+  gap: 0.45em;
+}
+
+.lwItem {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+
+.lwIcon {
+  width: 2.4em;
+  height: 2.4em;
+  flex: none;
+  padding: 0.25em;
+  background: var(--lw-slot-empty);
+  box-shadow: var(--lw-frame-light);
+  shape-rendering: crispEdges;
+}
+
+.lwIconFill {
+  fill: var(--lw-parchment);
+}
+
+.lwIconLight {
+  fill: var(--lw-ember);
+}
+
+.lwIcon-heart .lwIconFill {
+  fill: var(--lw-health);
+}
+
+.lwIcon-flame .lwIconFill,
+.lwIcon-key .lwIconFill {
+  fill: var(--lw-ember);
+}
+
+.lwIcon-flame .lwIconLight {
+  fill: var(--lw-parchment);
+}
+
+.lwItemName {
+  font-size: 1.2em;
+}
+
+.lwItemDetail {
+  color: var(--lw-parchment-2);
+}
+
+.lwObjectiveCard {
+  padding: 0.5em 0.7em;
+  background: var(--lw-parchment);
+  color: var(--lw-ink);
+  font-size: 1.15em;
+  text-shadow: none;
+}
+
+/* map */
+.lwMapWrap {
+  display: flex;
+  gap: 1.2em;
+  height: 100%;
+}
+
+.lwMapFrame {
+  height: 100%;
+  aspect-ratio: 1;
+  padding: 0.35em;
+  background: var(--lw-map-ink);
+  box-shadow: var(--lw-frame-light);
+}
+
+.lwMapCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.lwMapSide {
+  display: grid;
+  align-content: start;
+  gap: 0.6em;
+}
+
+.lwMapPercent {
+  color: var(--lw-ember);
+  font-size: 1.6em;
+}
+
+.lwMapNote {
+  color: var(--lw-parchment-2);
+}
+
+.lwLegend {
+  display: grid;
+  gap: 0.35em;
+}
+
+.lwLegendRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.lwLegendSwatch {
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--lw-map-ink);
+}
+
+.lwLegend-player {
+  background: var(--lw-map-player);
+  clip-path: polygon(50% 0, 100% 100%, 50% 75%, 0 100%);
+  border: 0;
+}
+
+.lwLegend-lantern {
+  background: var(--lw-map-lantern);
+}
+
+.lwLegend-npc {
+  background: var(--lw-map-npc);
+}
+
+.lwLegend-chest {
+  background: var(--lw-ember);
+  border-radius: 0;
+}
+
+.lwLegend-gate {
+  background: var(--lw-map-fog-deep);
+}
+
+.lwLegend-exit {
+  background: var(--lw-map-player);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  border: 0;
+}
+
+/* controls */
+.lwKeyCap {
+  min-width: 5.5em;
+  padding: 0 0.6em;
+  line-height: 1.2;
+  border: 2px solid var(--lw-key-cap-edge);
+  border-bottom-width: 4px;
+  background: var(--lw-key-cap);
+  color: var(--lw-ink);
+  font: inherit;
+  text-align: center;
+  text-shadow: none;
+  cursor: pointer;
+}
+
+.lwKeyCap.isFixed {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.lwKeyCap.isListening {
+  background: var(--lw-key-listen);
+  animation: lwPulse 0.9s steps(2) infinite;
+}
+
+.lwSmallButton {
+  justify-self: start;
+  padding: 0.2em 0.8em;
+  border: 2px solid var(--lw-wood-edge);
+  background: var(--lw-wood-light);
+  color: var(--lw-parchment);
+  font: inherit;
+  text-shadow: var(--lw-text-outline);
+  box-shadow: var(--lw-bevel);
+  cursor: pointer;
+}
+
+.lwSlider {
+  display: grid;
+  grid-template-columns: 9em 1fr 4em;
+  gap: 0.8em;
+  align-items: center;
+  font-size: 1.15em;
+}
+
+.lwSliderLabel {
+  color: var(--lw-parchment-2);
+}
+
+.lwSliderValue {
+  text-align: right;
+}
+
+.lwSliderInput {
+  --lwFill: 50%;
+  height: 0.8em;
+  appearance: none;
+  background: linear-gradient(90deg, var(--lw-ember) var(--lwFill), var(--lw-slot-empty) var(--lwFill));
+  box-shadow: var(--lw-slot-inset);
+  cursor: pointer;
+}
+
+.lwSliderInput::-webkit-slider-thumb {
+  width: 0.8em;
+  height: 1.5em;
+  appearance: none;
+  border: 2px solid var(--lw-wood-edge);
+  background: var(--lw-parchment);
+}
+
+.lwSliderInput::-moz-range-thumb {
+  width: 0.8em;
+  height: 1.5em;
+  border: 2px solid var(--lw-wood-edge);
+  border-radius: 0;
+  background: var(--lw-parchment);
+}
+
+.lwCheck {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 1.15em;
+  cursor: pointer;
+}
+
+.lwCheck input {
+  width: 1.1em;
+  height: 1.1em;
+  accent-color: var(--lw-ember);
+}
+
+.lwAudioPanel {
+  max-width: 60%;
 }

@@ -141,9 +141,21 @@
   --lw-boss-dark: #3a1e5c;
   --lw-xp: #7fe0ff;
   --lw-night: rgba(6, 8, 18, 0.82);
-  /* HUD type: a readable storybook sans for text, carved capitals for titles. */
-  --lw-font: 'Alegreya Sans', system-ui, sans-serif;
-  --lw-font-title: 'Cinzel', Georgia, serif;
+  /* HUD type: chunky blocky letters that match the low-poly pixel look.
+     Jersey 15 for reading, the tighter Jersey 10 for big titles. */
+  --lw-font: 'Jersey 15', 'Arial Narrow', sans-serif;
+  --lw-font-title: 'Jersey 10', 'Jersey 15', 'Arial Narrow', sans-serif;
+  /* Pause menu: map ink, parchment fog over unexplored ground, markers. */
+  --lw-map-ink: #2a1a0e;
+  --lw-map-fog: #d9bc8a;
+  --lw-map-fog-deep: #b08c5c;
+  --lw-map-player: #ffc457;
+  --lw-map-lantern: #ffb347;
+  --lw-map-npc: #7fe0ff;
+  --lw-tab: #523319;
+  --lw-key-cap: #fff4d6;
+  --lw-key-cap-edge: #c9a878;
+  --lw-key-listen: #ffc457;
   --lw-title-glow: 0 0 18px rgba(255, 196, 87, 0.55);
 
   /* Play-screen stage: the 16:9 game window, framed in carved wood with iron

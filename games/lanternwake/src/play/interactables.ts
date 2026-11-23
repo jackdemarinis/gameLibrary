@@ -317,6 +317,10 @@ export class Gate {
     return this.open;
   }
 
+  get centre(): { x: number; z: number } {
+    return { x: this.spec.x, z: this.spec.z };
+  }
+
   /** Distance from a point to the gate's span (0 when standing right against the bars). */
   distanceTo(point: THREE.Vector3): number {
     const dx = point.x - this.spec.x;

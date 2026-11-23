@@ -15,6 +15,15 @@ import { Foe, Warden, createFoe } from "./foes";
 import { Brazier, Chest, Door, DynamicProp, Gate, Npc, Pickup, Plate, Shards, WayLantern } from "./interactables";
 import { Physics } from "./physics";
 
+export interface MapMark {
+  kind: "tree" | "pine" | "rock" | "house" | "pond" | "well";
+  x: number;
+  z: number;
+  rot: number;
+  size: number;
+  variant?: string;
+}
+
 export class AreaRuntime {
   readonly def: AreaDef;
   readonly root = new THREE.Group();
@@ -33,6 +42,10 @@ export class AreaRuntime {
   readonly shards: Shards[] = [];
   readonly puzzles: PuzzleTracker;
   readonly motes: ParticleSystem;
+  /** Static landmarks for the pause-menu map (trees, houses, water...). */
+  readonly mapMarks: MapMark[] = [];
+  /** Walk-in cottage interiors (for the indoor music). */
+  private readonly interiors: Array<{ x: number; z: number; rot: number }> = [];
   private readonly lights: LightPool;
   private readonly occupied: Array<[number, number, number]> = [];
   private moteTimer = 0;
@@ -75,6 +88,17 @@ export class AreaRuntime {
   spawnFoe(kind: "shade", x: number, z: number): void {
     this.spawnCount += 1;
     this.addFoe(createFoe(kind, `spawn${this.spawnCount}`, this.physics, x, this.ground(x, z), z));
+  }
+
+  /** True while standing inside a walk-in cottage. */
+  isIndoors(point: THREE.Vector3): boolean {
+    return this.interiors.some(({ x, z, rot }) => {
+      const dx = point.x - x;
+      const dz = point.z - z;
+      const localX = dx * Math.cos(rot) - dz * Math.sin(rot);
+      const localZ = dx * Math.sin(rot) + dz * Math.cos(rot);
+      return Math.abs(localX) < 3.0 && Math.abs(localZ) < 2.3;
+    });
   }
 
   get warden(): Warden | null {
@@ -170,6 +194,13 @@ export class AreaRuntime {
         }
       }
     }
+    if (kind === "cottage") {
+      this.mapMarks.push({ kind: "house", x, z, rot, size: 1, variant: placement.variant });
+      if (placement.enterable) this.interiors.push({ x, z, rot });
+    } else if (kind === "pond") this.mapMarks.push({ kind: "pond", x, z, rot, size: placement.length ?? 5 });
+    else if (kind === "well") this.mapMarks.push({ kind: "well", x, z, rot, size: 1 });
+    else if (kind === "oak" || kind === "pine" || kind === "deadTree") this.mapMarks.push({ kind: kind === "pine" ? "pine" : "tree", x, z, rot, size: placement.scale ?? 1 });
+    else if (kind === "rock" || kind === "boulder") this.mapMarks.push({ kind: "rock", x, z, rot, size: (placement.scale ?? 1) * (kind === "boulder" ? 1.8 : 1) });
     const footprint = kind === "cottage" ? 6 : kind === "pond" ? (placement.length ?? 5) + 1 : kind === "gate" ? (placement.length ?? 6) / 2 + 1.5 : 1.6;
     this.occupied.push([x, z, footprint]);
   }
@@ -216,6 +247,9 @@ export class AreaRuntime {
       this.root.add(built.object);
       for (const collider of built.colliders) this.physics.addStatic(collider, item.x, item.y, item.z, item.rot);
       this.occupied.push([item.x, item.z, 0.8 * item.scale]);
+      if (def.kind === "oak" || def.kind === "deadTree") this.mapMarks.push({ kind: "tree", x: item.x, z: item.z, rot: item.rot, size: item.scale });
+      else if (def.kind === "pine") this.mapMarks.push({ kind: "pine", x: item.x, z: item.z, rot: item.rot, size: item.scale });
+      else if (def.kind === "rock") this.mapMarks.push({ kind: "rock", x: item.x, z: item.z, rot: item.rot, size: item.scale });
     });
   }
 

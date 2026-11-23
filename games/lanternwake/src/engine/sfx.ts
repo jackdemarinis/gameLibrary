@@ -1,4 +1,6 @@
 // Small synthesised sound effects and an ambient drone, so the game ships no audio files.
+// Effects/ambience and music run on separate buses with their own volumes.
+import { Music } from "./music";
 
 export type Sound =
   | "swing"
@@ -25,6 +27,11 @@ export type Sound =
 export class Sfx {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** Effects + ambience bus (what tone/noise/ambient connect to). */
+  private effects: GainNode | null = null;
+  private musicBus: GainNode | null = null;
+  private volumes = { sfx: 0.8, music: 0.55 };
+  readonly music = new Music();
   private noiseBuffer: AudioBuffer | null = null;
   private ambient: { gain: GainNode; nodes: AudioScheduledSourceNode[] } | null = null;
 
@@ -40,10 +47,29 @@ export class Sfx {
     this.master = this.context.createGain();
     this.master.gain.value = 0.45;
     this.master.connect(this.context.destination);
+    this.effects = this.context.createGain();
+    this.effects.connect(this.master);
+    this.musicBus = this.context.createGain();
+    this.musicBus.connect(this.master);
+    this.applyVolumes();
+    this.music.attach(this.context, this.musicBus);
     const length = this.context.sampleRate;
     this.noiseBuffer = this.context.createBuffer(1, length, this.context.sampleRate);
     const data = this.noiseBuffer.getChannelData(0);
     for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+  }
+
+  /** Volumes 0..1; perceptual (squared) curve so the slider's middle sounds like half. */
+  setVolumes(sfxVolume: number, musicVolume: number): void {
+    this.volumes = { sfx: sfxVolume, music: musicVolume };
+    this.applyVolumes();
+  }
+
+  private applyVolumes(): void {
+    if (!this.context || !this.effects || !this.musicBus) return;
+    const now = this.context.currentTime;
+    this.effects.gain.setTargetAtTime(this.volumes.sfx * this.volumes.sfx * 1.25, now, 0.05);
+    this.musicBus.gain.setTargetAtTime(this.volumes.music * this.volumes.music * 1.4, now, 0.05);
   }
 
   private tone(type: OscillatorType, from: number, to: number, duration: number, volume: number, delay = 0): void {
@@ -56,7 +82,7 @@ export class Sfx {
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, to), start + duration);
     gain.gain.setValueAtTime(volume, start);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    oscillator.connect(gain).connect(this.master);
+    oscillator.connect(gain).connect(this.effects!);
     oscillator.start(start);
     oscillator.stop(start + duration + 0.02);
   }
@@ -74,7 +100,7 @@ export class Sfx {
     const gain = this.context.createGain();
     gain.gain.setValueAtTime(volume, start);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    source.connect(filter).connect(gain).connect(this.master);
+    source.connect(filter).connect(gain).connect(this.effects!);
     source.start(start, Math.random() * 0.5);
     source.stop(start + duration + 0.02);
   }
@@ -166,7 +192,7 @@ export class Sfx {
 
   /** A low wind drone with a slow filter sweep; mood changes its pitch. */
   setAmbient(mood: "village" | "forest" | "shrine" | "none"): void {
-    if (!this.context || !this.master || !this.noiseBuffer) return;
+    if (!this.context || !this.effects || !this.noiseBuffer) return;
     const now = this.context.currentTime;
     if (this.ambient) {
       const old = this.ambient;
@@ -178,7 +204,7 @@ export class Sfx {
     const gain = this.context.createGain();
     gain.gain.value = 0;
     gain.gain.setTargetAtTime(1, now, 1.5);
-    gain.connect(this.master);
+    gain.connect(this.effects);
     const wind = this.context.createBufferSource();
     wind.buffer = this.noiseBuffer;
     wind.loop = true;

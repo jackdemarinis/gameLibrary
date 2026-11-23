@@ -4,6 +4,7 @@ import "./styles.css";
 import "./themeAdapter.css";
 import "./lanternwakeHud.css";
 import "./stage.css";
+import { sfx } from "./engine/sfx";
 import { Game } from "./play/game";
 import { registerOffline } from "./shared/offline";
 
@@ -25,6 +26,6 @@ if (!gameRoot || !stage) throw new Error("Application layers failed to mount.");
 const game = new Game(gameRoot, stage);
 void game.start();
 // Dev-only handle for automated play-testing scripts.
-if (import.meta.env.DEV) Object.assign(window, { lanternwake: game });
+if (import.meta.env.DEV) Object.assign(window, { lanternwake: game, lanternwakeSfx: sfx });
 
-registerOffline("../", ['500 16px "Alegreya Sans"', '700 16px "Alegreya Sans"', '700 16px "Cinzel"', '900 16px "Cinzel"']);
+registerOffline("../", ['16px "Jersey 15"', '16px "Jersey 10"']);
