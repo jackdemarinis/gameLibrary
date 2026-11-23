@@ -80,6 +80,12 @@ export interface TankState {
   /** Next grid waypoint when chasing around corners, and when to recompute it. */
   navWaypoint: Vector2 | null;
   navRefreshMs: number;
+  /** Corner-stuck detection: where the tank last made progress, and for how long it hasn't. */
+  progressAnchor: Vector2;
+  stuckMs: number;
+  /** While set, the tank backs off to this open cell centre to get unstuck. */
+  unstickTarget: Vector2 | null;
+  unstickRemainingMs: number;
   fireCooldownRemainingMs: number;
   projectileSpeed: number;
   projectileDamage: number;

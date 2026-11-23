@@ -509,7 +509,7 @@
 .hud-bar-screen .hudWeaponSlot {
   --slotColor: var(--dl-weapon-cannon);
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto auto auto;
   grid-template-rows: auto auto;
   column-gap: 8px;
   row-gap: 4px;
@@ -842,4 +842,38 @@
   .hud-bar-screen .settingsKeyWaiting {
     animation: none;
   }
+}
+
+/* ---------- pixel icons (src/ui/dustlineIcons.ts, 32x32 art) ---------- */
+.dlIcon {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.shop-screen .shop-upgrade-head:has(.shopIconBadge) {
+  grid-template-columns: var(--dl-icon-badge) minmax(0, 1fr) auto;
+}
+
+.shop-screen .shopIconBadge {
+  width: var(--dl-icon-badge);
+  height: var(--dl-icon-badge);
+  padding: 0;
+  background: var(--dl-plate-dark);
+  box-shadow: var(--dl-plate-bevel);
+}
+
+.shop-screen .shopIconBadge .dlIcon {
+  width: var(--dl-icon-shop);
+  height: var(--dl-icon-shop);
+}
+
+.shop-screen .shopWeaponCard .shopIconBadge {
+  box-shadow: var(--dl-plate-bevel), inset 0 -3px 0 var(--weaponColor);
+}
+
+.hud-bar-screen .hudWeaponIcon {
+  grid-row: span 2;
+  width: var(--dl-icon-hud);
+  height: var(--dl-icon-hud);
+  filter: drop-shadow(0 2px 0 var(--dl-ink));
 }

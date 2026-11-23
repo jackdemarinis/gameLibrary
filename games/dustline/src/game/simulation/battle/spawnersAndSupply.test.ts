@@ -305,3 +305,82 @@ describe("tank collisions", () => {
     expect(final.player.x).toBeLessThan(final.enemies[0].x);
   });
 });
+
+describe("enemy pathing", () => {
+  // A wall with a two-cell door, and a block whose corner sits on the direct line.
+  const course = (start: { x: number; y: number }, goal: { x: number; y: number }): BattleLevelData => ({
+    id: "test-corners",
+    name: "Corners",
+    briefing: "",
+    playerSpawn: { x: 1500, y: 1500 },
+    enemySpawns: [{ id: "router", x: start.x, y: start.y, archetype: "raider", patrol: [goal, start] }],
+    indestructibleWalls: [
+      { x: 0, y: 0, width: 1600, height: 64 },
+      { x: 0, y: 1536, width: 1600, height: 64 },
+      { x: 0, y: 0, width: 64, height: 1600 },
+      { x: 1536, y: 0, width: 64, height: 1600 },
+      // Dividing wall at x 640-704 with a door at y 448-576.
+      { x: 640, y: 64, width: 64, height: 384 },
+      { x: 640, y: 576, width: 64, height: 640 },
+      // A block just past the door whose corner cuts the straight line.
+      { x: 832, y: 256, width: 192, height: 192 },
+    ],
+    weakWalls: [],
+    crates: [],
+    pickups: [],
+  });
+
+  const runs = [
+    { start: { x: 160, y: 160 }, goal: { x: 1200, y: 352 } },
+    { start: { x: 160, y: 1100 }, goal: { x: 1100, y: 160 } },
+    { start: { x: 480, y: 800 }, goal: { x: 1300, y: 500 } },
+    { start: { x: 1300, y: 160 }, goal: { x: 160, y: 900 } },
+  ];
+
+  runs.forEach(({ start, goal }, index) => {
+    it(`drives around corners and through a doorway without sticking (${index + 1})`, () => {
+      const simulation = new BattleSimulation(course(start, goal), createInitialSave());
+      let closest = Infinity;
+      for (let elapsed = 0; elapsed < 14000; elapsed += 16) {
+        simulation.advance(16, idle);
+        const enemy = simulation.getSnapshot().enemies[0];
+        closest = Math.min(closest, Math.hypot(enemy.x - goal.x, enemy.y - goal.y));
+        if (closest < 60) break;
+      }
+      expect(closest).toBeLessThan(60);
+    });
+  });
+});
+
+describe("enemies don't wedge on walls", () => {
+  it("spend almost no time pinned against a wall while trying to move (Relay Station, 25s)", async () => {
+    const { circleIntersectsRect } = await import("./geometry");
+    const level = battleLevelOrder.find((entry) => entry.id === "relay-station")!;
+    const simulation = new BattleSimulation(level, createInitialSave({ difficulty: "normal" }));
+    type Tank = { id: string; alive: boolean; aiState: string | null; radius: number; position: { x: number; y: number }; health: number };
+    const state = (simulation as unknown as {
+      state: { player: Tank; enemies: Tank[]; obstacles: { x: number; y: number; width: number; height: number }[] };
+    }).state;
+    const last = new Map<string, { x: number; y: number }>();
+    let wedgedMs = 0;
+
+    for (let elapsed = 0; elapsed < 25000; elapsed += 16) {
+      // An invulnerable player driving a slow square keeps the enemies chasing and strafing.
+      state.player.health = 1e9;
+      const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][Math.floor(elapsed / 2500) % 4];
+      simulation.advance(16, { movementX: dx, movementY: dy, aim: { x: 0, y: 0 }, firing: false });
+      for (const enemy of state.enemies) {
+        if (!enemy.alive || enemy.aiState === "idle" || enemy.aiState === null) continue;
+        const before = last.get(enemy.id);
+        last.set(enemy.id, { ...enemy.position });
+        if (!before) continue;
+        const still = Math.hypot(enemy.position.x - before.x, enemy.position.y - before.y) < 0.3;
+        const touching = state.obstacles.some((rect) => circleIntersectsRect(enemy.position, enemy.radius + 2, rect));
+        if (still && touching) wedgedMs += 16;
+      }
+    }
+
+    // Was over 10 seconds before the fix.
+    expect(wedgedMs).toBeLessThan(1500);
+  });
+});

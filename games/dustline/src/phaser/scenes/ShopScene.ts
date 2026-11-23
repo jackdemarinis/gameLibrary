@@ -85,6 +85,7 @@ export class ShopScene extends Phaser.Scene {
 
         return {
           iconLabel: definition.iconLabel,
+          iconKey: key,
           category: definition.category,
           title: definition.title,
           summary: definition.body,
@@ -159,6 +160,7 @@ export class ShopScene extends Phaser.Scene {
       iconLabel: definition.iconLabel,
       category: owned ? "Owned" : "Locked",
       weaponKind: kind,
+      iconKey: kind,
       title: definition.name,
       summary: definition.summary,
       nextBonus,

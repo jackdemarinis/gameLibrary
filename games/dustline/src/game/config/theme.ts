@@ -181,3 +181,35 @@ export const menuArtTheme = {
   smoke: [0xf0ecc4, 0xcfc993, 0xa29d66],
   smokeEdge: 0x55532f,
 } as const;
+
+/**
+ * Palette for the 32x32 pixel icons on shop cards and the HUD inventory
+ * (painted by src/ui/dustlineIcons.ts). Ramps run light to dark.
+ */
+export const iconTheme = {
+  outline: pixelTheme.outline,
+  steel: [pixelTheme.steelRivet, pixelTheme.steelLight, pixelTheme.steelFace, pixelTheme.steelShade],
+  darkSteel: [pixelTheme.steelFace, pixelTheme.steelShade, pixelTheme.stoneShade, pixelTheme.steelGap],
+  rivet: pixelTheme.steelRivet,
+  stone: [pixelTheme.stoneLight, pixelTheme.stoneFace, pixelTheme.stoneShade],
+  stoneGap: pixelTheme.stoneGap,
+  repair: [0x9be08a, pixelTheme.repairCross, 0x2b7a33],
+  repairEdge: pixelTheme.repairEdge,
+  brass: menuArtTheme.brass,
+  brassDark: 0x5a3608,
+  olive: menuArtTheme.tank,
+  tread: [pixelTheme.treadLight, pixelTheme.treadMid, pixelTheme.treadDark],
+  wheel: [menuArtTheme.wheelLight, menuArtTheme.wheelFace, pixelTheme.steelShade],
+  hub: pixelTheme.steelGap,
+  speedLine: pixelTheme.flower,
+  lens: [pixelTheme.laserCore, pixelTheme.laserGlow, 0x3a9cc8, pixelTheme.freezeEdge],
+  glint: pixelTheme.white,
+  dialFace: [pixelTheme.white, 0xe8e0b0, 0xc9c08a],
+  dialHand: pixelTheme.spawnerCore,
+  flash: [pixelTheme.flashCore, pixelTheme.flashHot, pixelTheme.flashMid],
+  flashEdge: pixelTheme.flashEdge,
+  ricochet: [pixelTheme.ricochetCore, pixelTheme.ricochetGlow, 0x9a5fd0, 0x5a2a8a],
+  ricochetEdge: 0x3a1a5c,
+  laser: [pixelTheme.laserCore, pixelTheme.laserGlow, 0x3a9cc8],
+  laserEdge: pixelTheme.freezeEdge,
+} as const;

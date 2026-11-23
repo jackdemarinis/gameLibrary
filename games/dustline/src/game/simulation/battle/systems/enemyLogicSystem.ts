@@ -1,5 +1,6 @@
 import { battleConfig } from "../../../config/battleConfig";
 import {
+  circleIntersectsRect,
   distanceBetween,
   moveCircleWithCollisionsDetailed,
   normalizeVector,
@@ -13,10 +14,34 @@ import type {
   TankState,
   Vector2,
 } from "../types";
-import { findNextWaypoint } from "../navigation";
+import { cellCentre, findPath, openNeighbourCentres } from "../navigation";
 import { spawnProjectile } from "./projectileSystem";
 
 const navRefreshIntervalMs = 280;
+/** Corner-stuck detection: less than stuckDistancePx of progress in stuckAfterMs means stuck. */
+const stuck = {
+  distancePx: 10,
+  afterMs: 650,
+  /** How long to back off to an open cell before trying again. */
+  unstickMs: 700,
+  /** Targets closer than this are "holding position", not stuck. */
+  minTargetDistancePx: 36,
+};
+/**
+ * "Local" moves (strafe, back off, sidestep) are points a fixed distance away in
+ * some direction. They can land inside a wall, which used to wedge tanks on it.
+ * They're tagged here and clipped to how far the hull can really go.
+ */
+const localTargets = new WeakSet<Vector2>();
+const local = (target: Vector2): Vector2 => {
+  localTargets.add(target);
+  return target;
+};
+/** A local move shorter than this is treated as blocked; try another direction. */
+const minLocalMovePx = 48;
+
+/** Look this many cells ahead on the path for one the whole hull can reach in a straight line. */
+const pathLookahead = 6;
 /** Slow, heavy tanks back off instead of circling. */
 const holdsGround = (enemy: TankState): boolean =>
   enemy.archetype === "bulwark" || enemy.archetype === "lancer" || enemy.archetype === "warden";
@@ -46,13 +71,21 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
     updateEnemyState(enemy, perception);
     updateEnemyAim(enemy, player, perception, state.elapsedMs);
 
-    const moveTarget = chooseMovementTarget(enemy, player, perception, state.elapsedMs);
+    const chosenTarget = chooseMovementTarget(enemy, player, perception, state.elapsedMs);
+    const moveTarget =
+      chosenTarget && localTargets.has(chosenTarget) ? clipLocalTarget(state, enemy, chosenTarget) : chosenTarget;
 
     if (moveTarget) {
-      const steerTarget = routeAroundWalls(state, enemy, moveTarget, deltaMs);
+      trackProgress(state, enemy, moveTarget, deltaMs);
+      const steerTarget =
+        enemy.unstickTarget && enemy.unstickRemainingMs > 0
+          ? enemy.unstickTarget
+          : routeAroundWalls(state, enemy, moveTarget, deltaMs);
       moveEnemyTowards(enemy, steerTarget, deltaMs / 1000, state.obstacles);
     } else {
       enemy.navWaypoint = null;
+      enemy.stuckMs = 0;
+      enemy.progressAnchor = { ...enemy.position };
     }
 
     if (
@@ -68,11 +101,14 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
 }
 
 /**
- * Direct line to the target: drive straight at it. Otherwise follow the grid
- * path one cell at a time, so enemies can find their way through doorways.
+ * If the whole hull fits along a straight line to the target, drive at it.
+ * Otherwise follow the grid path, skipping ahead to the furthest cell on it the
+ * hull can reach in a straight line, so tanks cut clean lines through doorways
+ * instead of clipping corners. If no cell ahead is reachable, re-centre in the
+ * current cell first.
  */
 function routeAroundWalls(state: BattleState, enemy: TankState, target: Vector2, deltaMs: number): Vector2 {
-  if (hasLineOfSight(enemy.position, target, state.obstacles)) {
+  if (hullFits(enemy.position, target, enemy.radius, state.obstacles)) {
     enemy.navWaypoint = null;
     return target;
   }
@@ -81,10 +117,163 @@ function routeAroundWalls(state: BattleState, enemy: TankState, target: Vector2,
   const reachedWaypoint =
     enemy.navWaypoint !== null && distanceBetween(enemy.position, enemy.navWaypoint) <= 10;
   if (enemy.navWaypoint === null || reachedWaypoint || enemy.navRefreshMs <= 0) {
-    enemy.navWaypoint = findNextWaypoint(state.navGrid, enemy.position, target);
+    const path = findPath(state.navGrid, enemy.position, target);
+    enemy.navWaypoint = null;
+    for (let index = Math.min(pathLookahead, path.length) - 1; index >= 0; index -= 1) {
+      if (hullFits(enemy.position, path[index], enemy.radius, state.obstacles)) {
+        enemy.navWaypoint = path[index];
+        break;
+      }
+    }
+    if (!enemy.navWaypoint && path.length > 0) {
+      enemy.navWaypoint = cellCentre(state.navGrid, enemy.position);
+    }
     enemy.navRefreshMs = navRefreshIntervalMs;
   }
   return enemy.navWaypoint ?? target;
+}
+
+/**
+ * Shortens a local move to the furthest point the hull can reach in a straight
+ * line. If that's barely anywhere (a wall right there), tries the two sideways
+ * directions and straight back, and takes whichever goes furthest.
+ */
+function clipLocalTarget(state: BattleState, enemy: TankState, target: Vector2): Vector2 {
+  const offset = { x: target.x - enemy.position.x, y: target.y - enemy.position.y };
+  const length = Math.hypot(offset.x, offset.y);
+  if (length < 1) {
+    return target;
+  }
+
+  const reach = (direction: Vector2): Vector2 => {
+    const best = clearDistance(enemy.position, direction, Math.min(length, 640), enemy.radius, state.obstacles);
+    return { x: enemy.position.x + direction.x * best, y: enemy.position.y + direction.y * best };
+  };
+
+  const forward = { x: offset.x / length, y: offset.y / length };
+  const first = reach(forward);
+  if (distanceBetween(enemy.position, first) >= minLocalMovePx) {
+    return first;
+  }
+
+  const alternatives = [
+    { x: -forward.y, y: forward.x },
+    { x: forward.y, y: -forward.x },
+    { x: -forward.x, y: -forward.y },
+  ].map(reach);
+  return alternatives.reduce(
+    (best, point) =>
+      distanceBetween(enemy.position, point) > distanceBetween(enemy.position, best) ? point : best,
+    first,
+  );
+}
+
+/** True when a circle of this radius can slide from start to end without touching anything. */
+function hullFits(
+  start: Vector2,
+  end: Vector2,
+  radius: number,
+  obstacles: readonly { x: number; y: number; width: number; height: number }[],
+): boolean {
+  const length = distanceBetween(start, end);
+  if (length < 1) {
+    return true;
+  }
+  const direction = { x: (end.x - start.x) / length, y: (end.y - start.y) / length };
+  return clearDistance(start, direction, length, radius, obstacles) >= length;
+}
+
+/**
+ * How far a circle can travel from start along direction (up to maxDistance)
+ * before it would hit an obstacle. Marches the hull in small steps, with the
+ * radius trimmed a little so a tank already touching a wall can still slide
+ * along it or drive away from it.
+ */
+function clearDistance(
+  start: Vector2,
+  direction: Vector2,
+  maxDistance: number,
+  radius: number,
+  obstacles: readonly { x: number; y: number; width: number; height: number }[],
+): number {
+  const stepPx = 8;
+  const hullRadius = Math.max(4, radius - 3);
+  const end = { x: start.x + direction.x * maxDistance, y: start.y + direction.y * maxDistance };
+  // Only obstacles near the segment matter.
+  const nearby = obstacles.filter(
+    (rect) =>
+      rect.x - hullRadius <= Math.max(start.x, end.x) &&
+      rect.x + rect.width + hullRadius >= Math.min(start.x, end.x) &&
+      rect.y - hullRadius <= Math.max(start.y, end.y) &&
+      rect.y + rect.height + hullRadius >= Math.min(start.y, end.y),
+  );
+  if (nearby.length === 0) {
+    return maxDistance;
+  }
+
+  let clear = 0;
+  for (let distance = stepPx; ; distance += stepPx) {
+    const along = Math.min(distance, maxDistance);
+    const point = { x: start.x + direction.x * along, y: start.y + direction.y * along };
+    if (nearby.some((rect) => circleIntersectsRect(point, hullRadius, rect))) {
+      return clear;
+    }
+    clear = along;
+    if (along >= maxDistance) {
+      return clear;
+    }
+  }
+}
+
+/**
+ * Watches for a tank wedged on a corner (or another tank): if it hasn't made
+ * real progress for a while, it backs off to the nearest open cell, then
+ * re-plans its route.
+ */
+function trackProgress(state: BattleState, enemy: TankState, target: Vector2, deltaMs: number): void {
+  if (enemy.unstickRemainingMs > 0) {
+    enemy.unstickRemainingMs -= deltaMs;
+    if (
+      enemy.unstickRemainingMs <= 0 ||
+      (enemy.unstickTarget && distanceBetween(enemy.position, enemy.unstickTarget) <= 8)
+    ) {
+      enemy.unstickTarget = null;
+      enemy.unstickRemainingMs = 0;
+      enemy.navWaypoint = null;
+      enemy.navRefreshMs = 0;
+      enemy.progressAnchor = { ...enemy.position };
+      enemy.stuckMs = 0;
+    }
+    return;
+  }
+
+  if (distanceBetween(enemy.position, enemy.progressAnchor) > stuck.distancePx) {
+    enemy.progressAnchor = { ...enemy.position };
+    enemy.stuckMs = 0;
+    return;
+  }
+
+  if (distanceBetween(enemy.position, target) < stuck.minTargetDistancePx) {
+    enemy.stuckMs = 0;
+    return;
+  }
+
+  enemy.stuckMs += deltaMs;
+  if (enemy.stuckMs < stuck.afterMs) {
+    return;
+  }
+
+  // Back off: the current cell's centre if we're off it, else the nearest open neighbour.
+  const centre = cellCentre(state.navGrid, enemy.position);
+  const options =
+    distanceBetween(enemy.position, centre) > 12
+      ? [centre, ...openNeighbourCentres(state.navGrid, enemy.position)]
+      : openNeighbourCentres(state.navGrid, enemy.position);
+  // Prefer an escape that isn't straight back into whatever is blocking us: alternate by attempt.
+  enemy.unstickTarget = options[Math.floor(state.elapsedMs / 1000) % Math.max(1, options.length)] ?? centre;
+  enemy.unstickRemainingMs = stuck.unstickMs;
+  enemy.stuckMs = 0;
+  enemy.navWaypoint = null;
 }
 
 interface EnemyPerception {
@@ -223,10 +412,10 @@ function chooseEngageTarget(
   }
 
   if (perception.distance < enemy.preferredRange * 0.7) {
-    return {
+    return local({
       x: enemy.position.x - toPlayer.x * enemy.repositionDistance,
       y: enemy.position.y - toPlayer.y * enemy.repositionDistance,
-    };
+    });
   }
 
   if (enemy.archetype === "skirmisher" && perception.hasLineOfSight) {
@@ -267,10 +456,10 @@ function buildStrafeTarget(enemy: TankState, toPlayer: Vector2, distance: number
     y: swung.y + toPlayer.y * rangeCorrection,
   });
 
-  return {
+  return local({
     x: enemy.position.x + heading.x * lookAheadDistance,
     y: enemy.position.y + heading.y * lookAheadDistance,
-  };
+  });
 }
 
 /** Moves the tank onto a new random-length leg once the current one runs out. */
@@ -478,7 +667,7 @@ function buildRepositionTarget(enemy: TankState): Vector2 | null {
     return null;
   }
 
-  return holdsGround(enemy)
+  return local(holdsGround(enemy)
     ? {
         x: enemy.position.x - normalizeVector({
           x: target.x - enemy.position.x,
@@ -489,7 +678,7 @@ function buildRepositionTarget(enemy: TankState): Vector2 | null {
           y: target.y - enemy.position.y,
         }).y * enemy.repositionDistance,
       }
-    : buildLateralTarget(enemy, target, 1);
+    : buildLateralTarget(enemy, target, 1));
 }
 
 function buildLateralTarget(enemy: TankState, target: Vector2, multiplier: number): Vector2 {
@@ -503,10 +692,10 @@ function buildLateralTarget(enemy: TankState, target: Vector2, multiplier: numbe
     y: toPlayer.x * side,
   };
 
-  return {
+  return local({
     x: target.x + lateral.x * enemy.repositionDistance * multiplier - toPlayer.x * enemy.preferredRange * 0.22,
     y: target.y + lateral.y * enemy.repositionDistance * multiplier - toPlayer.y * enemy.preferredRange * 0.22,
-  };
+  });
 }
 
 function computeEnemyAimOffset(enemy: TankState, elapsedMs: number): number {

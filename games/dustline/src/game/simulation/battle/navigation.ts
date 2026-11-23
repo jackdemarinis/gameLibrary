@@ -32,11 +32,46 @@ export function rebuildNavGrid(grid: NavGrid, obstacles: readonly Rect[]): void 
   });
 }
 
+/** Centre of the grid cell a point is in. */
+export function cellCentre(grid: NavGrid, point: Vector2): Vector2 {
+  const column = Math.min(grid.columns - 1, Math.max(0, Math.floor(point.x / grid.tileSize)));
+  const row = Math.min(grid.rows - 1, Math.max(0, Math.floor(point.y / grid.tileSize)));
+  return { x: column * grid.tileSize + grid.tileSize / 2, y: row * grid.tileSize + grid.tileSize / 2 };
+}
+
+/**
+ * Open neighbouring cell centres around a point (4-way), nearest-first, for
+ * backing out of a wedge.
+ */
+export function openNeighbourCentres(grid: NavGrid, point: Vector2): Vector2[] {
+  const column = Math.floor(point.x / grid.tileSize);
+  const row = Math.floor(point.y / grid.tileSize);
+  const result: Vector2[] = [];
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const c = column + dx;
+    const r = row + dy;
+    if (c < 0 || r < 0 || c >= grid.columns || r >= grid.rows || grid.blocked[r * grid.columns + c]) continue;
+    result.push({ x: c * grid.tileSize + grid.tileSize / 2, y: r * grid.tileSize + grid.tileSize / 2 });
+  }
+  return result.sort(
+    (a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y),
+  );
+}
+
 /**
  * Breadth-first search from start to goal on the grid. Returns the centre of the
  * next cell to drive to, or null when already in the goal cell or unreachable.
  */
 export function findNextWaypoint(grid: NavGrid, start: Vector2, goal: Vector2): Vector2 | null {
+  return findPath(grid, start, goal)[0] ?? null;
+}
+
+/**
+ * Breadth-first search from start to goal. Returns the cell centres to drive
+ * through, in order, excluding the start cell. Empty when already in the goal
+ * cell or the goal is unreachable.
+ */
+export function findPath(grid: NavGrid, start: Vector2, goal: Vector2): Vector2[] {
   const toIndex = (point: Vector2): number => {
     const column = Math.min(grid.columns - 1, Math.max(0, Math.floor(point.x / grid.tileSize)));
     const row = Math.min(grid.rows - 1, Math.max(0, Math.floor(point.y / grid.tileSize)));
@@ -45,7 +80,7 @@ export function findNextWaypoint(grid: NavGrid, start: Vector2, goal: Vector2): 
   const startIndex = toIndex(start);
   const goalIndex = toIndex(goal);
   if (startIndex === goalIndex) {
-    return null;
+    return [];
   }
 
   const cameFrom = new Int32Array(grid.columns * grid.rows).fill(-1);
@@ -71,15 +106,15 @@ export function findNextWaypoint(grid: NavGrid, start: Vector2, goal: Vector2): 
   }
 
   if (cameFrom[goalIndex] === -1) {
-    return null;
+    return [];
   }
 
-  let step = goalIndex;
-  while (cameFrom[step] !== startIndex) {
-    step = cameFrom[step];
+  const path: Vector2[] = [];
+  for (let step = goalIndex; step !== startIndex; step = cameFrom[step]) {
+    path.push({
+      x: (step % grid.columns) * grid.tileSize + grid.tileSize / 2,
+      y: Math.floor(step / grid.columns) * grid.tileSize + grid.tileSize / 2,
+    });
   }
-  return {
-    x: (step % grid.columns) * grid.tileSize + grid.tileSize / 2,
-    y: Math.floor(step / grid.columns) * grid.tileSize + grid.tileSize / 2,
-  };
+  return path.reverse();
 }

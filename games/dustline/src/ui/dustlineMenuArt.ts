@@ -13,7 +13,7 @@ type Inside = (x: number, y: number) => boolean;
 type Shade = (x: number, y: number) => number;
 type Map2d = (x: number, y: number) => [number, number];
 
-class PixelCanvas {
+export class PixelCanvas {
   private readonly pixels: Array<number | null>;
 
   constructor(
@@ -86,7 +86,7 @@ class PixelCanvas {
 
 // ---- shapes -------------------------------------------------------------
 
-function polygon(points: Array<[number, number]>): Inside {
+export function polygon(points: Array<[number, number]>): Inside {
   return (x, y) => {
     let isInside = false;
     for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
@@ -100,11 +100,11 @@ function polygon(points: Array<[number, number]>): Inside {
   };
 }
 
-function circle(cx: number, cy: number, radius: number): Inside {
+export function circle(cx: number, cy: number, radius: number): Inside {
   return (x, y) => (x - cx) ** 2 + (y - cy) ** 2 <= radius ** 2;
 }
 
-function segment(ax: number, ay: number, bx: number, by: number, radius: number): Inside {
+export function segment(ax: number, ay: number, bx: number, by: number, radius: number): Inside {
   const dx = bx - ax;
   const dy = by - ay;
   const lengthSquared = dx * dx + dy * dy;
@@ -114,19 +114,19 @@ function segment(ax: number, ay: number, bx: number, by: number, radius: number)
   };
 }
 
-function stadium(x0: number, y0: number, x1: number, y1: number): Inside {
+export function stadium(x0: number, y0: number, x1: number, y1: number): Inside {
   const radius = (y1 - y0) / 2;
   const midY = y0 + radius;
   return (x, y) =>
     y >= y0 && y <= y1 && ((x >= x0 + radius && x <= x1 - radius) || circle(x0 + radius, midY, radius)(x, y) || circle(x1 - radius, midY, radius)(x, y));
 }
 
-function union(...shapes: Inside[]): Inside {
+export function union(...shapes: Inside[]): Inside {
   return (x, y) => shapes.some((shape) => shape(x, y));
 }
 
 /** Maps output pixels back into an unrotated drawing so sprites can be painted at any angle. */
-function rotateAbout(cx: number, cy: number, angle: number): Map2d {
+export function rotateAbout(cx: number, cy: number, angle: number): Map2d {
   const cos = Math.cos(-angle);
   const sin = Math.sin(-angle);
   return (x, y) => [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos];
@@ -142,7 +142,7 @@ const bayer4 = [
 ].map((row) => row.map((value) => (value + 0.5) / 16));
 
 /** Picks a ramp colour for t in 0..1, checker-dithering only near each step. */
-function rampAt(ramp: readonly number[], t: number, x: number, y: number): number {
+export function rampAt(ramp: readonly number[], t: number, x: number, y: number): number {
   const value = Math.max(0, Math.min(1, t)) * (ramp.length - 1);
   const base = Math.floor(value);
   const fraction = value - base;
@@ -155,7 +155,7 @@ function rampAt(ramp: readonly number[], t: number, x: number, y: number): numbe
   return ramp[Math.min(ramp.length - 1, index)];
 }
 
-function verticalRamp(ramp: readonly number[], top: number, bottom: number): Shade {
+export function verticalRamp(ramp: readonly number[], top: number, bottom: number): Shade {
   return (x, y) => rampAt(ramp, (y - top) / (bottom - top), x, y);
 }
 

@@ -1,3 +1,4 @@
+import { getDustlineIcon } from "./dustlineIcons";
 import { getDustlineMenuArt } from "./dustlineMenuArt";
 
 export interface UiAction {
@@ -25,6 +26,8 @@ export interface StartViewModel {
 
 export interface ShopOfferViewModel {
   iconLabel: string;
+  /** Which pixel icon to show (an upgrade key or cannon id); falls back to iconLabel text. */
+  iconKey?: string;
   category: string;
   /** Cannon id, for the armory cards' colour stripe. */
   weaponKind?: string;
@@ -211,6 +214,12 @@ export class AppChrome {
         </button>
       `;
     };
+    const renderBadge = (offer: ShopOfferViewModel): string => {
+      const icon = offer.iconKey ? getDustlineIcon(offer.iconKey) : "";
+      return icon
+        ? `<div class="shop-upgrade-badge shopIconBadge" title="${offer.title}"><img class="dlIcon" src="${icon}" alt="${offer.iconLabel}" /></div>`
+        : `<div class="shop-upgrade-badge">${offer.iconLabel}</div>`;
+    };
     const renderOffer = (offer: ShopOfferViewModel, index: number | string): string => {
       const priceLabel = offer.priceValue === null ? "MAX" : `$${offer.priceValue}`;
 
@@ -219,7 +228,7 @@ export class AppChrome {
           offer.weaponKind ? ` shopWeaponCard shopWeaponCard-${offer.weaponKind}` : ""
         }">
           <div class="shop-upgrade-head">
-            <div class="shop-upgrade-badge">${offer.iconLabel}</div>
+            ${renderBadge(offer)}
             <div class="shop-upgrade-heading">
               <span class="shop-upgrade-tag">${offer.category}</span>
               <h2 class="shop-upgrade-title">${offer.title}</h2>
@@ -485,6 +494,10 @@ export class AppChrome {
                       aria-pressed="${weapon.active}"
                     >
                       <span class="hudWeaponKey">${weapon.slot}</span>
+                      ${(() => {
+                        const icon = getDustlineIcon(weapon.kind);
+                        return icon ? `<img class="dlIcon hudWeaponIcon" src="${icon}" alt="" />` : "";
+                      })()}
                       <span class="hudWeaponName">${weapon.label}</span>
                       <span class="hudWeaponPips" aria-label="Damage level ${weapon.level}">
                         ${Array.from({ length: 4 }, (_, pip) => `<span class="hudWeaponPip${pip < weapon.level ? " hudWeaponPipOn" : ""}"></span>`).join("")}

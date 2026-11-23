@@ -133,6 +133,10 @@
   --dl-plate: #1f2a18;
   --dl-plate-light: #3a4b2c;
   --dl-plate-dark: #0e140b;
+  /* Pixel icons: 32px art shown at 2x in the garage, 1x on the battle HUD. */
+  --dl-icon-shop: 64px;
+  --dl-icon-badge: 70px;
+  --dl-icon-hud: 32px;
   --dl-olive: #4a5b30;
   --dl-olive-light: #71874a;
   --dl-olive-dark: #2c3a1c;
