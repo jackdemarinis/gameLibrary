@@ -61,7 +61,6 @@ export class BattleScene extends Phaser.Scene {
   private breakableObstacleLayer!: BreakableObstacleLayer;
   private fogLayer!: FogOfWarLayer;
   private lastHudSignature = "";
-  private lastSavedCredits = -1;
   private lastSavedTotalScore = -1;
   private currentSnapshot!: BattleSnapshot;
   private currentHud!: BattleHudSnapshot;
@@ -95,12 +94,8 @@ export class BattleScene extends Phaser.Scene {
     this.syncSnapshot(snapshot);
     createCameraRig(this.cameras.main, this.playerSprite.container, snapshot.worldWidth, snapshot.worldHeight);
 
-    this.lastSavedCredits = snapshot.credits;
     this.lastSavedTotalScore = snapshot.totalScore;
-    this.bridge.persistRunProgress({
-      credits: snapshot.credits,
-      totalScore: snapshot.totalScore,
-    });
+    this.bridge.persistRunProgress({ totalScore: snapshot.totalScore });
     this.renderHud(hud);
 
     this.input.mouse?.disableContextMenu();
@@ -122,7 +117,7 @@ export class BattleScene extends Phaser.Scene {
     window.addEventListener("blur", this.handleBlur);
 
     // Inventory: number keys pick a slot, the mouse wheel steps through them.
-    ["ONE", "TWO", "THREE", "FOUR", "FIVE"].forEach((keyName, index) => {
+    ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"].forEach((keyName, index) => {
       keyboard?.on(`keydown-${keyName}`, () => this.simulation.selectWeapon(index));
     });
     this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, deltaY: number) => {
@@ -168,15 +163,9 @@ export class BattleScene extends Phaser.Scene {
 
     this.syncSnapshot(result.snapshot);
 
-    if (
-      result.snapshot.credits !== this.lastSavedCredits ||
-      result.snapshot.totalScore !== this.lastSavedTotalScore
-    ) {
-      this.bridge.persistRunProgress({
-        credits: result.snapshot.credits,
-        totalScore: result.snapshot.totalScore,
-      });
-      this.lastSavedCredits = result.snapshot.credits;
+    // Coins are only banked when the level is won (see SceneBridge.finalizeBattle).
+    if (result.snapshot.totalScore !== this.lastSavedTotalScore) {
+      this.bridge.persistRunProgress({ totalScore: result.snapshot.totalScore });
       this.lastSavedTotalScore = result.snapshot.totalScore;
     }
 
@@ -436,7 +425,7 @@ export class BattleScene extends Phaser.Scene {
       fixedControls: [
         "Arrow keys: drive (always)",
         "Mouse: aim, left click to fire",
-        "1-5, mouse wheel: pick a cannon",
+        "1-6, mouse wheel: pick a cannon",
         "Esc: this menu",
       ],
       onVolumeInput: applyLive,
@@ -614,6 +603,7 @@ const playerPalette: TankArtPalette = {
  * Raider: red, cross stripe, cannon. Skirmisher: teal, small, chevron, autocannon.
  * Bulwark: slate, wide with skirts, square turret, twin scatterguns.
  * Lancer: purple, long hull, laser. Warden: black and gold, triple rebound cannons.
+ * Hunter: mustard, square turret with a missile pod.
  */
 const enemyPalettes: Record<NonNullable<TankSnapshot["archetype"]>, TankArtPalette> = {
   raider: {
@@ -690,6 +680,21 @@ const enemyPalettes: Record<NonNullable<TankSnapshot["archetype"]>, TankArtPalet
     domeRadius: 8,
     barrelLength: 13,
     barrelCount: 3,
+  },
+  hunter: {
+    name: "hunter",
+    faction: "enemy",
+    hull: tankTheme.hunterHull,
+    turret: tankTheme.hunterTurret,
+    accent: tankTheme.hunterAccent,
+    width: 20,
+    length: 22,
+    treadWidth: 5,
+    hullStyle: "standard",
+    turretStyle: "square",
+    domeRadius: 5,
+    barrelLength: 12,
+    barrelCount: 1,
   },
 };
 

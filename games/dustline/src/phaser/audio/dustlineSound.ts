@@ -107,7 +107,7 @@ export function playSound(
   cueGain.connect(effectsGain ?? masterGain);
   recipes[cue](audio, cueGain, audio.currentTime + 0.005);
   // Disconnect once every recipe has certainly finished.
-  window.setTimeout(() => cueGain.disconnect(), 2500);
+  window.setTimeout(() => cueGain.disconnect(), 4500);
 }
 
 function readMuted(): boolean {
@@ -227,6 +227,47 @@ function arpeggio(
   });
 }
 
+/**
+ * One muted-brass "wah": a buzzy sawtooth through a wah filter that opens and
+ * closes, sagging in pitch at the end. wobble adds a sobbing vibrato.
+ */
+function wah(audio: AudioContext, out: AudioNode, at: number, hz: number, lengthS: number, wobble: boolean): void {
+  const oscillator = audio.createOscillator();
+  oscillator.type = "sawtooth";
+  oscillator.frequency.setValueAtTime(hz * 1.03, at);
+  oscillator.frequency.linearRampToValueAtTime(hz, at + 0.06);
+  oscillator.frequency.setValueAtTime(hz, at + lengthS * 0.6);
+  oscillator.frequency.linearRampToValueAtTime(hz * (wobble ? 0.84 : 0.95), at + lengthS);
+
+  const filter = audio.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.Q.value = 6;
+  filter.frequency.setValueAtTime(350, at);
+  filter.frequency.linearRampToValueAtTime(1500, at + 0.12);
+  filter.frequency.linearRampToValueAtTime(600, at + lengthS);
+
+  const gain = audio.createGain();
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(0.22, at + 0.05);
+  gain.gain.setValueAtTime(0.22, at + lengthS * 0.7);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + lengthS);
+
+  if (wobble) {
+    const lfo = audio.createOscillator();
+    const depth = audio.createGain();
+    lfo.frequency.value = 6;
+    depth.gain.setValueAtTime(0, at);
+    depth.gain.linearRampToValueAtTime(hz * 0.035, at + 0.35);
+    lfo.connect(depth).connect(oscillator.frequency);
+    lfo.start(at);
+    lfo.stop(at + lengthS + 0.02);
+  }
+
+  oscillator.connect(filter).connect(gain).connect(out);
+  oscillator.start(at);
+  oscillator.stop(at + lengthS + 0.02);
+}
+
 function boom(audio: AudioContext, out: AudioNode, at: number, sizeS: number, peak: number): void {
   noise(audio, out, at, "lowpass", 1600, 90, sizeS, peak);
   tone(audio, out, at, "sine", 110, 32, sizeS * 0.9, peak * 0.9);
@@ -268,6 +309,11 @@ const recipes: Record<SoundCue, Recipe> = {
     tone(audio, out, at, "sine", 2600, 700, 0.16, 0.18);
     noise(audio, out, at, "highpass", 5000, 2500, 0.05, 0.12);
   },
+  missileShot: (audio, out, at) => {
+    tone(audio, out, at, "sine", 120, 50, 0.16, 0.45);
+    noise(audio, out, at, "bandpass", 700, 2600, 0.5, 0.32);
+    tone(audio, out, at + 0.02, "sawtooth", 190, 90, 0.32, 0.08);
+  },
   ricochet: (audio, out, at) => {
     tone(audio, out, at, "triangle", 1500, 2300, 0.11, 0.16);
     noise(audio, out, at, "highpass", 3500, 1800, 0.04, 0.2);
@@ -301,6 +347,12 @@ const recipes: Record<SoundCue, Recipe> = {
   },
   tankDestroyed: (audio, out, at) => {
     boom(audio, out, at, 0.6, 0.8);
+  },
+  // Sad trombone for the mission-failed screen: wah, wah, wah, waaaaahhh.
+  missionFailed: (audio, out, at) => {
+    const notes = [293.7, 277.2, 261.6];
+    notes.forEach((hz, index) => wah(audio, out, at + index * 0.5, hz, 0.46, false));
+    wah(audio, out, at + 1.5, 246.9, 1.7, true);
   },
   playerDestroyed: (audio, out, at) => {
     boom(audio, out, at, 1.1, 0.9);

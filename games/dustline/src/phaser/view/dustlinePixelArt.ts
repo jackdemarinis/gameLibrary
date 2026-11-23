@@ -490,6 +490,7 @@ const barrelLengthFactor: Record<WeaponKind, number> = {
   scattergun: 0.88,
   ricochet: 1,
   laser: 1.2,
+  missile: 0.8,
 };
 
 /**
@@ -558,6 +559,14 @@ export function ensureTurretTexture(scene: Phaser.Scene, palette: TankArtPalette
         }
         if (dx >= 1) return null;
         return dx < 0.6 ? light : palette.turret;
+      }
+      case "missile": {
+        // Boxy launcher pod with two dark tube mouths at the end.
+        const halfWidth = 3;
+        if (dx >= halfWidth) return null;
+        if (fromTip <= 1) return dx > 0.6 && dx < 2.4 ? p.outline : dark;
+        if (t === Math.round(radius + 1)) return palette.accent;
+        return dx < 0.6 ? light : dx > halfWidth - 1 ? dark : palette.turret;
       }
       case "cannon":
       default: {
@@ -635,6 +644,9 @@ function shotColors(kind: WeaponKind, faction: TankFaction): ShotColors {
       ? { body: p.laserEnemyGlow, light: p.laserEnemyCore, dim: shade(p.laserEnemyGlow, -0.4) }
       : { body: p.laserGlow, light: p.laserCore, dim: shade(p.laserGlow, -0.4) };
   }
+  if (kind === "missile") {
+    return { body: p.missileBody, light: p.missileLight, dim: p.missileDim };
+  }
   if (kind === "ricochet") {
     return enemy
       ? { body: p.ricochetEnemyGlow, light: p.ricochetCore, dim: shade(p.ricochetEnemyGlow, -0.4) }
@@ -685,6 +697,16 @@ const shotSprites: Record<WeaponKind, string[]> = {
     "......oblllo..",
     "........ooo...",
   ],
+  // Rocket: exhaust flame, finned tail, body and a red warhead (r).
+  missile: [
+    "......oo..........",
+    ".....odbo.........",
+    "ssfFoodbbbbbbbbbbrro.",
+    "sFFwoddbllllllllrrro",
+    "ssfFoodbbbbbbbbbbrro.",
+    ".....odbo.........",
+    "......oo..........",
+  ],
   // Long bolt: white core, coloured glow, tapered ends.
   laser: [
     ".....bbbbbbbbbbbbbbb...",
@@ -707,6 +729,9 @@ export function ensureProjectileTexture(scene: Phaser.Scene, kind: WeaponKind, f
     b: c.body,
     l: c.light,
     w: p.white,
+    r: faction === "enemy" ? p.missileEnemyWarhead : p.missileWarhead,
+    f: p.flashMid,
+    F: p.flashHot,
   };
 
   return paintTexture(
@@ -755,6 +780,11 @@ function blastSpec(weapon: WeaponKind, faction: TankFaction): BlastSpec {
           ? [p.laserEnemyCore, p.laserEnemyGlow, shade(p.laserEnemyGlow, -0.3), p.outline]
           : [p.laserCore, p.laserGlow, shade(p.laserGlow, -0.3), p.outline],
         rays: [0, Math.PI / 2, -Math.PI / 2, Math.PI].map((angle) => ({ angle, length: angle === 0 ? 1 : 0.6, thickness: 1.1 })),
+      };
+    case "missile":
+      return {
+        width: 13, height: 13, core: 3, colors: fire,
+        rays: [0, 2.4, -2.4, Math.PI].map((angle) => ({ angle, length: angle === 0 ? 0.7 : 1, thickness: 1.6 })),
       };
     case "cannon":
     default:

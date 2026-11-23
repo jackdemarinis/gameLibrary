@@ -40,8 +40,8 @@ export const defaultSettings: DustlineSettings = {
   },
 };
 
-/** Keys that always do the same thing and can't be bound: Esc opens settings, 1-5 pick cannons. */
-const reservedCodes = new Set(["Escape", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5"]);
+/** Keys that always do the same thing and can't be bound: Esc opens settings, 1-6 pick cannons. */
+const reservedCodes = new Set(["Escape", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6"]);
 
 const storageKey = "dustline.settings";
 let current: DustlineSettings = readSettings();

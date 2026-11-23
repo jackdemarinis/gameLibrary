@@ -531,6 +531,7 @@
 .hud-bar-screen .hudWeaponSlot-scattergun { --slotColor: var(--dl-weapon-scattergun); }
 .hud-bar-screen .hudWeaponSlot-ricochet { --slotColor: var(--dl-weapon-ricochet); }
 .hud-bar-screen .hudWeaponSlot-laser { --slotColor: var(--dl-weapon-laser); }
+.hud-bar-screen .hudWeaponSlot-missile { --slotColor: var(--dl-weapon-missile); }
 
 .hud-bar-screen .hudWeaponSlot:hover {
   opacity: 1;
@@ -627,6 +628,7 @@
 .shop-screen .shopWeaponCard-scattergun { --weaponColor: var(--dl-weapon-scattergun); }
 .shop-screen .shopWeaponCard-ricochet { --weaponColor: var(--dl-weapon-ricochet); }
 .shop-screen .shopWeaponCard-laser { --weaponColor: var(--dl-weapon-laser); }
+.shop-screen .shopWeaponCard-missile { --weaponColor: var(--dl-weapon-missile); }
 
 .shop-screen .shopWeaponCard .shop-upgrade-badge {
   color: var(--weaponColor);
@@ -873,4 +875,55 @@
   width: var(--dl-icon-hud);
   height: var(--dl-icon-hud);
   filter: drop-shadow(0 2px 0 var(--dl-ink));
+}
+
+/* ---------- results: big centred headline ---------- */
+.hud-result-screen:has(.resultBanner) {
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hud-result-screen.resultScreen-lost {
+  background: var(--dl-red-scrim);
+}
+
+.hud-result-screen .resultBanner {
+  margin: 0;
+  font-family: var(--font-pixel-logo);
+  font-size: var(--dl-banner-size);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: var(--dl-title-outline);
+  pointer-events: none;
+}
+
+.hud-result-screen .resultBanner-lost {
+  color: var(--dl-red-light);
+}
+
+.hud-result-screen .resultBanner-won {
+  color: var(--dl-gold);
+}
+
+.hud-result-screen:has(.resultBanner) .hud-result-card {
+  text-align: center;
+}
+
+.hud-result-screen:has(.resultBanner) .hud-action-row {
+  justify-content: center;
+}
+
+/* Loadout list: compact so all six cannons fit. */
+.shop-screen .shop-weapon-stack {
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.shop-screen .shop-weapon-pill {
+  min-height: 0;
+  padding: 5px 10px;
+  font-size: 0.82rem;
 }

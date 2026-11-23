@@ -132,6 +132,8 @@ export interface SettingsViewModel {
 export interface HudViewModel {
   layout: "active" | "result";
   title: string;
+  /** Results only: a big centred headline (MISSION FAILED / LEVEL COMPLETE). */
+  banner?: { text: string; tone: "won" | "lost" };
   copy: string;
   objective: string;
   kpis: HudKpi[];
@@ -286,7 +288,7 @@ export class AppChrome {
                   <span class="shop-credit-subvalue">Total score: ${model.totalScore}</span>
                 </div>
                 <article class="shop-side-card arcade-card">
-                  <p class="shop-side-label">Loadout · keys 1-5</p>
+                  <p class="shop-side-label">Loadout · keys 1-6</p>
                   <div class="shop-weapon-stack">
                     ${model.unlockedWeapons
                       .map((weapon, index) => `<span class="shop-weapon-pill">${index + 1} ${weapon}</span>`)
@@ -526,10 +528,10 @@ export class AppChrome {
       `;
     } else {
       this.root.innerHTML = `
-        <section class="hud-result-screen">
+        <section class="hud-result-screen${model.banner ? ` resultScreen-${model.banner.tone}` : ""}">
+          ${model.banner ? `<h1 class="resultBanner resultBanner-${model.banner.tone}">${model.banner.text}</h1>` : ""}
           <article class="hud-result-card">
-            <p class="eyebrow">${model.title}</p>
-            <h2 class="hud-card-title">Briefing</h2>
+            ${model.banner ? "" : `<p class="eyebrow">${model.title}</p><h2 class="hud-card-title">Briefing</h2>`}
             <p class="hud-copy">${model.copy}</p>
             ${model.objective ? `<p class="hud-copy hud-copy-secondary">${model.objective}</p>` : ""}
             <div class="hud-kpis">

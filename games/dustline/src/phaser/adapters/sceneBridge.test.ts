@@ -35,6 +35,32 @@ describe("SceneBridge", () => {
       "relay-station",
     ]);
     expect(bridge.loadOrCreateSave().completedLevelIds).toEqual(["training-yard"]);
+    expect(bridge.loadOrCreateSave().credits).toBe(120);
+  });
+
+  it("banks no coins from a failed run", () => {
+    let save = { ...createInitialSave(), credits: 50 };
+    const bridge = new SceneBridge({
+      chrome: createChromeStub(),
+      saveStore: createMemorySaveStore(() => save, (nextSave) => {
+        save = nextSave;
+      }),
+    });
+
+    bridge.persistRunProgress({ totalScore: 90 });
+    bridge.finalizeBattle({
+      status: "lost",
+      levelId: "training-yard",
+      levelName: "Training Yard",
+      creditsEarned: 120,
+      pointsEarned: 90,
+      totalScore: 90,
+      damageTaken: 75,
+      completionTimeMs: 30000,
+    });
+
+    expect(bridge.loadOrCreateSave().credits).toBe(50);
+    expect(bridge.loadOrCreateSave().currentLevelId).toBe("training-yard");
   });
 });
 

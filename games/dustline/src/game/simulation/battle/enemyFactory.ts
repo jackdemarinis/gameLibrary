@@ -47,6 +47,7 @@ export function createEnemyTank(
     stuckMs: 0,
     unstickTarget: null,
     unstickRemainingMs: 0,
+    engageMode: "strafe",
     projectileSpeed: profile.projectileSpeed,
     projectileDamage,
     muzzleOffset: battleConfig.enemy.muzzleOffset + (profile.radius - battleConfig.enemy.radius),

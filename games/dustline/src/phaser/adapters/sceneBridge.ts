@@ -113,16 +113,16 @@ export class SceneBridge {
     return updated;
   }
 
-  persistRunProgress(progress: { credits: number; totalScore: number }): void {
+  /** Saves score as it changes mid-battle. Coins wait for finalizeBattle: a failed run earns none. */
+  persistRunProgress(progress: { totalScore: number }): void {
     const save = this.loadOrCreateSave();
 
-    if (save.credits === progress.credits && save.totalScore === progress.totalScore) {
+    if (save.totalScore === progress.totalScore) {
       return;
     }
 
     this.saveStore.write({
       ...save,
-      credits: progress.credits,
       totalScore: progress.totalScore,
     });
   }
@@ -132,11 +132,11 @@ export class SceneBridge {
     const currentLevel = getBattleLevelById(save.currentLevelId);
     const baseSave = {
       ...save,
-      credits: save.credits,
       totalScore: Math.max(save.totalScore, summary.totalScore),
     };
 
     if (summary.status !== "won") {
+      // Lost: the coins picked up this run are forfeit.
       this.saveStore.write(baseSave);
 
       return {
@@ -155,6 +155,7 @@ export class SceneBridge {
 
     this.saveStore.write({
       ...baseSave,
+      credits: save.credits + summary.creditsEarned,
       currentLevelId: nextLevelId,
       unlockedLevelIds,
       completedLevelIds,

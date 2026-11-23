@@ -2,6 +2,7 @@ import { battleConfig } from "../../../config/battleConfig";
 import {
   circleIntersectsRect,
   distanceBetween,
+  forwardFromRotation,
   moveCircleWithCollisionsDetailed,
   normalizeVector,
   rotationFromVector,
@@ -18,6 +19,17 @@ import { cellCentre, findPath, openNeighbourCentres } from "../navigation";
 import { spawnProjectile } from "./projectileSystem";
 
 const navRefreshIntervalMs = 280;
+/**
+ * Smooth driving: the hull turns toward the chosen direction at most this fast,
+ * and the tank drives along its hull (slower while still swinging round). A
+ * direction more than reverseBeyondRadians behind it is reached by backing up.
+ */
+const steering = {
+  turnRadiansPerSecond: 5.2,
+  reverseBeyondRadians: (Math.PI * 2) / 3,
+  /** Reversing is a bit slower than driving forward. */
+  reverseSpeedFactor: 0.75,
+};
 /** Corner-stuck detection: less than stuckDistancePx of progress in stuckAfterMs means stuck. */
 const stuck = {
   distancePx: 10,
@@ -39,6 +51,9 @@ const local = (target: Vector2): Vector2 => {
 };
 /** A local move shorter than this is treated as blocked; try another direction. */
 const minLocalMovePx = 48;
+/** Once a blocked local move picks a detour direction, keep it this long (no flip-flopping). */
+const detourHoldMs = 700;
+const detours = new WeakMap<TankState, { direction: Vector2; untilMs: number }>();
 
 /** Look this many cells ahead on the path for one the whole hull can reach in a straight line. */
 const pathLookahead = 6;
@@ -74,6 +89,10 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
     const chosenTarget = chooseMovementTarget(enemy, player, perception, state.elapsedMs);
     const moveTarget =
       chosenTarget && localTargets.has(chosenTarget) ? clipLocalTarget(state, enemy, chosenTarget) : chosenTarget;
+    if (chosenTarget && chosenTarget === enemy.repositionTarget) {
+      // Clip a reposition move once, so it stays put instead of being re-clipped every tick.
+      enemy.repositionTarget = moveTarget;
+    }
 
     if (moveTarget) {
       trackProgress(state, enemy, moveTarget, deltaMs);
@@ -153,19 +172,36 @@ function clipLocalTarget(state: BattleState, enemy: TankState, target: Vector2):
   const forward = { x: offset.x / length, y: offset.y / length };
   const first = reach(forward);
   if (distanceBetween(enemy.position, first) >= minLocalMovePx) {
+    detours.delete(enemy);
     return first;
   }
 
-  const alternatives = [
+  const held = detours.get(enemy);
+  if (held && held.untilMs > state.elapsedMs) {
+    const point = reach(held.direction);
+    if (distanceBetween(enemy.position, point) >= minLocalMovePx) {
+      return point;
+    }
+  }
+
+  const options = [
     { x: -forward.y, y: forward.x },
     { x: forward.y, y: -forward.x },
     { x: -forward.x, y: -forward.y },
-  ].map(reach);
-  return alternatives.reduce(
-    (best, point) =>
-      distanceBetween(enemy.position, point) > distanceBetween(enemy.position, best) ? point : best,
-    first,
-  );
+  ];
+  let bestDirection = forward;
+  let bestPoint = first;
+  options.forEach((direction) => {
+    const point = reach(direction);
+    if (distanceBetween(enemy.position, point) > distanceBetween(enemy.position, bestPoint)) {
+      bestDirection = direction;
+      bestPoint = point;
+    }
+  });
+  if (bestDirection !== forward) {
+    detours.set(enemy, { direction: bestDirection, untilMs: state.elapsedMs + detourHoldMs });
+  }
+  return bestPoint;
 }
 
 /** True when a circle of this radius can slide from start to end without touching anything. */
@@ -407,11 +443,20 @@ function chooseEngageTarget(
     y: player.position.y - enemy.position.y,
   });
 
-  if (perception.distance > enemy.preferredRange + 52) {
+  // Enter a mode at one distance and leave it at another, so a tank sitting
+  // near a threshold doesn't swap behaviour (and direction) every tick.
+  const distance = perception.distance;
+  const range = enemy.preferredRange;
+  if (enemy.engageMode === "chase" && distance < range + 12) enemy.engageMode = "strafe";
+  else if (enemy.engageMode === "backOff" && distance > range * 0.86) enemy.engageMode = "strafe";
+  if (distance > range + 52) enemy.engageMode = "chase";
+  else if (distance < range * 0.7) enemy.engageMode = "backOff";
+
+  if (enemy.engageMode === "chase") {
     return { ...player.position };
   }
 
-  if (perception.distance < enemy.preferredRange * 0.7) {
+  if (enemy.engageMode === "backOff") {
     return local({
       x: enemy.position.x - toPlayer.x * enemy.repositionDistance,
       y: enemy.position.y - toPlayer.y * enemy.repositionDistance,
@@ -512,6 +557,7 @@ function moveEnemyTowards(
     enemy.moveSpeed * deltaSeconds,
     enemy.radius,
     obstacles,
+    forwardFromRotation(enemy.hullRotation),
   );
 
   if (!movement) {
@@ -521,8 +567,7 @@ function moveEnemyTowards(
     return;
   }
 
-  enemy.position = movement.position;
-  enemy.hullRotation = rotationFromVector(movement.heading);
+  steerAlong(enemy, movement, deltaSeconds, obstacles);
 
   if (
     enemy.aiState === "patrol" &&
@@ -536,7 +581,64 @@ function moveEnemyTowards(
 interface EnemyMoveChoice {
   position: Vector2;
   heading: Vector2;
+  /** The direction tried (before sliding along walls). */
+  direction: Vector2;
   score: number;
+}
+
+const wrapAngle = (angle: number): number => Math.atan2(Math.sin(angle), Math.cos(angle));
+
+/**
+ * Turns the hull toward the chosen direction at a capped rate and drives along
+ * it, so a tank arcs into new directions instead of snapping between them every
+ * tick. If driving along the hull is blocked (a wall corner), it falls back to
+ * the wall-sliding move that was chosen.
+ */
+function steerAlong(
+  enemy: TankState,
+  choice: EnemyMoveChoice,
+  deltaSeconds: number,
+  obstacles: readonly { x: number; y: number; width: number; height: number }[],
+): void {
+  const desired = rotationFromVector(choice.direction);
+  const forwardDiff = wrapAngle(desired - enemy.hullRotation);
+  const reversing = Math.abs(forwardDiff) > steering.reverseBeyondRadians;
+  // Reversing: the hull lines its back up with the direction instead.
+  const facingTarget = reversing ? desired + Math.PI : desired;
+  const diff = wrapAngle(facingTarget - enemy.hullRotation);
+  const maxTurn = steering.turnRadiansPerSecond * deltaSeconds;
+  enemy.hullRotation = wrapAngle(enemy.hullRotation + Math.max(-maxTurn, Math.min(maxTurn, diff)));
+
+  const remaining = Math.abs(wrapAngle(facingTarget - enemy.hullRotation));
+  const speedFactor = Math.max(0, Math.cos(remaining)) * (reversing ? steering.reverseSpeedFactor : 1);
+  if (speedFactor <= 0.05) {
+    return;
+  }
+  const forward = forwardFromRotation(enemy.hullRotation);
+  const sign = reversing ? -1 : 1;
+  const step = enemy.moveSpeed * deltaSeconds * speedFactor;
+  const result = moveCircleWithCollisionsDetailed(
+    enemy.position,
+    { x: forward.x * step * sign, y: forward.y * step * sign },
+    enemy.radius,
+    obstacles,
+  );
+  const travelled = distanceBetween(enemy.position, result.position);
+  if (travelled >= step * 0.35) {
+    enemy.position = result.position;
+    return;
+  }
+  // Pinned along the hull's line: take the chosen sliding move, scaled down the same way.
+  const fallback = {
+    x: enemy.position.x + (choice.position.x - enemy.position.x) * speedFactor,
+    y: enemy.position.y + (choice.position.y - enemy.position.y) * speedFactor,
+  };
+  enemy.position = moveCircleWithCollisionsDetailed(
+    enemy.position,
+    { x: fallback.x - enemy.position.x, y: fallback.y - enemy.position.y },
+    enemy.radius,
+    obstacles,
+  ).position;
 }
 
 function chooseEnemyMoveDirection(
@@ -546,6 +648,7 @@ function chooseEnemyMoveDirection(
   stepDistance: number,
   radius: number,
   obstacles: readonly { x: number; y: number; width: number; height: number }[],
+  hullForward: Vector2,
 ): EnemyMoveChoice | undefined {
   const candidates = buildEnemyMoveCandidates(target, start, direction);
   const startDistance = distanceBetween(start, target);
@@ -572,12 +675,16 @@ function chooseEnemyMoveDirection(
     const score =
       (startDistance - distanceAfterMove) * 2.3 +
       travelDistance * 0.14 -
-      (result.blocked ? 0.45 : 0);
+      (result.blocked ? 0.45 : 0) +
+      // Mild preference for the way the hull already points (either end), so
+      // near-ties don't flip the tank back and forth.
+      Math.abs(candidate.x * hullForward.x + candidate.y * hullForward.y) * stepDistance * 0.6;
 
     if (!best || score > best.score) {
       best = {
         position: result.position,
         heading,
+        direction: candidate,
         score,
       };
     }

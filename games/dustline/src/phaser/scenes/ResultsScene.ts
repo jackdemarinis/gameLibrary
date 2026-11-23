@@ -3,7 +3,8 @@ import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import type { BattleResultSummary } from "../../game/simulation/battle/types";
 import type { BattleFlowResult, SceneBridge } from "../adapters/sceneBridge";
-import { startMusic } from "../audio/dustlineMusic";
+import { startMusic, stopMusic } from "../audio/dustlineMusic";
+import { playSound } from "../audio/dustlineSound";
 
 export interface ResultsSceneData {
   flow: BattleFlowResult;
@@ -19,7 +20,14 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   create(data: ResultsSceneData): void {
-    startMusic("menu");
+    if (data.result.status === "won") {
+      startMusic("menu");
+    } else {
+      // Sad trombone first, then the menu music comes back in.
+      stopMusic();
+      playSound("missionFailed");
+      this.time.delayedCall(3600, () => startMusic("menu"));
+    }
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome(data);
@@ -32,6 +40,7 @@ export class ResultsScene extends Phaser.Scene {
       this.bridge.showHud({
         layout: "result",
         title: "Level Complete",
+        banner: { text: "Level Complete", tone: "won" },
         copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector. Spend your coins on new cannons in the garage.`,
         objective: data.flow.loopedCampaign
           ? "Campaign loop complete. The motor pool has cycled back to the opening yard."
@@ -63,11 +72,12 @@ export class ResultsScene extends Phaser.Scene {
     this.bridge.showHud({
       layout: "result",
       title: "Mission Failed",
-      copy: `${data.result.levelName} was not secured. The tank needs another pass before the route can open.`,
+      banner: { text: "Mission Failed", tone: "lost" },
+      copy: `Your tank was destroyed. ${data.result.levelName} was not secured, and the coins you picked up were lost with it.`,
       objective: "Re-arm, restart the encounter, or return to the main menu.",
       kpis: [
         { label: "Points Earned", value: `${data.result.pointsEarned}` },
-        { label: "Coins Earned", value: `$${data.result.creditsEarned}` },
+        { label: "Coins Lost", value: `$${data.result.creditsEarned}` },
         { label: "Total Score", value: `${data.result.totalScore}` },
         { label: "Damage Taken", value: `${data.result.damageTaken}` },
         { label: "Time Survived", value: formatTime(data.result.completionTimeMs) },

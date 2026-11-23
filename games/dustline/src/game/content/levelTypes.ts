@@ -5,7 +5,7 @@ export interface Point {
 
 /** Raider: standard. Skirmisher: fast and light. Bulwark: slow twin-barrel armour.
  *  Lancer: long-range sniper. Warden: the boss, fires a three-shell spread. */
-export type EnemyArchetype = "raider" | "skirmisher" | "bulwark" | "lancer" | "warden";
+export type EnemyArchetype = "raider" | "skirmisher" | "bulwark" | "lancer" | "warden" | "hunter";
 
 /** What a room is for in the flow of a map. */
 export type RoomKind = "staging" | "skirmish" | "chokepoint" | "vault" | "hard" | "command";

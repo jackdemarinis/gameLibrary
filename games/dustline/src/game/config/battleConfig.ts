@@ -43,6 +43,7 @@ export const battleConfig = {
         bulwark: 2800,
         lancer: 3200,
         warden: 2300,
+        hunter: 2000,
       },
     },
     /**
@@ -152,6 +153,26 @@ export const battleConfig = {
         shotCount: 3,
         spreadRadians: 0.3,
       },
+      hunter: {
+        maxHealth: 320,
+        moveSpeed: 124,
+        fireCooldownMs: 2300,
+        projectileSpeed: 330,
+        projectileDamage: 20,
+        recoilKick: 5,
+        recoilRecoveryPerSecond: 26,
+        sightRange: 860,
+        preferredRange: 430,
+        engageRange: 820,
+        aimInaccuracyRadians: 0.1,
+        repositionDistance: 110,
+        rewardCredits: 60,
+        rewardScore: 230,
+        radius: 27,
+        weapon: "missile",
+        shotCount: 1,
+        spreadRadians: 0,
+      },
     },
   },
   /**
@@ -245,6 +266,31 @@ export const battleConfig = {
       radius: 4,
       recoilKick: 4,
     },
+    missile: {
+      damage: 62,
+      cooldownMs: 950,
+      projectileSpeed: 480,
+      rangePx: 1500,
+      shotCount: 1,
+      spreadRadians: 0,
+      jitterRadians: 0,
+      bounces: 0,
+      pierce: 0,
+      radius: 6,
+      recoilKick: 5,
+    },
+  },
+  /**
+   * Seeker missiles turn toward the nearest target in front of them within
+   * seekRangePx, at most turnRadiansPerSecond (enemy missiles turn slower so
+   * the player can outdrive them).
+   */
+  missileHoming: {
+    seekRangePx: 640,
+    playerTurnRadiansPerSecond: 3.6,
+    enemyTurnRadiansPerSecond: 1.7,
+    /** Flies straight this long first, so it clears the launcher. */
+    armMs: 120,
   },
   /** Each damage level bought in the shop adds this share of the weapon's base damage. */
   weaponUpgrades: {

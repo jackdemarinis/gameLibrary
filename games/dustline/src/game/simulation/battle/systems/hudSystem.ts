@@ -32,7 +32,7 @@ export function buildBattleHudSnapshot(state: BattleState): BattleHudSnapshot {
       "WASD or arrow keys to move",
       "Mouse to aim the turret",
       "Left click to fire (hold for the autocannon)",
-      "1-5, the mouse wheel or a click on the inventory to switch cannons",
+      "1-6, the mouse wheel or a click on the inventory to switch cannons",
     ],
   };
 }

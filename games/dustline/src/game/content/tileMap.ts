@@ -28,9 +28,9 @@ import { battleConfig } from "../config/battleConfig";
  *   H  supply crate: repair    F  supply crate: freeze    R  supply crate: rapid fire
  *   Power-ups only ever come out of crates: supply crates show what's inside,
  *   and some plain crates hide one (see battleConfig.destructible.crateDrops).
- *   X  enemy spawner (raiders + skirmishers)   Y  heavy spawner (bulwarks + lancers)
+ *   X  enemy spawner (raiders + skirmishers)   Y  heavy spawner (bulwarks, lancers, hunters)
  *   P  player start
- *   r  raider   s  skirmisher   h  bulwark   l  lancer   W  warden (boss)
+ *   r  raider   s  skirmisher   h  bulwark   l  lancer   m  hunter (missiles)   W  warden (boss)
  */
 export const tileSize = gameConfig.gridSize;
 
@@ -39,6 +39,7 @@ const enemyByChar: Record<string, EnemyArchetype> = {
   s: "skirmisher",
   h: "bulwark",
   l: "lancer",
+  m: "hunter",
   W: "warden",
 };
 
@@ -55,7 +56,7 @@ const supplyDropByChar: Record<string, SupplyDrop> = {
 
 const spawnerRosterByChar: Record<string, EnemyArchetype[]> = {
   X: ["raider", "skirmisher", "raider", "skirmisher", "skirmisher"],
-  Y: ["bulwark", "raider", "lancer", "raider"],
+  Y: ["bulwark", "raider", "lancer", "hunter", "raider"],
 };
 
 /** Archetypes that hold their post instead of walking a beat. */

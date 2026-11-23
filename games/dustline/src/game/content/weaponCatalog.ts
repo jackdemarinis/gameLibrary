@@ -1,8 +1,8 @@
 /**
  * The cannons a tank can carry. Stats live in battleConfig.weapons; this file
- * holds names, shop prices and the order they appear in (and their 1-5 keys).
+ * holds names, shop prices and the order they appear in (and their 1-6 keys).
  */
-export const weaponOrder = ["cannon", "autocannon", "scattergun", "ricochet", "laser"] as const;
+export const weaponOrder = ["cannon", "autocannon", "scattergun", "ricochet", "laser", "missile"] as const;
 export type WeaponKind = (typeof weaponOrder)[number];
 
 export const initialWeaponId: WeaponKind = "cannon";
@@ -30,8 +30,8 @@ const definitions: Record<WeaponKind, WeaponDefinition> = {
     iconLabel: "CAN",
     summary: "Your stock gun. Steady shells with a solid punch.",
     price: 0,
-    upgradeBaseCost: 70,
-    upgradeGrowth: 1.6,
+    upgradeBaseCost: 120,
+    upgradeGrowth: 1.68,
   },
   autocannon: {
     id: "autocannon",
@@ -39,9 +39,9 @@ const definitions: Record<WeaponKind, WeaponDefinition> = {
     shortName: "Auto",
     iconLabel: "AUT",
     summary: "Hold the trigger. A stream of light tracer rounds that wanders a little.",
-    price: 180,
-    upgradeBaseCost: 70,
-    upgradeGrowth: 1.6,
+    price: 315,
+    upgradeBaseCost: 120,
+    upgradeGrowth: 1.68,
   },
   scattergun: {
     id: "scattergun",
@@ -49,9 +49,9 @@ const definitions: Record<WeaponKind, WeaponDefinition> = {
     shortName: "Scatter",
     iconLabel: "SCT",
     summary: "Seven pellets in a wide fan. Brutal up close, useless at range.",
-    price: 220,
-    upgradeBaseCost: 75,
-    upgradeGrowth: 1.6,
+    price: 385,
+    upgradeBaseCost: 130,
+    upgradeGrowth: 1.68,
   },
   ricochet: {
     id: "ricochet",
@@ -59,9 +59,9 @@ const definitions: Record<WeaponKind, WeaponDefinition> = {
     shortName: "Bounce",
     iconLabel: "BNC",
     summary: "Shells bounce off up to five walls. Bank shots around corners.",
-    price: 260,
-    upgradeBaseCost: 80,
-    upgradeGrowth: 1.6,
+    price: 455,
+    upgradeBaseCost: 140,
+    upgradeGrowth: 1.68,
   },
   laser: {
     id: "laser",
@@ -69,9 +69,19 @@ const definitions: Record<WeaponKind, WeaponDefinition> = {
     shortName: "Laser",
     iconLabel: "LSR",
     summary: "Near-instant bolt that pierces through up to four tanks in a line.",
-    price: 360,
-    upgradeBaseCost: 90,
-    upgradeGrowth: 1.6,
+    price: 630,
+    upgradeBaseCost: 155,
+    upgradeGrowth: 1.68,
+  },
+  missile: {
+    id: "missile",
+    name: "Seeker Missile",
+    shortName: "Missile",
+    iconLabel: "MSL",
+    summary: "Slow rockets that steer themselves into the nearest enemy. Hits hard.",
+    price: 735,
+    upgradeBaseCost: 165,
+    upgradeGrowth: 1.68,
   },
 };
 

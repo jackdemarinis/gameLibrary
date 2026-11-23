@@ -86,6 +86,8 @@ export interface TankState {
   /** While set, the tank backs off to this open cell centre to get unstuck. */
   unstickTarget: Vector2 | null;
   unstickRemainingMs: number;
+  /** Engage behaviour, kept until the range clearly changes (stops flip-flopping at the edges). */
+  engageMode: "chase" | "strafe" | "backOff";
   fireCooldownRemainingMs: number;
   projectileSpeed: number;
   projectileDamage: number;
@@ -153,6 +155,8 @@ export interface ProjectileState {
   /** Extra tanks it can still pass through (laser bolts), and the ones it already hit. */
   pierceLeft: number;
   hitTankIds: string[];
+  /** How long it has been flying (seeker missiles fly straight at first). */
+  ageMs: number;
 }
 
 /** One cannon in the player's inventory, with upgrades already applied. */
@@ -192,6 +196,7 @@ export type SoundCue =
   | "scatterShot"
   | "ricochetShot"
   | "laserShot"
+  | "missileShot"
   | "ricochet"
   | "weaponSwitch"
   | "hitEnemy"
@@ -201,6 +206,7 @@ export type SoundCue =
   | "playerHurt"
   | "tankDestroyed"
   | "playerDestroyed"
+  | "missionFailed"
   | "crateBreak"
   | "wallBreak"
   | "spawnerDestroyed"

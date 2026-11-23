@@ -17,7 +17,8 @@ export type DustlineIconKey =
   | "autocannon"
   | "scattergun"
   | "ricochet"
-  | "laser";
+  | "laser"
+  | "missile";
 
 const size = 32;
 const rect = (x0: number, y0: number, x1: number, y1: number) => polygon([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
@@ -168,6 +169,30 @@ function paintLaser(canvas: PixelCanvas): void {
   [[25, 13], [18, 4], [28, 9]].forEach(([x, y]) => canvas.set(x, y, ink.glint));
 }
 
+/** A rocket climbing up and right on a tail of fire. */
+function paintMissile(canvas: PixelCanvas): void {
+  const map = rotateAbout(16, 16, -Math.PI / 4);
+  canvas.fill(
+    union(circle(5, 16, 3.2), circle(2.5, 16, 2.2), circle(6.5, 13.5, 1.8), circle(6.5, 18.5, 1.8)),
+    (x, y) => rampAt(ink.flash, Math.hypot(x - 7, y - 16) / 5, x, y),
+    ink.flashEdge,
+    map,
+  );
+  canvas.fill(
+    union(polygon([[8, 16], [12, 9], [15, 9], [14, 16]]), polygon([[8, 16], [12, 23], [15, 23], [14, 16]])),
+    verticalRamp(ink.fin, 9, 23),
+    ink.outline,
+    map,
+  );
+  canvas.fill(rect(8.5, 13, 23, 19), (x, y) => rampAt(ink.missileBody, (y - 13) / 6, x, y), ink.outline, map);
+  canvas.fill(
+    polygon([[22.5, 13], [26, 13.6], [29.5, 16], [26, 18.4], [22.5, 19]]),
+    (x, y) => rampAt(ink.warhead, (y - 13) / 6, x, y),
+    ink.outline,
+    map,
+  );
+}
+
 const painters: Record<DustlineIconKey, (canvas: PixelCanvas) => void> = {
   maxHealth: paintMaxHealth,
   movementSpeed: paintMovementSpeed,
@@ -179,6 +204,7 @@ const painters: Record<DustlineIconKey, (canvas: PixelCanvas) => void> = {
   scattergun: paintScattergun,
   ricochet: paintRicochet,
   laser: paintLaser,
+  missile: paintMissile,
 };
 
 const cache = new Map<string, string>();

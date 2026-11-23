@@ -162,6 +162,7 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     stuckMs: 0,
     unstickTarget: null,
     unstickRemainingMs: 0,
+    engageMode: "strafe",
     projectileSpeed: 0,
     projectileDamage: 0,
     muzzleOffset: battleConfig.player.muzzleOffset,

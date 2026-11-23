@@ -36,7 +36,7 @@ describe("shop", () => {
       "maxHealth",
     );
 
-    expect(level0Price).toBe(60);
+    expect(level0Price).toBe(105);
     expect(level1Price).toBeGreaterThan(level0Price ?? 0);
     expect((level2Price ?? 0) - (level1Price ?? 0)).toBeGreaterThan(
       (level1Price ?? 0) - (level0Price ?? 0),
@@ -65,7 +65,7 @@ describe("shop", () => {
 
     save = purchaseWeapon(save, "laser");
     expect(save.unlockedWeapons).toEqual(["cannon", "laser"]);
-    expect(save.credits).toBe(1000 - 360);
+    expect(save.credits).toBe(1000 - 630);
     expect(getWeaponPrice(save, "laser")).toBeNull();
     expect(purchaseWeapon(save, "laser")).toBe(save);
 

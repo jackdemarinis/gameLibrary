@@ -140,10 +140,16 @@ renders at 480 lines with bloom and a colour-grade, bleed, grain and dither pass
 Top-down tank campaign:
 - Buy upgrades in the garage, then pick a level.
 - WASD to drive, the mouse to aim, click to fire (hold for the autocannon).
-- Five cannons: Field Cannon, Autocannon, Scattergun, Rebound Cannon (bounces
-  off up to 5 walls) and Beam Laser (pierces a line of tanks). Buy them and
-  level up their damage on the garage's Armory tab. In battle, switch with
-  1-5, the mouse wheel, or a click on the inventory above the HUD.
+- Six cannons: Field Cannon, Autocannon, Scattergun, Rebound Cannon (bounces
+  off up to 5 walls), Beam Laser (pierces a line of tanks) and Seeker Missile
+  (steers itself into the nearest enemy). Buy them and level up their damage on
+  the garage's Armory tab. In battle, switch with 1-6, the mouse wheel, or a
+  click on the inventory above the HUD.
+- Every enemy type carries one of those cannons: raiders the Field Cannon,
+  skirmishers the Autocannon, bulwarks the Scattergun, lancers the Beam Laser,
+  hunters the Seeker Missile, and the Warden boss the Rebound Cannon.
+- Coins you pick up are only banked when you win the level. Die (or quit) and
+  they're lost.
 - Power-ups (repair, rapid fire, freeze) are hidden in crates you break.
 - Enter moves you forward through the menus, and Esc takes you back.
 - Esc (or the gear button) opens settings: music and effects volume, key

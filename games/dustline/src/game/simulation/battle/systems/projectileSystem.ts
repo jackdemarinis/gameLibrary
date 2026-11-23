@@ -23,6 +23,7 @@ const muzzleColor: Record<WeaponKind, number> = {
   scattergun: 0xffa63f,
   ricochet: 0xd59cff,
   laser: 0x8fe8ff,
+  missile: 0xff9a4a,
 };
 
 /** Fires one volley from the shooter's cannon: shotCount shells fanned across spreadRadians. */
@@ -64,6 +65,7 @@ export function spawnProjectile(
       bouncesLeft: shooter.projectileBounces,
       pierceLeft: shooter.projectilePierce,
       hitTankIds: [],
+      ageMs: 0,
     });
     state.nextProjectileId += 1;
   }
@@ -90,6 +92,47 @@ export function spawnProjectile(
   ];
 }
 
+/**
+ * Seeker missiles: turn toward the nearest target ahead (enemies for the
+ * player's missiles, the player for enemy ones) at a capped rate.
+ */
+function steerMissile(state: BattleState, projectile: ProjectileState, deltaSeconds: number): ProjectileState {
+  const homing = battleConfig.missileHoming;
+  const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y);
+  if (speed < 1 || projectile.ageMs < homing.armMs) {
+    return { ...projectile, ageMs: projectile.ageMs + deltaSeconds * 1000 };
+  }
+  const heading = { x: projectile.velocity.x / speed, y: projectile.velocity.y / speed };
+  const candidates = projectile.faction === "player" ? state.enemies : [state.player];
+  let target: TankState | null = null;
+  let bestDistance: number = homing.seekRangePx;
+  candidates.forEach((tank) => {
+    if (!tank.alive || tank.faction === projectile.faction) return;
+    const dx = tank.position.x - projectile.position.x;
+    const dy = tank.position.y - projectile.position.y;
+    const distance = Math.hypot(dx, dy);
+    // Only targets roughly in front: a missile doesn't U-turn.
+    if (distance < bestDistance && (dx * heading.x + dy * heading.y) / Math.max(1, distance) > -0.2) {
+      bestDistance = distance;
+      target = tank;
+    }
+  });
+
+  let velocity = projectile.velocity;
+  const locked = target as TankState | null;
+  if (locked) {
+    const current = Math.atan2(heading.y, heading.x);
+    const wanted = Math.atan2(locked.position.y - projectile.position.y, locked.position.x - projectile.position.x);
+    const difference = Math.atan2(Math.sin(wanted - current), Math.cos(wanted - current));
+    const turnRate =
+      projectile.faction === "player" ? homing.playerTurnRadiansPerSecond : homing.enemyTurnRadiansPerSecond;
+    const maxTurn = turnRate * deltaSeconds;
+    const angle = current + Math.max(-maxTurn, Math.min(maxTurn, difference));
+    velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+  }
+  return { ...projectile, velocity, ageMs: projectile.ageMs + deltaSeconds * 1000 };
+}
+
 function shotSound(weapon: WeaponKind, faction: TankFaction, shots: number): SoundCue {
   switch (weapon) {
     case "autocannon":
@@ -100,6 +143,8 @@ function shotSound(weapon: WeaponKind, faction: TankFaction, shots: number): Sou
       return "ricochetShot";
     case "laser":
       return "laserShot";
+    case "missile":
+      return "missileShot";
     case "cannon":
     default:
       return faction === "player" ? "playerShot" : shots > 1 ? "heavyShot" : "enemyShot";
@@ -110,7 +155,8 @@ export function runProjectileSystem(state: BattleState, deltaSeconds: number): S
   const effects: SimulationEffect[] = [];
   const nextProjectiles: ProjectileState[] = [];
 
-  state.projectiles.forEach((projectile) => {
+  state.projectiles.forEach((unsteered) => {
+    const projectile = unsteered.kind === "missile" ? steerMissile(state, unsteered, deltaSeconds) : unsteered;
     const previous = projectile.position;
     const moved: ProjectileState = {
       ...projectile,
@@ -180,7 +226,7 @@ export function runProjectileSystem(state: BattleState, deltaSeconds: number): S
         x: moved.position.x,
         y: moved.position.y,
         color: moved.kind === "laser" ? 0x8fe8ff : moved.faction === "player" ? 0xf1c24c : 0xf27f48,
-        size: 16,
+        size: moved.kind === "missile" ? 26 : 16,
         rotation: travelRotation,
       });
       effects.push(...damageTank(state, target, moved.damage));

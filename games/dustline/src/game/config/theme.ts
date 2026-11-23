@@ -118,6 +118,12 @@ export const pixelTheme = {
   laserCore: 0xeafcff,
   laserEnemyGlow: 0xff5f8a,
   laserEnemyCore: 0xffd6e2,
+  /** Seeker missiles: olive body, red warhead, hot exhaust. */
+  missileBody: 0xd8dccf,
+  missileLight: 0xffffff,
+  missileDim: 0x8d9296,
+  missileWarhead: 0xe0573a,
+  missileEnemyWarhead: 0xffb02e,
   /** Muzzle blast, hottest to coolest, then smoke. */
   flashCore: 0xfff6cc,
   flashHot: 0xffd24a,
@@ -148,6 +154,9 @@ export const tankTheme = {
   wardenHull: 0x2c2a2e,
   wardenTurret: 0x5a565e,
   wardenAccent: 0xe8b43a,
+  hunterHull: 0xb8862e,
+  hunterTurret: 0xe9d6a0,
+  hunterAccent: 0xff6a3a,
 } as const;
 
 export function applyThemeVariables(root: HTMLElement): void {
@@ -212,4 +221,7 @@ export const iconTheme = {
   ricochetEdge: 0x3a1a5c,
   laser: [pixelTheme.laserCore, pixelTheme.laserGlow, 0x3a9cc8],
   laserEdge: pixelTheme.freezeEdge,
+  missileBody: [pixelTheme.missileLight, pixelTheme.missileBody, pixelTheme.missileDim, pixelTheme.steelShade],
+  warhead: [0xff9a7a, pixelTheme.missileWarhead, 0x9a2a18],
+  fin: [0x9be08a, 0x4caa50, 0x2c4d1f],
 } as const;

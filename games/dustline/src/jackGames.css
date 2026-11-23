@@ -160,6 +160,9 @@
   --dl-drop: 0 6px 0 #0e2a12;
   --dl-scrim: rgba(8, 12, 6, 0.72);
   --dl-red: #c4482f;
+  --dl-red-light: #ff7a5a;
+  --dl-red-scrim: rgba(60, 8, 4, 0.55);
+  --dl-banner-size: clamp(2.6rem, 7vw, 5.2rem);
   --dl-red-bevel: inset 0 2px 0 #e0775a, inset 0 -2px 0 #7a2618;
   --dl-teal: #2b9a9c;
   --dl-slate: #4f5d78;
@@ -173,6 +176,7 @@
   --dl-weapon-scattergun: #c4482f;
   --dl-weapon-ricochet: #d59cff;
   --dl-weapon-laser: #8fe8ff;
+  --dl-weapon-missile: #ff9a4a;
 
   /* Play-screen stage: the 16:9 game window, framed in riveted olive steel,
      centred on a calm dark field. */

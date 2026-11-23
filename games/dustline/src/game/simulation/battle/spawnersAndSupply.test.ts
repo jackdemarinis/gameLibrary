@@ -220,7 +220,7 @@ describe("cannons", () => {
     pickups: [],
   };
 
-  function armed(level: BattleLevelData, weapon: "ricochet" | "laser" | "scattergun") {
+  function armed(level: BattleLevelData, weapon: "ricochet" | "laser" | "scattergun" | "missile") {
     const save = createInitialSave();
     save.unlockedWeapons = ["cannon", weapon];
     const simulation = new BattleSimulation(level, save);
@@ -261,6 +261,24 @@ describe("cannons", () => {
 
     const damaged = simulation.getSnapshot().enemies.filter((enemy) => enemy.health < enemy.maxHealth);
     expect(damaged).toHaveLength(3);
+  });
+
+  it("seeker missiles curve into a target the turret isn't pointing at", () => {
+    const offset: BattleLevelData = {
+      ...range,
+      indestructibleWalls: [],
+      enemySpawns: [{ id: "mark", x: 640, y: 560, archetype: "raider" }],
+    };
+    const simulation = armed(offset, "missile");
+    (simulation as unknown as { state: { freezeRemainingMs: number } }).state.freezeRemainingMs = 10000;
+    // Aim straight right, well above the target.
+    advanceFor(simulation, 400, { movementX: 0, movementY: 0, aim: { x: 900, y: 400 }, firing: false });
+    simulation.advance(16, { movementX: 0, movementY: 0, aim: { x: 900, y: 400 }, firing: true });
+    expect(simulation.getSnapshot().projectiles[0]?.kind).toBe("missile");
+    advanceFor(simulation, 1600);
+
+    const target = simulation.getSnapshot().enemies[0];
+    expect(target.health).toBeLessThan(target.maxHealth);
   });
 
   it("the scattergun fires a fan of pellets, and switching shows in the snapshot", () => {
