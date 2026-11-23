@@ -1,12 +1,13 @@
 // The lantern-keeper: kinematic character controller, three-hit sword combo,
-// dodge roll with i-frames, lantern flare, hurt/death, and the rig animation.
+// lantern flare, hurt/death, and the rig animation. The hero always faces where the
+// camera (mouse) is looking; WASD moves relative to that view, strafing.
 import * as THREE from "three";
 import { damp, clamp } from "../engine/rng";
 import type { Action } from "../engine/input";
 import { angleDelta, comboDamage, inSwingArc, yawTowards } from "../game/rules/combat";
 import type { HeroStats } from "../game/rules/progression";
 import { HumanoidRig, heroLook } from "../world/humanoidRig";
-import { attackPose, deathPose, flarePose, hurtPose, idlePose, locomotionPose, rollPose } from "../world/rigAnimations";
+import { attackPose, deathPose, flarePose, hurtPose, idlePose, locomotionPose } from "../world/rigAnimations";
 import { SwordTrail } from "../world/swordTrail";
 import { artPalette } from "../world/artPalette";
 import type { Hittable, PlayContext } from "./context";
@@ -18,14 +19,13 @@ export interface ControlSource {
   wasPressed(action: Action): boolean;
 }
 
-type PlayerState = "move" | "attack" | "roll" | "hurt" | "flare" | "dead" | "frozen";
+type PlayerState = "move" | "attack" | "hurt" | "flare" | "dead" | "frozen";
 
 const capsuleHalf = 0.5;
 const capsuleRadius = 0.34;
 const centreToFeet = capsuleHalf + capsuleRadius;
 const runSpeed = 5.6;
 const attackDurations = [0.42, 0.42, 0.58];
-const rollDuration = 0.5;
 const flareDuration = 0.8;
 
 export class Player {
@@ -45,7 +45,6 @@ export class Player {
   private combo = 0;
   private comboQueued = false;
   private readonly hitThisSwing = new Set<Hittable>();
-  private rollDir = new THREE.Vector2();
   private invulnerable = 0;
   private grounded = true;
   private flared = false;
@@ -104,7 +103,7 @@ export class Player {
   }
 
   isInvulnerable(): boolean {
-    return this.invulnerable > 0 || this.state === "dead" || (this.state === "roll" && this.stateTime > 0.03 && this.stateTime < rollDuration * 0.85);
+    return this.invulnerable > 0 || this.state === "dead";
   }
 
   freeze(frozen: boolean): void {
@@ -172,11 +171,9 @@ export class Player {
         if (wishLength > 0.05) {
           targetSpeedX = (wishX / wishLength) * speed;
           targetSpeedZ = (wishZ / wishLength) * speed;
-          if (!this.lockTarget) this.turnTowards(Math.atan2(wishX, wishZ), 14, dt);
         }
-        if (this.lockTarget) this.turnTowards(yawTowards(this.position, this.lockTarget.position()), 16, dt);
+        this.faceView(cameraYaw, 16, dt);
         if (input.wasPressed("attack")) this.startAttack(0, context);
-        else if (input.wasPressed("roll")) this.startRoll(wishX, wishZ, wishLength, context);
         else if (input.wasPressed("flare")) this.startFlare(context);
         break;
       }
@@ -184,30 +181,17 @@ export class Player {
         const duration = attackDurations[this.combo];
         const progress = this.stateTime / duration;
         if (progress > 0.3 && this.combo < 2 && input.wasPressed("attack")) this.comboQueued = true;
-        if (progress < 0.25 && wishLength > 0.2 && !this.lockTarget) this.turnTowards(Math.atan2(wishX, wishZ), 10, dt);
-        if (this.lockTarget && progress < 0.3) this.turnTowards(yawTowards(this.position, this.lockTarget.position()), 18, dt);
+        // Swings aim where you're looking; the aim settles once the blade is moving.
+        if (progress < 0.3) this.faceView(cameraYaw, 22, dt);
         const lunge = progress > 0.18 && progress < 0.5 ? (this.combo === 2 ? 5 : 3.4) : 0;
         targetSpeedX = Math.sin(this.yaw) * lunge;
         targetSpeedZ = Math.cos(this.yaw) * lunge;
         accel = 30;
         if (progress > 0.28 && progress < 0.6) this.sweepHits(context);
-        if (progress > 0.55 && input.wasPressed("roll")) {
-          this.startRoll(wishX, wishZ, wishLength, context);
-          break;
-        }
         if (progress >= 1) {
           if (this.comboQueued && this.combo < 2) this.startAttack(this.combo + 1, context);
           else this.enter("move");
         }
-        break;
-      }
-      case "roll": {
-        const progress = this.stateTime / rollDuration;
-        const speed = progress < 0.75 ? 8.8 : 8.8 * (1 - (progress - 0.75) * 3);
-        targetSpeedX = this.rollDir.x * speed;
-        targetSpeedZ = this.rollDir.y * speed;
-        accel = 40;
-        if (progress >= 1) this.enter("move");
         break;
       }
       case "hurt":
@@ -250,6 +234,12 @@ export class Player {
     }
   }
 
+  /** Face the camera's look direction, or the locked-on target. */
+  private faceView(cameraYaw: number, rate: number, dt: number): void {
+    const target = this.lockTarget ? yawTowards(this.position, this.lockTarget.position()) : cameraYaw;
+    this.turnTowards(target, rate, dt);
+  }
+
   private turnTowards(targetYaw: number, rate: number, dt: number): void {
     this.yaw += angleDelta(this.yaw, targetYaw) * damp(rate, dt);
   }
@@ -260,18 +250,6 @@ export class Player {
     this.hitThisSwing.clear();
     this.enter("attack");
     context.play("swing");
-  }
-
-  private startRoll(wishX: number, wishZ: number, wishLength: number, context: PlayContext): void {
-    if (wishLength > 0.2) {
-      this.rollDir.set(wishX / wishLength, wishZ / wishLength);
-      this.yaw = Math.atan2(wishX, wishZ);
-    } else {
-      this.rollDir.set(Math.sin(this.yaw), Math.cos(this.yaw));
-    }
-    this.enter("roll");
-    context.play("roll");
-    context.dust.emit({ count: 8, position: this.position.clone().setY(this.position.y + 0.1), spread: 0.4, speed: 1.5, up: 0.6, gravity: 2, life: 0.6, size: 0.12, color: 0x6a5a48 });
   }
 
   private startFlare(context: PlayContext): void {
@@ -343,10 +321,6 @@ export class Player {
         target = attackPose(this.combo, clamp(this.stateTime / attackDurations[this.combo], 0, 1));
         rate = 40;
         break;
-      case "roll":
-        target = rollPose(clamp(this.stateTime / rollDuration, 0, 1));
-        rate = 60;
-        break;
       case "hurt":
         target = hurtPose(clamp(this.stateTime / 0.38, 0, 1));
         rate = 30;
@@ -361,7 +335,9 @@ export class Player {
         break;
       default:
         if (horizontalSpeed > 0.4) {
-          this.stepPhase += dt * (6.5 + run * 4.5) * Math.min(1, horizontalSpeed / 2.5);
+          // Backing away (facing the view while moving against it) plays the cycle in reverse.
+          const forwardness = (this.velocity.x * Math.sin(this.yaw) + this.velocity.z * Math.cos(this.yaw)) / horizontalSpeed;
+          this.stepPhase += dt * (6.5 + run * 4.5) * Math.min(1, horizontalSpeed / 2.5) * (forwardness < -0.3 ? -1 : 1);
           target = locomotionPose(this.stepPhase, run);
           const sign = Math.sign(Math.sin(this.stepPhase));
           if (sign !== this.lastStepSign) {

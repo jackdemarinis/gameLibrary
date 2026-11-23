@@ -1,5 +1,5 @@
-// Third-person orbit camera: mouse/stick look, gentle auto-follow behind the hero,
-// lock-on framing, wall collision against static geometry, and trauma shake.
+// Third-person orbit camera driven by the mouse/right stick (the hero faces wherever
+// it looks), lock-on framing, wall collision against static geometry, and trauma shake.
 import * as THREE from "three";
 import { clamp, damp } from "../engine/rng";
 import { angleDelta, yawTowards } from "../game/rules/combat";
@@ -12,7 +12,6 @@ export class CameraRig {
   private distance = 6.6;
   private currentDistance = 6.6;
   private trauma = 0;
-  private idleLook = 0;
   private readonly focus = new THREE.Vector3();
   private time = 0;
 
@@ -28,20 +27,16 @@ export class CameraRig {
     this.trauma = Math.min(1, this.trauma + amount);
   }
 
-  update(dt: number, target: THREE.Vector3, look: { x: number; y: number }, lookActive: boolean, heroYaw: number, moving: number, lock: THREE.Vector3 | null, physics: Physics | null): void {
+  update(dt: number, target: THREE.Vector3, look: { x: number; y: number }, lock: THREE.Vector3 | null, physics: Physics | null): void {
     this.time += dt;
     this.yaw -= look.x;
     this.pitch = clamp(this.pitch + look.y, -0.25, 1.1);
-    this.idleLook = lookActive ? 0 : this.idleLook + dt;
 
     if (lock) {
       // Frame both: swing behind the hero, looking at the target.
       const toward = yawTowards(target, lock);
       this.yaw += angleDelta(this.yaw, toward) * damp(5, dt);
       this.pitch += (0.36 - this.pitch) * damp(3, dt);
-    } else if (this.idleLook > 0.8 && moving > 0.3) {
-      // Drift back behind the hero while running.
-      this.yaw += angleDelta(this.yaw, heroYaw) * damp(0.9 * moving, dt);
     }
 
     const desiredFocus = new THREE.Vector3(target.x, target.y + 1.5, target.z);

@@ -108,28 +108,6 @@ export function attackPose(combo: number, progress: number): Pose {
   );
 }
 
-/** Forward dodge roll; progress 0..1. */
-export function rollPose(progress: number): Pose {
-  const pose = restPose();
-  const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-  const tuck = Math.sin(Math.min(1, progress * 1.15) * Math.PI);
-  pose.bodyPitch = eased * Math.PI * 2;
-  pose.bodyY = hipHeight - tuck * 0.42;
-  pose.spineX = 0.2 + tuck * 0.7;
-  pose.neckX = tuck * 0.5;
-  pose.hipLX = -tuck * 1.7;
-  pose.hipRX = -tuck * 1.5;
-  pose.kneeLX = tuck * 2.2;
-  pose.kneeRX = tuck * 2.1;
-  pose.shoulderLX = -tuck * 1.1;
-  pose.shoulderRX = -tuck * 1.0;
-  pose.elbowLX = -tuck * 1.4;
-  pose.elbowRX = -tuck * 1.4;
-  pose.wristRX = -1.3;
-  pose.capeLift = 0.3 + tuck;
-  return pose;
-}
-
 export function hurtPose(progress: number): Pose {
   const pose = restPose();
   const hit = Math.sin(Math.min(1, progress) * Math.PI) * (1 - progress * 0.3);

@@ -1,11 +1,9 @@
 // Keyboard + mouse (pointer lock for camera look) + gamepad, read as game actions.
 
-export type Action = "attack" | "roll" | "interact" | "flare" | "lockOn" | "pause" | "confirm";
+export type Action = "attack" | "interact" | "flare" | "lockOn" | "pause" | "confirm";
 
 const keyActions: Record<string, Action[]> = {
   KeyJ: ["attack"],
-  Space: ["roll"],
-  KeyK: ["roll"],
   KeyE: ["interact", "confirm"],
   Enter: ["interact", "confirm"],
   KeyQ: ["flare"],
@@ -19,7 +17,6 @@ const keyActions: Record<string, Action[]> = {
 // Standard gamepad mapping: A=0, B=1, X=2, Y=3, LB=4, RB=5, Start=9.
 const padActions: Array<[number, Action[]]> = [
   [0, ["interact", "confirm"]],
-  [1, ["roll"]],
   [2, ["attack"]],
   [3, ["flare"]],
   [5, ["lockOn"]],

@@ -30,7 +30,7 @@ type GameState = "loading" | "title" | "playing" | "paused" | "dialogue" | "tran
 const transientFlags = ["bossActive"];
 
 /** Input buffer: a press waits up to `bufferSeconds` for the hero to be able to act
- * on it (mid-flinch, end of a roll), and is consumed the moment it's read. */
+ * on it (mid-flinch, end of a swing), and is consumed the moment it's read. */
 const bufferSeconds = 0.2;
 
 class BufferedControls implements ControlSource {
@@ -462,7 +462,7 @@ export class Game {
   private simulate(dt: number, passive: boolean): void {
     const area = this.area;
     if (!area) return;
-    this.controls.capture(["attack", "roll", "flare"]);
+    this.controls.capture(["attack", "flare"]);
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= dt;
       return;
@@ -717,7 +717,7 @@ export class Game {
   }
 
   private titleCamera(dt: number): void {
-    this.cameraRig.update(dt, this.player.position, { x: dt * 0.05, y: 0 }, true, this.player.yaw, 0, null, this.area?.physics ?? null);
+    this.cameraRig.update(dt, this.player.position, { x: dt * 0.05, y: 0 }, null, this.area?.physics ?? null);
   }
 
   private render(dt: number): void {
@@ -736,7 +736,7 @@ export class Game {
     const lock = this.player.lockTarget?.position() ?? null;
     if (this.state === "playing" || this.state === "dialogue" || this.state === "dead") {
       const look = this.state === "playing" ? this.input.look(dt) : { x: 0, y: 0 };
-      this.cameraRig.update(dt, this.player.rig.root.position, look, this.input.lookActive(), this.player.yaw, this.player.moveAmount, lock, area.physics);
+      this.cameraRig.update(dt, this.player.rig.root.position, look, lock, area.physics);
     }
     this.hud.setLock(lock ? this.project(lock.clone().setY(lock.y + 1.2)) : null);
 

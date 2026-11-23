@@ -4,7 +4,6 @@ export type Sound =
   | "swing"
   | "hit"
   | "hurt"
-  | "roll"
   | "flare"
   | "pickup"
   | "levelUp"
@@ -87,9 +86,6 @@ export class Sfx {
         break;
       case "hurt":
         this.tone("sawtooth", 320, 90, 0.25, 0.16);
-        break;
-      case "roll":
-        this.noise(0.25, 0.22, 400, 1400, "lowpass");
         break;
       case "flare":
         this.tone("triangle", 330, 990, 0.45, 0.16);
