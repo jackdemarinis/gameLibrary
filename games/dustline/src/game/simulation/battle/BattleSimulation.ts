@@ -1,5 +1,4 @@
 import { battleConfig } from "../../config/battleConfig";
-import type { EnemyArchetype } from "../../content/levelTypes";
 import type { BattleLevelData } from "../../content/levelTypes";
 import { gameConfig } from "../../config/gameConfig";
 import type { SaveData } from "../state";
@@ -7,6 +6,8 @@ import { createNavGrid } from "./navigation";
 import { buildBattleHudSnapshot } from "./systems/hudSystem";
 import { createBreakableObstacles, rebuildObstacleRects } from "./systems/destructibleSystem";
 import { runEnemyLogicSystem } from "./systems/enemyLogicSystem";
+import { runSpawnerSystem } from "./systems/spawnerSystem";
+import { createEnemyTank } from "./enemyFactory";
 import { runPickupSystem } from "./systems/pickupSystem";
 import { runPlayerControlSystem } from "./systems/playerControlSystem";
 import { runProjectileSystem } from "./systems/projectileSystem";
@@ -71,6 +72,7 @@ export class BattleSimulation {
 
     this.state.elapsedMs += deltaMs;
     this.state.rapidFireRemainingMs = Math.max(0, this.state.rapidFireRemainingMs - deltaMs);
+    this.state.freezeRemainingMs = Math.max(0, this.state.freezeRemainingMs - deltaMs);
     tickCooldowns(this.state, deltaMs);
 
     if (this.state.status !== "lost") {
@@ -79,6 +81,7 @@ export class BattleSimulation {
 
     if (this.state.status === "active") {
       effects.push(...runEnemyLogicSystem(this.state, deltaMs));
+      effects.push(...runSpawnerSystem(this.state, deltaMs));
     }
 
     if (this.state.status !== "lost") {
@@ -155,6 +158,8 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     lastKnownPlayerPosition: null,
     repositionTarget: null,
     behaviorSeed: 0,
+    strafeLeg: 0,
+    strafeLegEndMs: 0,
     alive: true,
   };
 
@@ -200,6 +205,9 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     status: "active",
     nextProjectileId: 0,
     nextPickupId: 0,
+    freezeRemainingMs: 0,
+    nextSpawnId: 0,
+    difficulty: difficultyTuning,
   };
 
   rebuildObstacleRects(state);
@@ -228,8 +236,11 @@ function resolveBattleStatus(state: BattleState): void {
   }
 
   const enemiesRemaining = state.enemies.some((enemy) => enemy.alive);
+  const spawnersRemaining = state.breakableObstacles.some(
+    (obstacle) => obstacle.kind === "spawner" && obstacle.alive,
+  );
 
-  if (!enemiesRemaining && state.status === "active") {
+  if (!enemiesRemaining && !spawnersRemaining && state.status === "active") {
     state.status = "won";
     state.projectiles = state.projectiles.filter((projectile) => projectile.faction === "player");
   }
@@ -239,8 +250,8 @@ function createBattleSnapshot(state: BattleState): BattleSnapshot {
   return {
     status: state.status,
     visibility: createBattleVisibilitySnapshot(state.visibility),
-    player: createTankSnapshot(state.player),
-    enemies: state.enemies.map(createTankSnapshot),
+    player: createTankSnapshot(state.player, false),
+    enemies: state.enemies.map((enemy) => createTankSnapshot(enemy, state.freezeRemainingMs > 0)),
     projectiles: state.projectiles.map((projectile) => ({
       id: projectile.id,
       faction: projectile.faction,
@@ -267,7 +278,7 @@ function createBattleSnapshot(state: BattleState): BattleSnapshot {
   };
 }
 
-function createTankSnapshot(tank: TankState): TankSnapshot {
+function createTankSnapshot(tank: TankState, frozen: boolean): TankSnapshot {
   return {
     id: tank.id,
     faction: tank.faction,
@@ -280,6 +291,7 @@ function createTankSnapshot(tank: TankState): TankSnapshot {
     maxHealth: tank.maxHealth,
     recoilOffset: tank.recoilOffset,
     showHealthBar: tank.faction === "enemy" && tank.recentDamageMs > 0 && tank.health < tank.maxHealth,
+    frozen: frozen && tank.faction === "enemy",
     aiState: tank.aiState,
     alive: tank.alive,
   };
@@ -296,6 +308,7 @@ function createBreakableObstacleSnapshot(obstacle: BattleState["breakableObstacl
     health: obstacle.health,
     maxHealth: obstacle.maxHealth,
     rewardCredits: obstacle.rewardCredits,
+    drop: obstacle.drop,
   };
 }
 
@@ -313,65 +326,6 @@ function createInitialPickups(level: BattleLevelData): PickupState[] {
   }));
 }
 
-function createEnemyTank(
-  id: string,
-  x: number,
-  y: number,
-  archetype: EnemyArchetype,
-  patrolPoints: readonly { x: number; y: number }[],
-  difficultyTuning: (typeof battleConfig.difficulty)[keyof typeof battleConfig.difficulty],
-): TankState {
-  const profile = battleConfig.enemy.archetypes[archetype];
-  const maxHealth = Math.round(profile.maxHealth * difficultyTuning.enemyHealthMultiplier);
-  const projectileDamage = Math.round(profile.projectileDamage * difficultyTuning.enemyDamageMultiplier);
-  const fireCooldownMs = Math.round(
-    profile.fireCooldownMs * difficultyTuning.enemyFireCooldownMultiplier,
-  );
-
-  return {
-    id,
-    faction: "enemy",
-    archetype,
-    position: { x, y },
-    hullRotation: Math.PI,
-    turretRotation: Math.PI,
-    radius: profile.radius,
-    health: maxHealth,
-    maxHealth,
-    moveSpeed: profile.moveSpeed,
-    turretTurnSpeed: 0,
-    fireCooldownMs,
-    fireCooldownRemainingMs: 220 + (hashString(id) % 360),
-    shotCount: profile.shotCount,
-    spreadRadians: profile.spreadRadians,
-    navWaypoint: null,
-    navRefreshMs: 0,
-    projectileSpeed: profile.projectileSpeed,
-    projectileDamage,
-    muzzleOffset: battleConfig.enemy.muzzleOffset + (profile.radius - battleConfig.enemy.radius),
-    recoilKick: profile.recoilKick,
-    recoilRecoveryPerSecond: profile.recoilRecoveryPerSecond,
-    recoilOffset: 0,
-    recentDamageMs: 0,
-    rewardCredits: profile.rewardCredits,
-    rewardScore: profile.rewardScore,
-    sightRange: profile.sightRange,
-    nearbyRange: battleConfig.enemy.nearbyDetectionRange,
-    preferredRange: profile.preferredRange,
-    engageRange: profile.engageRange,
-    aimInaccuracyRadians: profile.aimInaccuracyRadians,
-    repositionDistance: profile.repositionDistance,
-    patrolPoints: patrolPoints.map((point) => ({ x: point.x, y: point.y })),
-    aiState: patrolPoints.length > 0 ? "patrol" : "idle",
-    aiStateElapsedMs: 0,
-    patrolIndex: 0,
-    lastKnownPlayerPosition: null,
-    repositionTarget: null,
-    behaviorSeed: hashString(id),
-    alive: true,
-  };
-}
-
 function createBattleResultSummary(state: BattleState): BattleResultSummary {
   return {
     status: state.status,
@@ -383,14 +337,4 @@ function createBattleResultSummary(state: BattleState): BattleResultSummary {
     damageTaken: state.damageTaken,
     completionTimeMs: state.elapsedMs,
   };
-}
-
-function hashString(value: string): number {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-
-  return hash;
 }

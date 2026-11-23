@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { tankTheme, worldTheme } from "../../game/config/theme";
+import { pixelTheme, tankTheme, worldTheme } from "../../game/config/theme";
 import { BattleSimulation } from "../../game/simulation/battle/BattleSimulation";
 import type {
   BattleHudSnapshot,
@@ -26,6 +26,7 @@ import {
 import {
   ensureBattlefieldTexture,
   ensureCoinTexture,
+  ensureFreezeTexture,
   ensureRapidFireTexture,
   ensureRepairTexture,
   ensureShotTexture,
@@ -253,7 +254,9 @@ export class BattleScene extends Phaser.Scene {
             ? ensureRepairTexture(this)
             : pickup.kind === "rapidFire"
               ? ensureRapidFireTexture(this)
-              : ensureCoinTexture(this);
+              : pickup.kind === "freeze"
+                ? ensureFreezeTexture(this)
+                : ensureCoinTexture(this);
         const sprite = this.add.image(pickup.x, pickup.y, key);
         sprite.setDepth(4);
         // Coins spin like a flipbook; power-ups bob in two hard steps.
@@ -276,6 +279,13 @@ export class BattleScene extends Phaser.Scene {
   private syncTankSprite(sprite: TankSprite, tank: TankSnapshot): void {
     syncTankPose(sprite, tank.x, tank.y, tank.hullRotation, tank.turretRotation, tank.recoilOffset);
     sprite.container.setAlpha(tank.alive ? 1 : 0.28);
+    if (tank.frozen) {
+      sprite.hull.setTint(pixelTheme.frozenTint);
+      sprite.turret.setTint(pixelTheme.frozenTint);
+    } else {
+      sprite.hull.clearTint();
+      sprite.turret.clearTint();
+    }
     this.renderEnemyHealthBar(sprite, tank);
   }
 
@@ -311,8 +321,10 @@ export class BattleScene extends Phaser.Scene {
       { label: "Score", value: `${hud.totalScore}` },
       { label: "Credits", value: `$${hud.credits}` },
       { label: "Enemies", value: `${hud.enemiesRemaining}` },
+      ...(hud.spawnersRemaining > 0 ? [{ label: "Spawners", value: `${hud.spawnersRemaining}` }] : []),
       { label: "Time", value: formatTime(this.currentSnapshot.elapsedMs) },
       ...(hud.rapidFireSeconds > 0 ? [{ label: "Rapid Fire", value: `${hud.rapidFireSeconds}s` }] : []),
+      ...(hud.freezeSeconds > 0 ? [{ label: "Freeze", value: `${hud.freezeSeconds}s` }] : []),
     ];
     const viewModel = {
       layout: "active" as const,

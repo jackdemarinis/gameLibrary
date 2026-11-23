@@ -1,9 +1,9 @@
-import type { EnemyArchetype, PickupKind, Rect, BattleLevelData } from "../../content/levelTypes";
+import type { EnemyArchetype, PickupKind, Rect, BattleLevelData, SupplyDrop } from "../../content/levelTypes";
 import type { NavGrid } from "./navigation";
 
 export type BattleStatus = "active" | "won" | "lost";
 export type TankFaction = "player" | "enemy";
-export type BreakableObstacleKind = "crate" | "weakWall";
+export type BreakableObstacleKind = "crate" | "weakWall" | "supplyCrate" | "spawner";
 export type EnemyAiStateName = "idle" | "patrol" | "investigate" | "engage" | "reposition";
 export const battleVisibilityTileState = {
   unexplored: 0,
@@ -94,7 +94,18 @@ export interface TankState {
   lastKnownPlayerPosition: Vector2 | null;
   repositionTarget: Vector2 | null;
   behaviorSeed: number;
+  /** Current random strafe leg and when it ends (see buildStrafeTarget). */
+  strafeLeg: number;
+  strafeLegEndMs: number;
   alive: boolean;
+}
+
+export interface SpawnerState {
+  roster: EnemyArchetype[];
+  rosterIndex: number;
+  cooldownMs: number;
+  /** Ids of the enemies it produced that are still alive. */
+  liveSpawnIds: string[];
 }
 
 export interface BreakableObstacleState {
@@ -105,6 +116,10 @@ export interface BreakableObstacleState {
   maxHealth: number;
   rewardCredits: number;
   rewardScore: number;
+  /** Supply crates: the power-up left behind when broken. */
+  drop: SupplyDrop | null;
+  /** Spawners only. */
+  spawner: SpawnerState | null;
   alive: boolean;
 }
 
@@ -173,6 +188,16 @@ export interface BattleState {
   status: BattleStatus;
   nextProjectileId: number;
   nextPickupId: number;
+  /** Enemies and spawners stand still while this runs down. */
+  freezeRemainingMs: number;
+  nextSpawnId: number;
+  difficulty: DifficultyTuning;
+}
+
+export interface DifficultyTuning {
+  enemyHealthMultiplier: number;
+  enemyDamageMultiplier: number;
+  enemyFireCooldownMultiplier: number;
 }
 
 export interface TankSnapshot {
@@ -187,6 +212,8 @@ export interface TankSnapshot {
   maxHealth: number;
   recoilOffset: number;
   showHealthBar: boolean;
+  /** Held by a freeze power-up: the renderer tints it icy. */
+  frozen: boolean;
   aiState: EnemyAiStateName | null;
   alive: boolean;
 }
@@ -198,6 +225,8 @@ export interface BreakableObstacleSnapshot extends Rect {
   maxHealth: number;
   /** Gold crates pay out; the renderer paints them differently. */
   rewardCredits: number;
+  /** Supply crates show which power-up is inside. */
+  drop: SupplyDrop | null;
 }
 
 export interface ProjectileSnapshot {
@@ -243,6 +272,9 @@ export interface BattleHudSnapshot {
   enemiesRemaining: number;
   /** Whole seconds of rapid fire left (0 = none). */
   rapidFireSeconds: number;
+  /** Whole seconds of enemy freeze left (0 = none). */
+  freezeSeconds: number;
+  spawnersRemaining: number;
   controls: string[];
 }
 

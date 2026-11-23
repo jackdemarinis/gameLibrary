@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { pixelTheme as p } from "../../game/config/theme";
-import type { Rect } from "../../game/content/levelTypes";
+import type { Rect, SupplyDrop } from "../../game/content/levelTypes";
 import type { BreakableObstacleKind } from "../../game/simulation/battle/types";
 
 /** World pixels per art pixel. A 64px grid cell is 16x16 art pixels. */
@@ -181,8 +181,11 @@ export function damageStage(health: number, maxHealth: number): number {
   return Math.min(3, Math.ceil(lost * 3 - 0.001));
 }
 
-/** plain, or the tougher look: a gold crate (pays out) or a steel-banded brick. */
-export type ObstacleVariant = "plain" | "special";
+/**
+ * plain, or the tougher look: a gold crate (pays out) or a steel-banded brick.
+ * Supply crates use their drop as the variant so each shows its power-up.
+ */
+export type ObstacleVariant = "plain" | "special" | SupplyDrop;
 
 export function ensureObstacleTexture(
   scene: Phaser.Scene,
@@ -196,6 +199,15 @@ export function ensureObstacleTexture(
   const artHeight = Math.max(4, Math.round(worldHeight / artPixel));
   const key = `dl-${kind}-${variant}-${artWidth}x${artHeight}-${stage}`;
 
+  if (kind === "spawner") {
+    return paintTexture(scene, key, artWidth, artHeight, (x, y) => spawnerColor(x, y, artWidth, artHeight, stage));
+  }
+  if (kind === "supplyCrate") {
+    const drop: SupplyDrop = variant === "plain" || variant === "special" ? "repair" : variant;
+    return paintTexture(scene, key, artWidth, artHeight, (x, y) =>
+      supplyCrateColor(crateColor(x, y, artWidth, artHeight, stage), x, y, artWidth, artHeight, drop),
+    );
+  }
   if (kind === "crate") {
     return paintTexture(scene, key, artWidth, artHeight, (x, y) => {
       const color = crateColor(x, y, artWidth, artHeight, stage);
@@ -225,6 +237,68 @@ function goldCrateColor(color: number | null, x: number, y: number, width: numbe
     [p.woodDark]: p.goldDark,
   };
   return swap[color] ?? color;
+}
+
+/** 6x6 power-up emblems, shared by supply crates and the matching pickups. */
+const supplyEmblems: Record<SupplyDrop, readonly string[]> = {
+  repair: ["..XX..", "..XX..", "XXXXXX", "XXXXXX", "..XX..", "..XX.."],
+  freeze: ["X.XX.X", ".XXXX.", "XX..XX", "XX..XX", ".XXXX.", "X.XX.X"],
+  rapidFire: ["...XX.", "..XX..", ".XXXX.", "..XX..", ".XX...", ".X...."],
+};
+
+const supplyColors: Record<SupplyDrop, { emblem: number; band: number }> = {
+  repair: { emblem: p.repairCross, band: p.repairCross },
+  freeze: { emblem: p.freezeFace, band: p.freezeEdge },
+  rapidFire: { emblem: p.boltFace, band: p.boltEdge },
+};
+
+/**
+ * Supply crate: the wooden crate with a coloured band top and bottom and a dark
+ * plate in the middle stamped with its power-up, so you know what's inside.
+ */
+function supplyCrateColor(
+  color: number | null,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  drop: SupplyDrop,
+): number | null {
+  if (color === null) return null;
+  const colors = supplyColors[drop];
+  if ((y === 3 || y === height - 4) && x > 2 && x < width - 3) return colors.band;
+  const plateX = x - Math.floor(width / 2) + 4;
+  const plateY = y - Math.floor(height / 2) + 4;
+  if (plateX < 0 || plateY < 0 || plateX > 7 || plateY > 7) return color;
+  if (plateX === 0 || plateY === 0 || plateX === 7 || plateY === 7) return p.outline;
+  const row = supplyEmblems[drop][plateY - 1];
+  return row?.[plateX - 1] === "X" ? colors.emblem : p.supplyPlate;
+}
+
+/**
+ * Enemy spawner: an armoured steel hatch ringed with hazard stripes and a hot
+ * red core. Damage cracks the plate and dims the core.
+ */
+function spawnerColor(x: number, y: number, width: number, height: number, stage: number): number | null {
+  const right = width - 1;
+  const bottom = height - 1;
+  if ((x === 0 || x === right) && (y === 0 || y === bottom)) return null;
+  if (x === 0 || y === 0 || x === right || y === bottom) return p.outline;
+  if (x <= 2 || y <= 2 || x >= right - 2 || y >= bottom - 2) {
+    return Math.floor((x + y) / 2) % 2 === 0 ? p.hazardStripe : p.outline;
+  }
+  if (stage > 0 && hash(x, y, 71) < stage * 0.09) return p.spawnerCrack;
+
+  const dx = x + 0.5 - width / 2;
+  const dy = y + 0.5 - height / 2;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  if (distance < 2.2) return stage >= 3 ? p.spawnerCore : p.spawnerCoreLight;
+  if (distance < 3.4) return stage >= 2 ? p.spawnerDark : p.spawnerCore;
+  if (distance < 4.4) return p.outline;
+  if ((x === 4 || x === right - 4) && (y === 4 || y === bottom - 4)) return p.steelRivet;
+  if (x === 3 || y === 3) return p.spawnerLight;
+  if (x === right - 3 || y === bottom - 3) return p.spawnerDark;
+  return p.spawnerFace;
 }
 
 /** Running-bond bricks (8x4 art px). Damage knocks whole bricks out. */
@@ -452,6 +526,29 @@ export function ensureRepairTexture(scene: Phaser.Scene): string {
     if (x === 0 || y === 0 || x === size - 1 || y === size - 1) return p.repairEdge;
     if ((x >= 4 && x <= 6 && y >= 2 && y <= 8) || (y >= 4 && y <= 6 && x >= 2 && x <= 8)) return p.repairCross;
     return y === 1 || x === 1 ? p.white : p.repairFace;
+  });
+}
+
+/** Freeze charge: an icy snowflake on a dark plate. */
+export function ensureFreezeTexture(scene: Phaser.Scene): string {
+  const size = 11;
+  const flake = [
+    "....X....",
+    ".X..X..X.",
+    "..X.X.X..",
+    "...XXX...",
+    "XXXXXXXXX",
+    "...XXX...",
+    "..X.X.X..",
+    ".X..X..X.",
+    "....X....",
+  ];
+  return paintTexture(scene, "dlFreeze", size, size, (x, y) => {
+    if ((x === 0 || x === size - 1) && (y === 0 || y === size - 1)) return null;
+    if (x === 0 || y === 0 || x === size - 1 || y === size - 1) return p.freezeEdge;
+    const row = flake[y - 1];
+    if (row && row[x - 1] === "X") return x === 5 || y === 5 ? p.freezeLight : p.freezeFace;
+    return p.outline;
   });
 }
 

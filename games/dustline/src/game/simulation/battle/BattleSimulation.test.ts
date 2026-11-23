@@ -134,12 +134,8 @@ describe("BattleSimulation", () => {
     expect(snapshot.pickups).toHaveLength(1);
     expect(snapshot.totalScore).toBe(140);
 
-    advanceFor(simulation, 800, {
-      movementX: 0,
-      movementY: 1,
-      aim: { x: 120, y: 240 },
-      firing: false,
-    });
+    // Enemies strafe, so the coin lands wherever the kill happened: drive to it.
+    advanceTowardPickup(simulation, 2400);
 
     snapshot = simulation.getSnapshot();
     expect(snapshot.credits).toBe(35);
@@ -152,7 +148,6 @@ describe("BattleSimulation", () => {
       creditsEarned: 35,
       pointsEarned: 175,
       totalScore: 175,
-      damageTaken: 0,
     });
   });
 
@@ -402,6 +397,28 @@ function advanceTrackingEnemy(simulation: BattleSimulation, durationMs: number):
         ? { x: enemy.x, y: enemy.y }
         : { x: 120, y: 240 },
       firing: true,
+    });
+  }
+}
+
+function advanceTowardPickup(simulation: BattleSimulation, durationMs: number): void {
+  const stepMs = 16;
+
+  for (let elapsed = 0; elapsed < durationMs; elapsed += stepMs) {
+    const snapshot = simulation.getSnapshot();
+    const pickup = snapshot.pickups[0];
+
+    if (!pickup) {
+      return;
+    }
+
+    const offsetX = pickup.x - snapshot.player.x;
+    const offsetY = pickup.y - snapshot.player.y;
+    simulation.advance(stepMs, {
+      movementX: Math.abs(offsetX) > 4 ? Math.sign(offsetX) : 0,
+      movementY: Math.abs(offsetY) > 4 ? Math.sign(offsetY) : 0,
+      aim: { x: pickup.x, y: pickup.y },
+      firing: false,
     });
   }
 }

@@ -25,7 +25,8 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
   const player = state.player;
   const effects: SimulationEffect[] = [];
 
-  if (!player.alive) {
+  // A freeze power-up holds every enemy in place: no moving, aiming or firing.
+  if (!player.alive || state.freezeRemainingMs > 0) {
     return effects;
   }
 
@@ -45,7 +46,7 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
     updateEnemyState(enemy, perception);
     updateEnemyAim(enemy, player, perception, state.elapsedMs);
 
-    const moveTarget = chooseMovementTarget(enemy, player, perception);
+    const moveTarget = chooseMovementTarget(enemy, player, perception, state.elapsedMs);
 
     if (moveTarget) {
       const steerTarget = routeAroundWalls(state, enemy, moveTarget, deltaMs);
@@ -158,6 +159,7 @@ function chooseMovementTarget(
   enemy: TankState,
   player: TankState,
   perception: EnemyPerception,
+  elapsedMs: number,
 ): Vector2 | null {
   switch (enemy.aiState) {
     case "patrol":
@@ -198,7 +200,7 @@ function chooseMovementTarget(
         return enemy.lastKnownPlayerPosition;
       }
 
-      return chooseEngageTarget(enemy, player, perception);
+      return chooseEngageTarget(enemy, player, perception, elapsedMs);
     case "idle":
     default:
       return null;
@@ -209,7 +211,8 @@ function chooseEngageTarget(
   enemy: TankState,
   player: TankState,
   perception: EnemyPerception,
-): Vector2 | null {
+  elapsedMs: number,
+): Vector2 {
   const toPlayer = normalizeVector({
     x: player.position.x - enemy.position.x,
     y: player.position.y - enemy.position.y,
@@ -234,7 +237,65 @@ function chooseEngageTarget(
     return { ...player.position };
   }
 
-  return null;
+  return buildStrafeTarget(enemy, toPlayer, perception.distance, elapsedMs);
+}
+
+/**
+ * Keep moving around the player at preferred range, at normal driving speed.
+ * Time is cut into legs of random length; each leg gets a random heading
+ * (sideways one way or the other, swung forward or back by a random amount),
+ * blended with a pull in or out to hold range. Seeded per tank, so it looks
+ * random but replays the same way.
+ */
+function buildStrafeTarget(enemy: TankState, toPlayer: Vector2, distance: number, elapsedMs: number): Vector2 {
+  const { lookAheadDistance, maxRangeCorrection, legLengthMin, legLengthMax, headingJitterRadians, switchMs } =
+    battleConfig.enemy.strafe;
+  const leg = advanceStrafeLeg(enemy, elapsedMs, switchMs[enemy.archetype ?? "raider"], legLengthMin, legLengthMax);
+  const side = seededUnit(enemy.behaviorSeed, leg, 1) < 0.5 ? 1 : -1;
+  const swing = (seededUnit(enemy.behaviorSeed, leg, 2) * 2 - 1) * headingJitterRadians;
+  const sideways = { x: -toPlayer.y * side, y: toPlayer.x * side };
+  const swung = {
+    x: sideways.x * Math.cos(swing) - sideways.y * Math.sin(swing),
+    y: sideways.x * Math.sin(swing) + sideways.y * Math.cos(swing),
+  };
+  const rangeCorrection = Math.max(
+    -maxRangeCorrection,
+    Math.min(maxRangeCorrection, (distance - enemy.preferredRange) / enemy.preferredRange),
+  );
+  const heading = normalizeVector({
+    x: swung.x + toPlayer.x * rangeCorrection,
+    y: swung.y + toPlayer.y * rangeCorrection,
+  });
+
+  return {
+    x: enemy.position.x + heading.x * lookAheadDistance,
+    y: enemy.position.y + heading.y * lookAheadDistance,
+  };
+}
+
+/** Moves the tank onto a new random-length leg once the current one runs out. */
+function advanceStrafeLeg(
+  enemy: TankState,
+  elapsedMs: number,
+  baseMs: number,
+  minFactor: number,
+  maxFactor: number,
+): number {
+  while (enemy.strafeLegEndMs <= elapsedMs) {
+    enemy.strafeLeg += 1;
+    const lengthFactor = minFactor + seededUnit(enemy.behaviorSeed, enemy.strafeLeg, 0) * (maxFactor - minFactor);
+    enemy.strafeLegEndMs = Math.max(enemy.strafeLegEndMs, elapsedMs) + baseMs * lengthFactor;
+  }
+
+  return enemy.strafeLeg;
+}
+
+/** Deterministic 0..1 noise from a tank's seed, a leg number and a channel. */
+function seededUnit(seed: number, leg: number, channel: number): number {
+  let value = Math.imul(seed | 0, 2654435761 | 0) ^ Math.imul(leg + 1, 2246822519 | 0) ^ Math.imul(channel + 7, 3266489917 | 0);
+  value = Math.imul(value ^ (value >>> 15), 2246822507 | 0);
+  value = Math.imul(value ^ (value >>> 13), 3266489909 | 0);
+  return ((value ^ (value >>> 16)) >>> 0) / 4294967296;
 }
 
 function moveEnemyTowards(

@@ -85,6 +85,19 @@ export const pixelTheme = {
   boltFace: 0xff7a3d,
   boltLight: 0xffd36b,
   boltEdge: 0x6e2410,
+  freezeFace: 0x8fdcff,
+  freezeLight: 0xe6f7ff,
+  freezeEdge: 0x1f4f6e,
+  /** Tint over enemy tanks while a freeze holds them. */
+  frozenTint: 0x9fdcff,
+  supplyPlate: 0x2a2f26,
+  spawnerFace: 0x3d4347,
+  spawnerLight: 0x6a7276,
+  spawnerDark: 0x23272a,
+  spawnerCrack: 0x0e1011,
+  hazardStripe: 0xf1c24c,
+  spawnerCore: 0xe0573a,
+  spawnerCoreLight: 0xffa36b,
 } as const;
 
 /**

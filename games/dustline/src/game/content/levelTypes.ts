@@ -13,7 +13,11 @@ export type RoomKind = "staging" | "skirmish" | "chokepoint" | "vault" | "hard" 
 /** How hard a map is, shown as a badge on level select. */
 export type LevelTier = "easy" | "medium" | "bonus" | "hard" | "boss";
 
-export type PickupKind = "coin" | "repair" | "rapidFire";
+/** freeze stops every enemy and spawner for a few seconds. */
+export type PickupKind = "coin" | "repair" | "rapidFire" | "freeze";
+
+/** Power-ups a supply crate can hold. */
+export type SupplyDrop = "repair" | "rapidFire" | "freeze";
 
 export interface Rect {
   x: number;
@@ -34,6 +38,17 @@ export interface BreakableLayoutRect extends Rect {
   id: string;
   maxHealth: number;
   rewardCredits?: number;
+}
+
+/** A crate that drops a power-up when it is shot open. */
+export interface SupplyCrateLayout extends BreakableLayoutRect {
+  drop: SupplyDrop;
+}
+
+/** A heavily armoured structure that keeps producing enemies until destroyed. */
+export interface SpawnerLayout extends BreakableLayoutRect {
+  /** Archetypes it produces, in rotation. */
+  roster: EnemyArchetype[];
 }
 
 export interface PickupSpawn {
@@ -62,5 +77,7 @@ export interface BattleLevelData {
   indestructibleWalls: Rect[];
   weakWalls: BreakableLayoutRect[];
   crates: BreakableLayoutRect[];
+  supplyCrates?: SupplyCrateLayout[];
+  spawners?: SpawnerLayout[];
   pickups: PickupSpawn[];
 }

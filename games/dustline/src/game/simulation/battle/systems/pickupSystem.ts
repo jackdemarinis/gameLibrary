@@ -6,6 +6,7 @@ const pickupColors: Record<PickupState["kind"], number> = {
   coin: 0xf1c24c,
   repair: 0x8fe07a,
   rapidFire: 0xff7a3d,
+  freeze: 0x8fdcff,
 };
 
 export function runPickupSystem(state: BattleState): SimulationEffect[] {
@@ -35,6 +36,8 @@ export function runPickupSystem(state: BattleState): SimulationEffect[] {
       );
     } else if (pickup.kind === "rapidFire") {
       state.rapidFireRemainingMs = battleConfig.pickup.rapidFireDurationMs;
+    } else if (pickup.kind === "freeze") {
+      state.freezeRemainingMs = battleConfig.pickup.freezeDurationMs;
     } else {
       state.credits += pickup.value;
       state.creditsEarned += pickup.value;

@@ -4,7 +4,7 @@ export const battleConfig = {
   fixedStepMs: 1000 / 120,
   player: {
     radius: 28,
-    maxHealth: 100,
+    maxHealth: 75,
     moveSpeed: 228,
     fireCooldownMs: 180,
     minFireCooldownMs: 78,
@@ -24,6 +24,30 @@ export const battleConfig = {
     nearbyDetectionRange: 228,
     investigateDurationMs: 2200,
     repositionDurationMs: 1000,
+    /** Enemies produced by a spawner pay this share of the normal reward. */
+    spawnedRewardMultiplier: 0.25,
+    /**
+     * In range, enemies keep moving at their normal speed instead of parking: they
+     * pick a new random heading around the player every so often (switchMs per type,
+     * stretched or shortened at random), and drift in or out to hold their range.
+     * No bursts of speed: tanks only ever drive at moveSpeed.
+     */
+    strafe: {
+      lookAheadDistance: 80,
+      maxRangeCorrection: 0.6,
+      /** Each leg lasts switchMs times a random factor in this range. */
+      legLengthMin: 0.5,
+      legLengthMax: 1.6,
+      /** Random heading spread either side of a pure sideways move, in radians. */
+      headingJitterRadians: 0.9,
+      switchMs: {
+        raider: 1700,
+        skirmisher: 950,
+        bulwark: 2800,
+        lancer: 3200,
+        warden: 2300,
+      },
+    },
     /**
      * The enemy roster. Each type reads differently on screen (colour + silhouette,
      * see enemyTankArt in BattleScene) and in how it fights.
@@ -31,8 +55,8 @@ export const battleConfig = {
      */
     archetypes: {
       raider: {
-        maxHealth: 76,
-        moveSpeed: 126,
+        maxHealth: 290,
+        moveSpeed: 165,
         fireCooldownMs: 920,
         projectileSpeed: 440,
         projectileDamage: 12,
@@ -50,8 +74,8 @@ export const battleConfig = {
         spreadRadians: 0,
       },
       skirmisher: {
-        maxHealth: 52,
-        moveSpeed: 168,
+        maxHealth: 200,
+        moveSpeed: 205,
         fireCooldownMs: 760,
         projectileSpeed: 470,
         projectileDamage: 10,
@@ -69,8 +93,8 @@ export const battleConfig = {
         spreadRadians: 0,
       },
       bulwark: {
-        maxHealth: 150,
-        moveSpeed: 80,
+        maxHealth: 580,
+        moveSpeed: 106,
         fireCooldownMs: 1240,
         projectileSpeed: 360,
         projectileDamage: 14,
@@ -88,8 +112,8 @@ export const battleConfig = {
         spreadRadians: 0.09,
       },
       lancer: {
-        maxHealth: 64,
-        moveSpeed: 70,
+        maxHealth: 240,
+        moveSpeed: 98,
         fireCooldownMs: 1900,
         projectileSpeed: 780,
         projectileDamage: 24,
@@ -107,8 +131,8 @@ export const battleConfig = {
         spreadRadians: 0,
       },
       warden: {
-        maxHealth: 520,
-        moveSpeed: 64,
+        maxHealth: 2100,
+        moveSpeed: 88,
         fireCooldownMs: 1350,
         projectileSpeed: 420,
         projectileDamage: 15,
@@ -127,6 +151,24 @@ export const battleConfig = {
       },
     },
   },
+  /**
+   * Enemy spawners: armoured structures that keep producing tanks while the player
+   * is within activationRange, up to maxAlive at a time. A level is not won until
+   * every spawner is destroyed.
+   */
+  spawner: {
+    maxHealth: 900,
+    spawnIntervalMs: 5200,
+    firstSpawnDelayMs: 1800,
+    maxAlive: 3,
+    activationRange: 820,
+    rewardCredits: 120,
+    rewardScore: 600,
+  },
+  supplyCrate: {
+    maxHealth: 60,
+    rewardScore: 30,
+  },
   projectile: {
     radius: 5,
     ttlMs: 1400,
@@ -140,6 +182,8 @@ export const battleConfig = {
     /** Rapid-fire charge: fire cooldown multiplier and how long it lasts. */
     rapidFireCooldownMultiplier: 0.5,
     rapidFireDurationMs: 9000,
+    /** Freeze: enemies and spawners stop for this long. */
+    freezeDurationMs: 5000,
   },
   destructible: {
     healthBarVisibleMs: 1100,

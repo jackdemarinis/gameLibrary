@@ -10,7 +10,11 @@ import type {
   Point,
   Rect,
   RoomKind,
+  SpawnerLayout,
+  SupplyCrateLayout,
+  SupplyDrop,
 } from "./levelTypes";
+import { battleConfig } from "../config/battleConfig";
 
 /**
  * Levels are drawn as text maps on one square grid: the same 64px cell as the
@@ -22,6 +26,8 @@ import type {
  *   c  crate                                 $  gold crate (pays out when broken)
  *   o  coin                                  O  coin stash
  *   +  repair kit                            !  rapid-fire charge
+ *   H  supply crate: repair    F  supply crate: freeze    R  supply crate: rapid fire
+ *   X  enemy spawner (raiders + skirmishers)   Y  heavy spawner (bulwarks + lancers)
  *   P  player start
  *   r  raider   s  skirmisher   h  bulwark   l  lancer   W  warden (boss)
  */
@@ -40,6 +46,17 @@ const pickupByChar: Record<string, { kind: PickupKind; value: number }> = {
   O: { kind: "coin", value: 90 },
   "+": { kind: "repair", value: 0 },
   "!": { kind: "rapidFire", value: 0 },
+};
+
+const supplyDropByChar: Record<string, SupplyDrop> = {
+  H: "repair",
+  F: "freeze",
+  R: "rapidFire",
+};
+
+const spawnerRosterByChar: Record<string, EnemyArchetype[]> = {
+  X: ["raider", "skirmisher", "raider", "skirmisher", "skirmisher"],
+  Y: ["bulwark", "raider", "lancer", "raider"],
 };
 
 /** Archetypes that hold their post instead of walking a beat. */
@@ -67,7 +84,7 @@ export interface TileLevelSpec {
   map: readonly string[];
 }
 
-const solidChars = new Set(["#", "b", "B", "c", "$"]);
+const solidChars = new Set(["#", "b", "B", "c", "$", "H", "F", "R", "X", "Y"]);
 
 export function isSolidTile(char: string): boolean {
   return solidChars.has(char);
@@ -91,6 +108,8 @@ export function compileTileLevel(spec: TileLevelSpec): BattleLevelData {
   const enemySpawns: EnemySpawn[] = [];
   const weakWalls: BreakableLayoutRect[] = [];
   const crates: BreakableLayoutRect[] = [];
+  const supplyCrates: SupplyCrateLayout[] = [];
+  const spawners: SpawnerLayout[] = [];
   const pickups: PickupSpawn[] = [];
   const counters = new Map<string, number>();
   const nextId = (prefix: string): string => {
@@ -119,6 +138,21 @@ export function compileTileLevel(spec: TileLevelSpec): BattleLevelData {
           ...cell,
           maxHealth: crateHealth,
           ...(char === "$" ? { rewardCredits: goldCrateReward } : {}),
+        });
+      } else if (supplyDropByChar[char]) {
+        supplyCrates.push({
+          id: nextId(`supply-${supplyDropByChar[char]}`),
+          ...cell,
+          maxHealth: battleConfig.supplyCrate.maxHealth,
+          drop: supplyDropByChar[char],
+        });
+      } else if (spawnerRosterByChar[char]) {
+        spawners.push({
+          id: nextId(char === "Y" ? "heavySpawner" : "spawner"),
+          ...cell,
+          maxHealth: battleConfig.spawner.maxHealth,
+          rewardCredits: battleConfig.spawner.rewardCredits,
+          roster: spawnerRosterByChar[char],
         });
       } else if (pickupByChar[char]) {
         const pickup = pickupByChar[char];
@@ -156,6 +190,8 @@ export function compileTileLevel(spec: TileLevelSpec): BattleLevelData {
     indestructibleWalls: mergeWallCells(rows),
     weakWalls,
     crates,
+    supplyCrates,
+    spawners,
     pickups,
   };
 }
