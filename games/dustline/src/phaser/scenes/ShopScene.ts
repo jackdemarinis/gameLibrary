@@ -13,6 +13,7 @@ import {
   shopUpgradeOrder,
 } from "../../game/simulation/shop";
 import { SceneBridge } from "../adapters/sceneBridge";
+import { startMusic } from "../audio/dustlineMusic";
 
 const shopDifficultyChoices = [
   {
@@ -45,6 +46,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMusic("menu");
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome();

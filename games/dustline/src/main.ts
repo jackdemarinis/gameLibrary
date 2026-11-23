@@ -11,6 +11,7 @@ import { createGame } from "./phaser/boot/createGame";
 import { SceneBridge } from "./phaser/adapters/sceneBridge";
 import { AppChrome } from "./ui/AppChrome";
 import { registerOffline } from "./shared/offline";
+import { unlockSound } from "./phaser/audio/dustlineSound";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 
@@ -41,5 +42,9 @@ const saveStore = createSaveStore(window.localStorage);
 const bridge = new SceneBridge({ chrome, saveStore });
 
 createGame(gameRoot, bridge);
+
+// Browsers only start audio after a click or key press; the music waits for it.
+window.addEventListener("pointerdown", unlockSound);
+window.addEventListener("keydown", unlockSound);
 
 registerOffline("../", ['16px "Pixelify Sans"', '700 16px "Pixelify Sans"']);

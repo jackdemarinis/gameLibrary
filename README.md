@@ -146,8 +146,11 @@ Top-down tank campaign:
   1-5, the mouse wheel, or a click on the inventory above the HUD.
 - Power-ups (repair, rapid fire, freeze) are hidden in crates you break.
 - Enter moves you forward through the menus, and Esc takes you back.
-- M mutes or unmutes the sound. All sound effects are synthesized in code
-  (`games/dustline/src/phaser/audio/dustlineSound.ts`); there are no audio files.
+- Esc (or the gear button) opens settings: music and effects volume, key
+  rebinding, restart, and back to the main menu. M mutes by default.
+- Music and sound effects are synthesized in code (`games/dustline/src/phaser/audio/`):
+  `dustlineMusic.ts` sequences an original menu track and battle track, and
+  `dustlineSound.ts` plays the effects. There are no audio files.
 
 The save lives in localStorage. Design notes: `games/dustline/PLAN.md`, `TODO.md`.
 

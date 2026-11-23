@@ -3,6 +3,7 @@ import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import type { BattleResultSummary } from "../../game/simulation/battle/types";
 import type { BattleFlowResult, SceneBridge } from "../adapters/sceneBridge";
+import { startMusic } from "../audio/dustlineMusic";
 
 export interface ResultsSceneData {
   flow: BattleFlowResult;
@@ -18,6 +19,7 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   create(data: ResultsSceneData): void {
+    startMusic("menu");
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome(data);

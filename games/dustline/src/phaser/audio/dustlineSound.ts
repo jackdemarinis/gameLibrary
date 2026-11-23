@@ -1,4 +1,5 @@
 import type { SoundCue } from "../../game/simulation/battle/types";
+import { getSettings } from "../settings/dustlineSettings";
 
 /**
  * Dustline's sound effects, synthesized live with the Web Audio API: no audio
@@ -6,6 +7,10 @@ import type { SoundCue } from "../../game/simulation/battle/types";
  *
  * The simulation tags effects with a SoundCue; BattleScene hands them here with
  * the listener (player) position so distant fire is quieter.
+ *
+ * Routing: effects and music (dustlineMusic.ts) each have their own volume,
+ * set from the settings menu, and both feed one master bus with a limiter.
+ * Mute silences the master bus.
  */
 
 const soundSettings = {
@@ -22,9 +27,26 @@ type Recipe = (audio: AudioContext, out: AudioNode, at: number) => void;
 
 let context: AudioContext | null = null;
 let masterGain: GainNode | null = null;
+let effectsGain: GainNode | null = null;
+let musicGain: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 let muted = readMuted();
 const lastPlayedAt = new Map<SoundCue, number>();
+
+/** Music bus for the soundtrack: null until audio exists and is allowed to play. */
+export function getMusicBus(): { audio: AudioContext; out: AudioNode; noise: AudioBuffer } | null {
+  const audio = getContext();
+  if (!audio || !musicGain || !noiseBuffer || audio.state !== "running") {
+    return null;
+  }
+  return { audio, out: musicGain, noise: noiseBuffer };
+}
+
+/** Applies volumes live (0..1). The settings menu calls this while a slider moves. */
+export function setChannelVolumes(music: number, effects: number): void {
+  if (musicGain) musicGain.gain.value = music;
+  if (effectsGain) effectsGain.gain.value = effects;
+}
 
 export function isSoundMuted(): boolean {
   return muted;
@@ -82,7 +104,7 @@ export function playSound(
 
   const cueGain = audio.createGain();
   cueGain.gain.value = volume;
-  cueGain.connect(masterGain);
+  cueGain.connect(effectsGain ?? masterGain);
   recipes[cue](audio, cueGain, audio.currentTime + 0.005);
   // Disconnect once every recipe has certainly finished.
   window.setTimeout(() => cueGain.disconnect(), 2500);
@@ -109,6 +131,13 @@ function getContext(): AudioContext | null {
   context = new AudioContextClass();
   masterGain = context.createGain();
   masterGain.gain.value = muted ? 0 : soundSettings.masterVolume;
+  const settings = getSettings();
+  effectsGain = context.createGain();
+  effectsGain.gain.value = settings.effectsVolume;
+  effectsGain.connect(masterGain);
+  musicGain = context.createGain();
+  musicGain.gain.value = settings.musicVolume;
+  musicGain.connect(masterGain);
 
   // A gentle limiter so explosions on top of gunfire don't clip.
   const limiter = context.createDynamicsCompressor();

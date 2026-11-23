@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
+import { startMusic } from "../audio/dustlineMusic";
 
 export class LevelIntroScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -12,6 +13,7 @@ export class LevelIntroScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMusic("menu");
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome();

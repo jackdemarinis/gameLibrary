@@ -7,6 +7,7 @@ import { buildBattleHudSnapshot } from "./systems/hudSystem";
 import { createBreakableObstacles, rebuildObstacleRects } from "./systems/destructibleSystem";
 import { runEnemyLogicSystem } from "./systems/enemyLogicSystem";
 import { runSpawnerSystem } from "./systems/spawnerSystem";
+import { runTankCollisionSystem } from "./systems/tankCollisionSystem";
 import { createEnemyTank } from "./enemyFactory";
 import { applyWeaponToTank, buildPlayerLoadout, selectPlayerWeapon } from "./playerWeapons";
 import { runPickupSystem } from "./systems/pickupSystem";
@@ -97,6 +98,10 @@ export class BattleSimulation {
     if (this.state.status === "active") {
       effects.push(...runEnemyLogicSystem(this.state, deltaMs));
       effects.push(...runSpawnerSystem(this.state, deltaMs));
+    }
+
+    if (this.state.status !== "lost") {
+      runTankCollisionSystem(this.state);
     }
 
     if (this.state.status !== "lost") {

@@ -3,6 +3,7 @@ import { goToLibrary } from "../../shared/libraryNav";
 import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
+import { startMusic } from "../audio/dustlineMusic";
 
 export class MenuScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -13,6 +14,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMusic("menu");
     // The DOM title screen paints the pixel camo field over this.
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.renderChrome();

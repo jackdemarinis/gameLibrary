@@ -106,6 +106,26 @@ export interface HudWeaponSlotViewModel {
   onPress: () => void;
 }
 
+export type VolumeChannel = "music" | "effects";
+
+/** The in-battle settings window (Esc or the gear button). */
+export interface SettingsViewModel {
+  /** 0..100 */
+  musicVolume: number;
+  effectsVolume: number;
+  muted: boolean;
+  bindings: { id: string; label: string; key: string; waiting: boolean }[];
+  /** Controls that can't be rebound, e.g. "Mouse: aim and fire". */
+  fixedControls: string[];
+  /** Live while the slider moves (no redraw). */
+  onVolumeInput: (channel: VolumeChannel, value: number) => void;
+  /** When the slider is let go: saved. */
+  onVolumeCommit: (channel: VolumeChannel, value: number) => void;
+  onToggleMute: () => void;
+  onRebind: (id: string) => void;
+  onResetBindings: () => void;
+}
+
 export interface HudViewModel {
   layout: "active" | "result";
   title: string;
@@ -114,11 +134,20 @@ export interface HudViewModel {
   kpis: HudKpi[];
   notes: string[];
   actions: UiAction[];
-  helpAction?: UiAction;
-  helpBackAction?: UiAction;
-  helpOpen?: boolean;
+  /** The gear button; opens settings. */
+  settingsAction?: UiAction;
+  resumeAction?: UiAction;
+  settingsOpen?: boolean;
+  settings?: SettingsViewModel;
   weapons?: HudWeaponSlotViewModel[];
 }
+
+/** Pixel gear for the settings button, drawn on a 12x12 grid. */
+const gearIcon = `
+  <svg class="hudGearIcon" viewBox="0 0 12 12" width="24" height="24" aria-hidden="true" shape-rendering="crispEdges">
+    <path fill="currentColor" d="M5 0h2v2h1V1h2v2H9v1h3v4H9v1h1v2H8v-1H7v2H5v-2H4v1H2V9h1V8H0V4h3V3H2V1h2v1h1zM5 4v1H4v2h1v1h2V7h1V5H7V4z"/>
+  </svg>
+`;
 
 export class AppChrome {
   private readonly root: HTMLDivElement;
@@ -428,8 +457,18 @@ export class AppChrome {
       `;
     };
 
-    const helpButton = model.helpAction
-      ? this.renderActionButton("hud-help", model.helpAction, actionMap, "hud-help-button chrome-button chrome-button-secondary")
+    if (model.settingsAction) {
+      actionMap.set("hud-settings", model.settingsAction);
+    }
+    const settingsButton = model.settingsAction
+      ? `
+        <button
+          class="hud-help-button hudSettingsButton chrome-button chrome-button-secondary"
+          data-action-id="hud-settings"
+          aria-label="Settings (Esc)"
+          title="Settings (Esc)"
+        >${gearIcon}</button>
+      `
       : "";
 
     if (model.layout === "active") {
@@ -462,42 +501,14 @@ export class AppChrome {
               <div class="hud-bar-kpis">
                 ${model.kpis.map((kpi) => renderActiveKpi(kpi)).join("")}
               </div>
-              ${helpButton}
+              ${settingsButton}
             </article>
           `;
       this.root.innerHTML = `
         <section class="hud-bar-screen">
           ${inventory}
           ${mainHud}
-          ${
-            model.helpOpen
-              ? `
-                <div class="hud-modal-backdrop">
-                  <article class="hud-modal-card">
-                    <p class="eyebrow">${model.title}</p>
-                    <h2 class="hud-card-title">Objective</h2>
-                    <p class="hud-copy">${model.objective}</p>
-                    <h2 class="hud-card-title">Controls</h2>
-                    <ul class="hud-sidebar-list">
-                      ${model.notes.map((note) => `<li>${note}</li>`).join("")}
-                    </ul>
-                    <div class="hud-modal-actions">
-                      ${
-                        model.helpBackAction
-                          ? this.renderActionButton("hud-help-back", model.helpBackAction, actionMap, "chrome-button")
-                          : ""
-                      }
-                      ${model.actions
-                        .map((action, index) =>
-                          this.renderActionButton(`hud-modal-${index}`, action, actionMap, "chrome-button"),
-                        )
-                        .join("")}
-                    </div>
-                  </article>
-                </div>
-              `
-              : ""
-          }
+          ${model.settingsOpen && model.settings ? this.renderSettings(model, actionMap) : ""}
         </section>
       `;
     } else {
@@ -533,6 +544,9 @@ export class AppChrome {
     }
 
     this.bindActionMap(actionMap);
+    if (model.settingsOpen && model.settings) {
+      this.bindSettings(model.settings);
+    }
     // pointerdown, not click: the HUD redraws every second for the clock and
     // a click split across a redraw would be lost.
     this.root.querySelectorAll<HTMLButtonElement>("[data-weapon-slot]").forEach((button) => {
@@ -543,6 +557,88 @@ export class AppChrome {
           weapon.onPress();
         });
       }
+    });
+  }
+
+  private renderSettings(model: HudViewModel, actionMap: Map<string, UiAction>): string {
+    const settings = model.settings!;
+    const slider = (channel: VolumeChannel, label: string, value: number): string => `
+      <label class="settingsSlider">
+        <span class="settingsSliderLabel">${label}</span>
+        <input type="range" min="0" max="100" step="5" value="${value}" data-volume="${channel}" />
+        <output class="settingsSliderValue" data-volume-value="${channel}">${value}%</output>
+      </label>
+    `;
+
+    return `
+      <div class="hud-modal-backdrop">
+        <article class="hud-modal-card settingsCard" role="dialog" aria-label="Settings">
+          <div class="settingsHead">
+            <p class="eyebrow">${model.title}</p>
+            <h2 class="hud-card-title">Settings</h2>
+            <p class="settingsObjective">${model.objective}</p>
+          </div>
+          <div class="settingsColumns">
+            <section class="settingsSection">
+              <h3 class="settingsSectionTitle">Audio</h3>
+              ${slider("music", "Music", settings.musicVolume)}
+              ${slider("effects", "Effects", settings.effectsVolume)}
+              <button class="settingsToggle" data-settings-mute aria-pressed="${settings.muted}">
+                Sound: <strong>${settings.muted ? "Muted" : "On"}</strong>
+              </button>
+              <h3 class="settingsSectionTitle">Always</h3>
+              <ul class="settingsFixed">
+                ${settings.fixedControls.map((line) => `<li>${line}</li>`).join("")}
+              </ul>
+            </section>
+            <section class="settingsSection">
+              <div class="settingsSectionHead">
+                <h3 class="settingsSectionTitle">Key bindings</h3>
+                <button class="settingsToggle" data-settings-reset>Reset</button>
+              </div>
+              <ul class="settingsBindings">
+                ${settings.bindings
+                  .map(
+                    (binding) => `
+                      <li class="settingsBinding">
+                        <span>${binding.label}</span>
+                        <button
+                          class="settingsKey${binding.waiting ? " settingsKeyWaiting" : ""}"
+                          data-rebind="${binding.id}"
+                          aria-label="Rebind ${binding.label}"
+                        >${binding.waiting ? "Press a key" : binding.key}</button>
+                      </li>
+                    `,
+                  )
+                  .join("")}
+              </ul>
+            </section>
+          </div>
+          <div class="hud-modal-actions settingsActions">
+            ${model.resumeAction ? this.renderActionButton("hud-resume", model.resumeAction, actionMap, "chrome-button") : ""}
+            ${model.actions
+              .map((action, index) => this.renderActionButton(`hud-modal-${index}`, action, actionMap, "chrome-button"))
+              .join("")}
+          </div>
+        </article>
+      </div>
+    `;
+  }
+
+  private bindSettings(settings: SettingsViewModel): void {
+    this.root.querySelectorAll<HTMLInputElement>("[data-volume]").forEach((input) => {
+      const channel = input.dataset.volume as VolumeChannel;
+      const readout = this.root.querySelector<HTMLOutputElement>(`[data-volume-value="${channel}"]`);
+      input.addEventListener("input", () => {
+        if (readout) readout.textContent = `${input.value}%`;
+        settings.onVolumeInput(channel, Number(input.value));
+      });
+      input.addEventListener("change", () => settings.onVolumeCommit(channel, Number(input.value)));
+    });
+    this.root.querySelector("[data-settings-mute]")?.addEventListener("click", settings.onToggleMute);
+    this.root.querySelector("[data-settings-reset]")?.addEventListener("click", settings.onResetBindings);
+    this.root.querySelectorAll<HTMLButtonElement>("[data-rebind]").forEach((button) => {
+      button.addEventListener("click", () => settings.onRebind(button.dataset.rebind ?? ""));
     });
   }
 

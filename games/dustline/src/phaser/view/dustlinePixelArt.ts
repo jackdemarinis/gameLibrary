@@ -645,54 +645,78 @@ function shotColors(kind: WeaponKind, faction: TankFaction): ShotColors {
     : { body: p.shotPlayer, light: p.shotPlayerLight, dim: p.shotPlayerDim };
 }
 
+/**
+ * Shell sprites, drawn as pixel grids pointing along +x (rotate them to the
+ * direction of travel). o = ink outline, s = smoke, d/b/l = dim/body/light
+ * colour for the faction and cannon, w = white-hot. Rows are padded to the
+ * widest one.
+ */
+const shotSprites: Record<WeaponKind, string[]> = {
+  // Brass-banded shell with a hot nose and a puff of smoke behind.
+  cannon: [
+    "......ooooooooo...",
+    "s..oodbbbbbblllo..",
+    ".ssddobbbbbbllllwo",
+    ".ssddobbbbbbllllwo",
+    "s..oodbbbbbblllo..",
+    "......ooooooooo...",
+  ],
+  // Long thin tracer streak.
+  autocannon: [
+    ".........oooooo.",
+    "ddddbbbbbblllwwo",
+    ".........oooooo.",
+  ],
+  // Round pellet with a highlight.
+  scattergun: [
+    ".ooo.",
+    "oblwo",
+    "obllo",
+    "obblo",
+    ".ooo.",
+  ],
+  // Glowing orb trailing sparks.
+  ricochet: [
+    "........ooo...",
+    "......oblllo..",
+    "d..b.obllwllo.",
+    ".ddbbbllwwwlo.",
+    "d..b.obllwllo.",
+    "......oblllo..",
+    "........ooo...",
+  ],
+  // Long bolt: white core, coloured glow, tapered ends.
+  laser: [
+    ".....bbbbbbbbbbbbbbb...",
+    "...bblllllllllllllllbb.",
+    "dbblwwwwwwwwwwwwwwwwwlb",
+    "...bblllllllllllllllbb.",
+    ".....bbbbbbbbbbbbbbb...",
+  ],
+};
+
 /** Shell sprite for a cannon, pointing along +x (rotate it to the direction of travel). */
 export function ensureProjectileTexture(scene: Phaser.Scene, kind: WeaponKind, faction: TankFaction): string {
   const c = shotColors(kind, faction);
-  const key = `dlShot-${kind}-${faction}`;
+  const rows = shotSprites[kind];
+  const width = Math.max(...rows.map((row) => row.length));
+  const colors: Record<string, number> = {
+    o: p.outline,
+    s: p.flashSmoke,
+    d: c.dim,
+    b: c.body,
+    l: c.light,
+    w: p.white,
+  };
 
-  switch (kind) {
-    case "autocannon":
-      // Thin tracer streak.
-      return paintTexture(scene, key, 9, 1, (x) => (x === 8 ? p.white : x >= 6 ? c.light : x >= 3 ? c.body : x >= 1 ? c.dim : null), shotArtPixel);
-    case "scattergun":
-      // Round pellet.
-      return paintTexture(scene, key, 3, 3, (x, y) => {
-        if (x === 1 && y === 1) return p.white;
-        if (x === 1 || y === 1) return c.body;
-        return null;
-      }, shotArtPixel);
-    case "ricochet":
-      // Glowing orb with a short tail.
-      return paintTexture(scene, key, 8, 5, (x, y) => {
-        const distance = Math.hypot(x - 5, y - 2);
-        if (distance < 0.9) return p.white;
-        if (distance < 1.6) return c.light;
-        if (distance < 2.5) return c.body;
-        if (y === 2 && x < 3) return x === 0 ? c.dim : c.body;
-        return null;
-      }, shotArtPixel);
-    case "laser":
-      // Long bolt: white-hot core, coloured glow, tapered ends.
-      return paintTexture(scene, key, 16, 3, (x, y) => {
-        if (y === 1) return x >= 14 ? p.white : x >= 2 ? c.light : c.body;
-        if (x >= 3 && x <= 13) return c.body;
-        return null;
-      }, shotArtPixel);
-    case "cannon":
-    default:
-      // Shell with a bright nose and a fading trail.
-      return paintTexture(scene, key, 10, 3, (x, y) => {
-        if (y === 1) {
-          if (x === 9) return p.white;
-          if (x >= 4) return c.light;
-          if (x >= 2) return c.body;
-          return x === 1 ? c.dim : null;
-        }
-        if (x >= 4 && x <= 8) return x === 8 ? c.light : c.body;
-        if (x === 3) return c.dim;
-        return null;
-      }, shotArtPixel);
-  }
+  return paintTexture(
+    scene,
+    `dlShot2-${kind}-${faction}`,
+    width,
+    rows.length,
+    (x, y) => colors[rows[y][x] ?? "."] ?? null,
+    shotArtPixel,
+  );
 }
 
 interface BlastSpec {

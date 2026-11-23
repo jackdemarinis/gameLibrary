@@ -275,3 +275,33 @@ describe("cannons", () => {
     expect(simulation.getHudSnapshot().weapons.map((slot) => slot.active)).toEqual([false, true]);
   });
 });
+
+describe("tank collisions", () => {
+  it("tanks can't drive through each other", () => {
+    const level: BattleLevelData = {
+      id: "test-ram",
+      name: "Ram",
+      briefing: "",
+      playerSpawn: { x: 200, y: 400 },
+      enemySpawns: [{ id: "wall-raider", x: 420, y: 400, archetype: "raider" }],
+      indestructibleWalls: [],
+      weakWalls: [],
+      crates: [],
+      pickups: [],
+    };
+    const simulation = new BattleSimulation(level, createInitialSave());
+    // Freeze the enemy so it stays put, then drive straight into it.
+    (simulation as unknown as { state: { freezeRemainingMs: number } }).state.freezeRemainingMs = 10000;
+
+    for (let elapsed = 0; elapsed < 3000; elapsed += 16) {
+      simulation.advance(16, { movementX: 1, movementY: 0, aim: { x: 900, y: 400 }, firing: false });
+      const snapshot = simulation.getSnapshot();
+      const enemy = snapshot.enemies[0];
+      const gap = Math.hypot(enemy.x - snapshot.player.x, enemy.y - snapshot.player.y);
+      // Player and raider are both radius 28.
+      expect(gap).toBeGreaterThan(56 - 1);
+    }
+    const final = simulation.getSnapshot();
+    expect(final.player.x).toBeLessThan(final.enemies[0].x);
+  });
+});
