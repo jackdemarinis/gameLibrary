@@ -865,7 +865,7 @@
 
 
 .lwNextTitle {
-  color: var(--lw-wood);
+  color: var(--lw-ember);
   font-family: var(--lw-font-title);
   font-size: 1.7em;
   line-height: 1;
@@ -1013,10 +1013,6 @@
 
 .lwInfoBox {
   display: grid;
-  align-content: start;
-  gap: 0.15em;
-  height: 6.2em;
-  overflow: hidden;
   padding: 0.4em 0.6em;
   border-left: 3px solid var(--lw-ember);
   background: var(--lw-slot-empty);
@@ -1040,4 +1036,16 @@
 .lwLatestHint {
   color: var(--lw-parchment-2);
   line-height: 1.2;
+}
+
+.lwInfoPage {
+  display: grid;
+  grid-area: 1 / 1;
+  align-content: start;
+  gap: 0.15em;
+  visibility: hidden;
+}
+
+.lwInfoPage.isActive {
+  visibility: visible;
 }

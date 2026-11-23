@@ -341,12 +341,18 @@ export class PauseMenu {
     return tile;
   }
 
-  /** Hovering or focusing a tile previews it in `box`; clicking pins it. */
+  /** Hovering or focusing a tile previews it in `box`; clicking pins it. Every entry is
+   *  rendered into the same grid cell (only the active one visible), so the box is as
+   *  tall as its longest entry: nothing is clipped and the layout never jumps. */
   private linkInfo(box: HTMLElement, tiles: InfoTile[], initial: number): void {
     let pinned = Math.min(initial, tiles.length - 1);
+    const pages = tiles.map((entry) => {
+      const page = element("div", "lwInfoPage", box);
+      entry.fill(page);
+      return page;
+    });
     const show = (index: number): void => {
-      box.innerHTML = "";
-      tiles[index]?.fill(box);
+      pages.forEach((page, other) => page.classList.toggle("isActive", other === index));
       tiles.forEach((entry, other) => entry.tile.classList.toggle("isSelected", other === pinned));
     };
     tiles.forEach((entry, index) => {
@@ -360,6 +366,7 @@ export class PauseMenu {
     });
     if (tiles.length) show(pinned);
   }
+
 
   // ------------------------------------------------------------ map
 
