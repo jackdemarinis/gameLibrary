@@ -79,6 +79,21 @@ export const adventureTheme = {
   boots: 0x2f2217,
   staffWood: 0x9b6b3b,
   staffKnot: 0x6e4a28,
+  hairDark: 0x3c210f,
+  skinShade: 0xd59a6c,
+  keeperOutline: 0x1c1220,
+  bladeLight: 0xe8eef4,
+  bladeDark: 0x8d99a8,
+  hilt: 0xc9a23f,
+  emberBlade: 0xffd36b,
+  emberBladeEdge: 0xff7a2a,
+  slashSteel: 0xf4f8ff,
+  slashSteelEdge: 0xa9c3dd,
+  slashEmber: 0xfff1b4,
+  slashEmberEdge: 0xff9a3d,
+  heart: 0xe5483f,
+  heartShine: 0xffb3a8,
+  heartOutline: 0x5a1414,
   lanternBody: 0xffae3d,
   lanternCore: 0xfff1b4,
 
@@ -115,4 +130,4 @@ export const adventureTheme = {
 } as const;
 
 /** How dark the night overlay is per objective step: dusk deepens, then dawn breaks. */
-export const nightDarknessByStep = [0.38, 0.5, 0.6, 0.68, 0.12] as const;
+export const nightDarknessByStep = [0.26, 0.4, 0.52, 0.6, 0.12] as const;

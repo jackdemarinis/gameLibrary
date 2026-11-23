@@ -115,6 +115,12 @@ const obstacles: Obstacle[] = [
 export const adventureContent = {
   title: "Lanternwake",
   tagline: "Gather, forge the Ember Lantern, and still the Mirewarden before dawn.",
+  howToPlay: [
+    "Chop trees and mine grey rocks for 3 timber and 2 ironstone.",
+    "Forge the Ember Lantern at the workbench: your blade catches fire.",
+    "Banish the three shades in the east. Dodge their lunges.",
+    "Step through the shrine gate and still the Mirewarden. Roll through its pulse.",
+  ],
   story:
     "The fog-mire has swallowed Cinderhollow. As its last lantern-keeper, gather timber and ironstone, forge the Ember Lantern at the old workbench, drive back the shades, and still the Mirewarden at the drowned shrine.",
   world: { width: 1600, height: 1000 },
@@ -145,27 +151,53 @@ export const adventureContent = {
   recipe: { timber: 3, ironstone: 2 },
   player: {
     radius: 18,
-    speed: 220,
+    speed: 210,
     maxHealth: 100,
-    attackRange: 70,
-    attackCooldown: 0.4,
+    /** Sword reach from the keeper's centre, and the width of the cut in front of them. */
+    attackRange: 76,
+    attackArcDegrees: 150,
+    attackCooldown: 0.3,
+    swingSeconds: 0.28,
+    /** Iron blade damage before the lantern is forged; ember damage after. */
+    bladeDamage: 10,
     lanternDamage: 30,
-    // The unlit staff cannot harm anything; it only shoves shades back.
-    staffKnockback: 90,
-    staggerSeconds: 0.6,
-    interactRange: 60,
-    hurtCooldown: 0.8,
+    interactRange: 95,
+    /** Invulnerable seconds after a hit, and how long the hit stuns your input. */
+    hurtCooldown: 0.9,
+    hurtStun: 0.18,
+    hurtKnockback: 330,
+    dodgeSeconds: 0.3,
+    dodgeSpeed: 480,
+    dodgeCooldown: 0.5,
   },
-  shade: { radius: 16, maxHealth: 30, speed: 95, aggroRange: 280, contactDamage: 8 },
+  shade: {
+    radius: 16,
+    maxHealth: 30,
+    speed: 85,
+    aggroRange: 300,
+    contactDamage: 6,
+    /** Shades stop, swell (the wind-up), then dash at where you stood. */
+    lungeRange: 110,
+    windupSeconds: 0.55,
+    lungeSeconds: 0.3,
+    lungeSpeed: 360,
+    lungeDamage: 12,
+    recoverSeconds: 0.8,
+    knockback: 400,
+  },
+  heartHeal: 30,
   bossStats: {
     radius: 40,
-    maxHealth: 200,
+    maxHealth: 210,
     speed: 70,
     contactDamage: 10,
     pulseInterval: 4,
-    pulseWindup: 1,
+    pulseWindup: 1.1,
     pulseRadius: 150,
-    pulseDamage: 12,
+    pulseDamage: 14,
+    /** After a pulse the Mirewarden sags, open to attack. */
+    dazeSeconds: 1.5,
+    knockback: 90,
   },
   // Chapter labels that frame the short loop as a full night-long campaign.
   chapters: ["Dusk: Gather", "Nightfall: Forge", "Midnight: Clear the Path", "Before Dawn: The Shrine"],

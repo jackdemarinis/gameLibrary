@@ -10,64 +10,6 @@ export interface PixelSprite {
   palette: Readonly<Record<string, number>>;
 }
 
-/** Head and torso, shared by every frame; legs come from the frame below. */
-const playerTopRows = [
-  "...hhhhh....",
-  "..hhhhhhh.x.",
-  "..hhsssssxyx",
-  "..hssesse.x.",
-  "..hsssss..w.",
-  "...ssss...w.",
-  "..tttttt..w.",
-  ".ttTtttttsw.",
-  ".stTtttt..w.",
-  ".s.tttt...w.",
-  "...bbbb...w.",
-  "...pppp...w.",
-];
-
-/** Leg poses: standing, then a 4-step run cycle (stride, pass, other stride, pass). */
-const playerLegFrames = {
-  idle: ["...pp.pp..w.", "...pp.pp..w.", "..BBB.BBB.w.", "..BB...BB..."],
-  strideA: ["..PP..pp..w.", ".PP....pp.w.", "BB......BBw.", "............"],
-  pass: ["...pp.PP..w.", "...pp..PP.w.", "..BBB..BB.w.", "............"],
-  strideB: ["..pp..PP..w.", ".pp....PP.w.", "BB......BBw.", "............"],
-} as const;
-
-export type PlayerPose = keyof typeof playerLegFrames;
-
-/** Frame order while running; each entry is held for one animation tick. */
-export const playerRunCycle: readonly PlayerPose[] = ["strideA", "pass", "strideB", "pass"];
-
-const playerPalette = {
-  h: t.hair,
-  s: t.skin,
-  e: t.eye,
-  t: t.tunic,
-  T: t.tunicDark,
-  b: t.belt,
-  p: t.pants,
-  P: t.pantsBack,
-  B: t.boots,
-  w: t.staffWood,
-};
-
-const dimPalette = { ...playerPalette, x: t.staffKnot, y: t.staffWood };
-const litPalette = { ...playerPalette, x: t.lanternBody, y: t.lanternCore };
-
-export function playerTextureKey(lit: boolean, pose: PlayerPose): string {
-  return `lwPlayer${lit ? "Lit" : "Dim"}_${pose}`;
-}
-
-const playerFrameSprites: PixelSprite[] = (Object.keys(playerLegFrames) as PlayerPose[]).flatMap((pose) => [
-  { key: playerTextureKey(false, pose), scale: 3, rows: [...playerTopRows, ...playerLegFrames[pose]], palette: dimPalette },
-  { key: playerTextureKey(true, pose), scale: 3, rows: [...playerTopRows, ...playerLegFrames[pose]], palette: litPalette },
-]);
-
-/** Standing frames, kept as named exports for callers that only need a still. */
-export const playerDimSprite = playerFrameSprites[0];
-export const playerLitSprite = playerFrameSprites[1];
-
 export const shadeSprite: PixelSprite = {
   key: "lwShade",
   scale: 3,
@@ -461,7 +403,6 @@ export const portraitSprite: PixelSprite = {
 };
 
 export const adventureSprites: readonly PixelSprite[] = [
-  ...playerFrameSprites,
   cottageRedSprite,
   cottageBlueSprite,
   wellSprite,

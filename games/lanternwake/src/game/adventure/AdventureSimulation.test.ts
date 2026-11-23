@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { adventureContent, type Point } from "./adventureContent";
 import {
   AdventureSimulation,
+  checkpointFrom,
   createAdventureState,
   getObjective,
   isGateOpen,
@@ -147,20 +148,72 @@ describe("Lanternwake simulation", () => {
     expect(swings).toBe(3);
   });
 
-  it("only staggers shades with the unlit staff, so the gate cannot open before the lantern", () => {
+  it("lets the unlit blade chip and knock back shades, but the gate stays sealed without the lantern", () => {
     const base = createAdventureState();
     const shade = base.foes[0];
     let state = placePlayer(base, { x: shade.x - 50, y: shade.y });
     state = step(state, { attack: true });
-    const shoved = state.foes[0];
-    expect(shoved.health).toBe(shoved.maxHealth);
-    expect(shoved.x).toBeGreaterThan(shade.x);
-    expect(shoved.stagger).toBeGreaterThan(0);
+    const struck = state.foes[0];
+    expect(struck.health).toBe(struck.maxHealth - adventureContent.player.bladeDamage);
+    expect(struck.velX).toBeGreaterThan(0);
+    expect(struck.mode).toBe("recover");
 
-    state = fight(state, shade.id, 600);
-    expect(state.foes[0].alive).toBe(true);
-    expect(isGateOpen(state)).toBe(false);
-    expect(getObjective(state).step).toBe(0);
+    let cleared: AdventureState = state;
+    for (const foe of adventureContent.shades) {
+      cleared = fight(cleared, foe.id);
+    }
+    expect(cleared.foes.filter((foe) => foe.kind === "shade").every((foe) => !foe.alive)).toBe(true);
+    expect(isGateOpen(cleared)).toBe(false);
+    expect(getObjective(cleared).step).toBe(0);
+  });
+
+  it("only swings into the arc the keeper aims at", () => {
+    const base = createAdventureState();
+    const shade = base.foes[0];
+    const state = placePlayer(base, { x: shade.x - 60, y: shade.y });
+    const away = step(state, { attack: true, aimX: -1, aimY: 0 });
+    expect(away.foes[0].health).toBe(shade.maxHealth);
+    const toward = step(state, { attack: true, aimX: 1, aimY: 0 });
+    expect(toward.foes[0].health).toBeLessThan(shade.maxHealth);
+  });
+
+  it("makes the keeper invulnerable while dodge-rolling", () => {
+    const base = createAdventureState();
+    const shade = base.foes[0];
+    let state = placePlayer(base, { x: shade.x - (shade.radius + base.player.radius), y: shade.y });
+    const rolled = stepAdventure(state, { ...idle, dodge: true, moveX: 0, moveY: 1 });
+    expect(rolled.events.some((event) => event.type === "dodge")).toBe(true);
+    expect(rolled.state.player.dodgeTimer).toBeGreaterThan(0);
+    state = rolled.state;
+    expect(state.player.health).toBe(state.player.maxHealth);
+  });
+
+  it("drops a heart when a shade is banished and heals on pickup", () => {
+    let state: AdventureState = { ...createAdventureState(), hasLantern: true };
+    const shade = state.foes[0];
+    state = fight(state, shade.id);
+    expect(state.pickups).toHaveLength(1);
+    const heart = state.pickups[0];
+    state = { ...state, player: { ...state.player, health: 40 } };
+    state = step(placePlayer(state, heart));
+    expect(state.pickups).toHaveLength(0);
+    expect(state.player.health).toBe(40 + adventureContent.heartHeal);
+  });
+
+  it("restores a checkpoint with full health, living foes reset and progress kept", () => {
+    let state: AdventureState = { ...createAdventureState(), hasLantern: true };
+    state = fight(state, state.foes[0].id);
+    state = { ...state, player: { ...state.player, health: 5 }, foes: state.foes.map((foe, i) => (i === 1 ? { ...foe, health: 1, x: foe.x + 50 } : foe)) };
+    const checkpoint = checkpointFrom(state);
+    expect(checkpoint.player.health).toBe(checkpoint.player.maxHealth);
+    expect(checkpoint.hasLantern).toBe(true);
+    expect(checkpoint.foes[0].alive).toBe(false);
+    expect(checkpoint.foes[1].health).toBe(checkpoint.foes[1].maxHealth);
+    expect(checkpoint.foes[1].x).toBe(createAdventureState().foes[1].x);
+
+    const simulation = new AdventureSimulation();
+    simulation.loadState(checkpoint);
+    expect(simulation.getState().player.health).toBe(checkpoint.player.maxHealth);
   });
 
   it("only lets the boss be wounded from inside the shrine", () => {

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { adventureSprites, pixelHash, type PixelSprite } from "../../game/adventure/adventureSprites";
+import { characterSprites } from "../../game/adventure/characterFrames";
 import { adventureTheme as t } from "../../game/config/adventureTheme";
 
 export const lanternwakeTextureKeys = {
@@ -16,6 +17,7 @@ const tileScale = 3;
 /** Builds every Lanternwake texture once per game; later scene restarts reuse them. */
 export function ensureLanternwakeTextures(scene: Phaser.Scene): void {
   adventureSprites.forEach((sprite) => buildSprite(scene, sprite));
+  characterSprites.forEach((sprite) => buildSprite(scene, sprite));
 
   buildTile(scene, lanternwakeTextureKeys.grass, 32, 32, (x, y) => {
     const roll = pixelHash(x, y, 11);

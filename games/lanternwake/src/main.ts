@@ -37,7 +37,8 @@ new Phaser.Game({
   width: 1280,
   height: 720,
   backgroundColor: "#07130f",
-  render: { antialias: true, pixelArt: false, roundPixels: false },
+  render: { antialias: false, pixelArt: true, roundPixels: false },
+  input: { gamepad: true },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [new AdventureScene(chrome)],
 });

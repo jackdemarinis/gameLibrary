@@ -40,6 +40,8 @@ export interface HudViewModel {
   status?: HudStatusViewModel;
   hotbar?: HudSlotViewModel[];
   title: string;
+  /** Result-card heading (defaults to "Briefing"). */
+  heading?: string;
   copy: string;
   objective: string;
   kpis: HudKpi[];
@@ -194,9 +196,14 @@ export class AppChrome {
         <section class="hud-result-screen${skinClass}">
           <article class="hud-result-card">
             <p class="eyebrow">${model.title}</p>
-            <h2 class="hud-card-title">Briefing</h2>
+            <h2 class="hud-card-title">${model.heading ?? "Briefing"}</h2>
             <p class="hud-copy">${model.copy}</p>
             ${model.objective ? `<p class="hud-copy hud-copy-secondary">${model.objective}</p>` : ""}
+            ${
+              model.notes.length
+                ? `<ul class="hud-sidebar-list">${model.notes.map((note) => `<li>${note}</li>`).join("")}</ul>`
+                : ""
+            }
             <div class="hud-kpis">
               ${model.kpis
                 .map(
