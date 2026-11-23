@@ -33,21 +33,21 @@ function paintMaxHealth(canvas: PixelCanvas): void {
   canvas.fill(union(rect(13.5, 8, 18.5, 23), rect(9, 13, 23, 18)), verticalRamp(ink.repair, 8, 23), ink.repairEdge);
 }
 
-/** A tread blurring forward with speed lines behind it. */
+/** A tank seen side-on, racing right with speed lines behind it. */
 function paintMovementSpeed(canvas: PixelCanvas): void {
-  [11, 17, 23].forEach((y, index) =>
-    canvas.fill(segment(1.5 + (index % 2) * 2, y, 7, y, 1.3), () => ink.speedLine, null),
+  [12, 18, 24].forEach((y, index) =>
+    canvas.fill(segment(0.5 + (index % 2) * 1.5, y, 5.5, y, 1.2), () => ink.speedLine, null),
   );
-  canvas.fill(polygon([[12, 4], [26, 4], [29, 9], [10, 9]]), verticalRamp(ink.olive, 4, 9));
-  canvas.fill(stadium(9, 9, 30, 25), verticalRamp(ink.tread, 9, 25));
-  // Tread links along the top and bottom runs.
-  for (let x = 13; x < 27; x += 3) {
-    canvas.set(x, 10, ink.tread[0]);
-    canvas.set(x, 23, ink.tread[0]);
+  canvas.fill(rect(22, 10, 31, 14.5), verticalRamp(ink.olive, 10, 15));
+  canvas.fill(polygon([[12, 9], [21, 9], [23.5, 15.5], [10.5, 15.5]]), verticalRamp(ink.olive, 9, 16));
+  canvas.fill(polygon([[9, 15], [28, 15], [30.5, 20.5], [6.5, 20.5]]), verticalRamp(ink.olive, 14, 21));
+  canvas.fill(stadium(7.5, 20, 30, 29), verticalRamp(ink.tread, 20, 29));
+  for (let x = 11; x < 28; x += 3) {
+    canvas.set(x, 21, ink.tread[0]);
   }
-  [14, 19.5, 25].forEach((cx) => {
-    canvas.fill(circle(cx, 17, 3.2), radialRamp(ink.wheel, cx, 17, 3.2));
-    canvas.set(Math.floor(cx), 16, ink.hub);
+  [11.5, 16, 20.5, 25].forEach((cx) => {
+    canvas.fill(circle(cx, 24.5, 2.2), radialRamp(ink.wheel, cx, 24.5, 2.2), null);
+    canvas.set(Math.floor(cx), 24, ink.hub);
   });
 }
 
@@ -77,18 +77,29 @@ function paintFireRate(canvas: PixelCanvas): void {
   canvas.set(16, 17, ink.outline);
 }
 
-/** Turret seen from above with a curved arrow around it. */
+/** Turret seen from above, with two bold arrows circling it clockwise. */
 function paintTurretRotation(canvas: PixelCanvas): void {
-  const arc = (x: number, y: number) => {
-    const radius = Math.hypot(x - 16, y - 16);
-    let angle = Math.atan2(y - 16, x - 16);
-    if (angle < -1.5) angle += Math.PI * 2;
-    return radius >= 10.5 && radius <= 14.5 && angle >= 0.35 && angle <= 3.75;
+  const centre = 16;
+  const tau = Math.PI * 2;
+  const deg = (value: number) => (value * Math.PI) / 180;
+  const ring = (from: number, to: number) => (x: number, y: number) => {
+    const radius = Math.hypot(x - centre, y - centre);
+    const angle = (Math.atan2(y - centre, x - centre) + tau) % tau;
+    return radius >= 10.5 && radius <= 15 && angle >= from && angle <= to;
   };
-  canvas.fill(union(arc, polygon([[24.6, 19.1], [31.4, 21.6], [29.8, 14.2]])), radialRamp(ink.brass, 16, 16, 14, 0, 0.6));
-  canvas.fill(segment(16, 15, 16, 3.5, 2.2), verticalRamp(ink.olive, 3, 15));
-  canvas.fill(circle(16, 17, 7.5), radialRamp(ink.olive, 16, 17, 7.5));
-  canvas.fill(circle(16, 17, 2.4), () => ink.olive[3], null);
+  /** Arrowhead at the clockwise end of an arc, pointing along it. */
+  const head = (end: number) => {
+    const at = (radius: number, angle: number): [number, number] => [
+      centre + Math.cos(angle) * radius,
+      centre + Math.sin(angle) * radius,
+    ];
+    return polygon([at(8, end), at(17.5, end), at(12.75, end + deg(30))]);
+  };
+  const arrows = union(ring(deg(195), deg(305)), head(deg(305)), ring(deg(15), deg(125)), head(deg(125)));
+  canvas.fill(arrows, (x, y) => rampAt(ink.flash, Math.hypot(x - centre, y - centre) / 17, x, y), ink.flashEdge);
+  canvas.fill(segment(centre, centre, 28, centre, 1.9), verticalRamp(ink.olive, 13, 19));
+  canvas.fill(circle(centre, centre, 6.5), radialRamp(ink.olive, centre, centre, 6.5));
+  canvas.fill(circle(centre, centre, 2.2), () => ink.olive[3], null);
 }
 
 /** One big brass shell, pointing up and right. */

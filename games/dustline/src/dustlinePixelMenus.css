@@ -620,7 +620,7 @@
 
 .shop-screen .shopWeaponCard {
   --weaponColor: var(--dl-weapon-cannon);
-  box-shadow: var(--dl-plate-bevel), inset 4px 0 0 var(--weaponColor);
+  box-shadow: var(--dl-plate-bevel);
 }
 
 .shop-screen .shopWeaponCard-autocannon { --weaponColor: var(--dl-weapon-autocannon); }
@@ -867,9 +867,6 @@
   height: var(--dl-icon-shop);
 }
 
-.shop-screen .shopWeaponCard .shopIconBadge {
-  box-shadow: var(--dl-plate-bevel), inset 0 -3px 0 var(--weaponColor);
-}
 
 .hud-bar-screen .hudWeaponIcon {
   grid-row: span 2;
