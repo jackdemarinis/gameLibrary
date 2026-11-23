@@ -4,8 +4,8 @@
    no rounding. Every value comes from a --dl-* token in jackGames.css. */
 
 .start-screen {
-  --dlNotch: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
-  --dlNotchSmall: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  --dlNotch: polygon(var(--dl-notch) 0, calc(100% - var(--dl-notch)) 0, 100% var(--dl-notch), 100% calc(100% - var(--dl-notch)), calc(100% - var(--dl-notch)) 100%, var(--dl-notch) 100%, 0 calc(100% - var(--dl-notch)), 0 var(--dl-notch));
+  --dlNotchSmall: polygon(var(--dl-notch-small) 0, calc(100% - var(--dl-notch-small)) 0, 100% var(--dl-notch-small), 100% calc(100% - var(--dl-notch-small)), calc(100% - var(--dl-notch-small)) 100%, var(--dl-notch-small) 100%, 0 calc(100% - var(--dl-notch-small)), 0 var(--dl-notch-small));
   position: absolute;
   inset: 0;
   display: flex;
@@ -64,7 +64,7 @@
   margin: 0 0 12px;
   padding: 4px 4px 0;
   color: var(--dl-gold);
-  font-family: var(--font-pixel-display);
+  font-family: var(--font-pixel-logo);
   font-size: clamp(2.5rem, 5.6vw, 5.4rem);
   font-weight: 700;
   line-height: 1;
@@ -84,7 +84,7 @@
   max-width: 30ch;
   margin: 0;
   padding: 12px 16px 13px;
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   background: var(--dl-plate);
   box-shadow: var(--dl-plate-bevel);
   color: var(--dl-khaki);
@@ -173,7 +173,7 @@
   align-items: center;
   gap: 16px;
   padding: 14px 14px 14px 20px;
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   background: var(--dl-plate);
   box-shadow: var(--dl-plate-bevel);
   clip-path: var(--dlNotch);
@@ -198,7 +198,7 @@
 /* ---- arcade buttons ---- */
 .start-screen .chrome-button {
   padding: 14px 22px 16px;
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   font-family: var(--font-pixel-display);
   font-weight: 700;
@@ -244,7 +244,7 @@
 /* clip-path hides outlines, so focus is drawn inside the button. */
 .start-screen .chrome-button:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 4px var(--dl-ember);
+  box-shadow: inset 0 0 0 var(--dl-focus-ring) var(--dl-ember);
 }
 
 .start-play-button {

@@ -9,8 +9,8 @@
 .brief-screen,
 .hud-result-screen,
 .hud-bar-screen {
-  --dlNotch: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
-  --dlNotchSmall: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  --dlNotch: polygon(var(--dl-notch) 0, calc(100% - var(--dl-notch)) 0, 100% var(--dl-notch), 100% calc(100% - var(--dl-notch)), calc(100% - var(--dl-notch)) 100%, var(--dl-notch) 100%, 0 calc(100% - var(--dl-notch)), 0 var(--dl-notch));
+  --dlNotchSmall: polygon(var(--dl-notch-small) 0, calc(100% - var(--dl-notch-small)) 0, 100% var(--dl-notch-small), 100% calc(100% - var(--dl-notch-small)), calc(100% - var(--dl-notch-small)) 100%, var(--dl-notch-small) 100%, 0 calc(100% - var(--dl-notch-small)), 0 var(--dl-notch-small));
   font-family: var(--font-pixel);
   color: var(--dl-khaki);
 }
@@ -29,7 +29,7 @@
 .hud-result-screen .hud-result-card,
 .hud-bar-screen .hud-modal-card,
 .shop-screen .difficulty-modal {
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-plate);
   box-shadow: var(--dl-plate-bevel);
@@ -47,7 +47,7 @@
 .shop-screen .shop-credit-pill,
 .brief-screen .brief-stat-card,
 .hud-result-screen .hud-kpi {
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-olive-dark);
   box-shadow: var(--dl-olive-bevel);
@@ -160,7 +160,7 @@
 .shop-screen .shop-upgrade-badge,
 .shop-screen .shop-board-status,
 .shop-screen .shop-weapon-pill {
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-ink);
   color: var(--dl-gold);
@@ -169,7 +169,7 @@
 }
 
 .shop-screen .shop-upgrade-pip {
-  border: 2px solid var(--dl-ink);
+  border: var(--dl-line-thin) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-meter-back);
   box-shadow: none;
@@ -183,7 +183,7 @@
 /* ---------- buttons (same as the title screen) ---------- */
 :is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button {
   padding: 11px 18px 13px;
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   font-family: var(--font-pixel-display);
   font-weight: 700;
@@ -243,7 +243,7 @@
 .level-screen .level-tile:focus-visible,
 .shop-screen .difficulty-choice:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 4px var(--dl-ember);
+  box-shadow: inset 0 0 0 var(--dl-focus-ring) var(--dl-ember);
 }
 
 /* ---------- difficulty modal ---------- */
@@ -254,7 +254,7 @@
 }
 
 .shop-screen .difficulty-choice {
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-olive);
   color: var(--dl-khaki);
@@ -291,7 +291,7 @@
   gap: 4px;
   justify-items: start;
   text-align: left;
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-olive);
   color: var(--dl-khaki);
@@ -357,7 +357,7 @@
 .levelTier {
   display: inline-block;
   padding: 3px 6px 2px;
-  border: 2px solid var(--dl-ink);
+  border: var(--dl-line-thin) solid var(--dl-ink);
   background: var(--dl-olive-light);
   color: var(--dl-ink);
   font-family: var(--font-pixel-display);
@@ -405,7 +405,7 @@
   align-items: center;
   gap: 6px;
   padding: 5px 9px 5px 5px;
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   background: var(--dl-olive);
   color: var(--dl-khaki);
   font-size: 0.85rem;
@@ -447,7 +447,7 @@
 
 /* ---------- in-battle HUD bar ---------- */
 .hud-bar-screen .hud-bar {
-  border: 3px solid var(--dl-ink);
+  border: var(--dl-line) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-plate);
   box-shadow: var(--dl-plate-bevel);
@@ -468,7 +468,7 @@
 }
 
 .hud-bar-screen .hud-bar-kpi-meter-track {
-  border: 2px solid var(--dl-ink);
+  border: var(--dl-line-thin) solid var(--dl-ink);
   border-radius: 0;
   background: var(--dl-meter-back);
   box-shadow: none;
@@ -477,10 +477,17 @@
 .hud-bar-screen .hud-bar-kpi-meter-fill {
   border-radius: 0;
   background: var(--dl-health);
-  box-shadow: inset 0 -3px 0 var(--dl-health-dark);
+  box-shadow: inset 0 -2px 0 var(--dl-health-dark);
 }
 
 .hud-bar-screen .hud-help-button {
   min-width: 0;
   padding: 6px 12px 8px;
+}
+
+/* Labels that used to rely on Silkscreen's all-caps glyphs. */
+.shop-screen .shop-weapon-pill,
+.level-screen .level-score {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }

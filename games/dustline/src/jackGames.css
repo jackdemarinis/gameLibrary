@@ -107,7 +107,15 @@
   /* Dustline title screen: pixel military-arcade skin over a pixel camo field
      (art colours mirror menuArtTheme / pixelTheme in src/game/config/theme.ts). */
   --font-pixel: 'Pixelify Sans', ui-monospace, monospace;
-  --font-pixel-display: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;
+  /* Pixel scale for the menus: borders, notches, bevels and outlines are drawn at
+     2x resolution (2px lines, 1px outlines). Silkscreen is kept for the title logo only. */
+  --font-pixel-display: 'Pixelify Sans', ui-monospace, monospace;
+  --font-pixel-logo: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;
+  --dl-line: 2px;
+  --dl-line-thin: 1px;
+  --dl-notch: 4px;
+  --dl-notch-small: 2px;
+  --dl-focus-ring: 2px;
   --dl-ink: #141810;
   --dl-camo: #22692e;
   --dl-plate: #1f2a18;
@@ -127,16 +135,16 @@
     4px 0 0 #141810, -4px 0 0 #141810, 0 4px 0 #141810, 0 -4px 0 #141810,
     4px 4px 0 #141810, -4px 4px 0 #141810, 4px -4px 0 #141810, -4px -4px 0 #141810,
     0 8px 0 #141810, 4px 8px 0 #141810, -4px 8px 0 #141810, 0 12px 0 #0e2a12, 4px 12px 0 #0e2a12, -4px 12px 0 #0e2a12;
-  --dl-text-outline: 2px 0 0 #141810, -2px 0 0 #141810, 0 2px 0 #141810, 0 -2px 0 #141810;
-  --dl-plate-bevel: inset 0 3px 0 #3a4b2c, inset 0 -3px 0 #0e140b;
-  --dl-gold-bevel: inset 0 4px 0 #fff0a0, inset 0 -5px 0 #b5780f;
-  --dl-gold-bevel-press: inset 0 4px 0 #b5780f;
-  --dl-olive-bevel: inset 0 3px 0 #71874a, inset 0 -4px 0 #2c3a1c;
-  --dl-olive-bevel-press: inset 0 3px 0 #2c3a1c;
+  --dl-text-outline: 1px 0 0 #141810, -1px 0 0 #141810, 0 1px 0 #141810, 0 -1px 0 #141810;
+  --dl-plate-bevel: inset 0 2px 0 #3a4b2c, inset 0 -2px 0 #0e140b;
+  --dl-gold-bevel: inset 0 2px 0 #fff0a0, inset 0 -3px 0 #b5780f;
+  --dl-gold-bevel-press: inset 0 2px 0 #b5780f;
+  --dl-olive-bevel: inset 0 2px 0 #71874a, inset 0 -2px 0 #2c3a1c;
+  --dl-olive-bevel-press: inset 0 2px 0 #2c3a1c;
   --dl-drop: 0 6px 0 #0e2a12;
   --dl-scrim: rgba(8, 12, 6, 0.72);
   --dl-red: #c4482f;
-  --dl-red-bevel: inset 0 3px 0 #e0775a, inset 0 -4px 0 #7a2618;
+  --dl-red-bevel: inset 0 2px 0 #e0775a, inset 0 -2px 0 #7a2618;
   --dl-teal: #2b9a9c;
   --dl-slate: #4f5d78;
   --dl-purple: #7a4aa8;
