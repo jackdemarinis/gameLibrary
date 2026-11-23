@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-import { gameConfig } from "../../game/config/gameConfig";
-import { worldTheme } from "../../game/config/theme";
+import { tankTheme, worldTheme } from "../../game/config/theme";
 import { BattleSimulation } from "../../game/simulation/battle/BattleSimulation";
 import type {
   BattleHudSnapshot,
@@ -27,6 +26,8 @@ import {
 import {
   ensureBattlefieldTexture,
   ensureCoinTexture,
+  ensureRapidFireTexture,
+  ensureRepairTexture,
   ensureShotTexture,
 } from "../view/dustlinePixelArt";
 import { spawnSimulationEffect } from "../view/spawnSimulationEffect";
@@ -74,12 +75,12 @@ export class BattleScene extends Phaser.Scene {
     this.currentHud = hud;
 
     this.cameras.main.setBackgroundColor(worldTheme.background);
-    this.drawBattlefield(level.id, snapshot.indestructibleWalls);
+    this.drawBattlefield(level.id, snapshot.worldWidth, snapshot.worldHeight, snapshot.indestructibleWalls);
     this.createSprites(snapshot);
     this.breakableObstacleLayer = createBreakableObstacleLayer(this);
     this.fogLayer = createFogOfWarLayer(this);
     this.syncSnapshot(snapshot);
-    createCameraRig(this.cameras.main, this.playerSprite.container);
+    createCameraRig(this.cameras.main, this.playerSprite.container, snapshot.worldWidth, snapshot.worldHeight);
 
     this.lastSavedCredits = snapshot.credits;
     this.lastSavedTotalScore = snapshot.totalScore;
@@ -247,24 +248,26 @@ export class BattleScene extends Phaser.Scene {
 
     pickups.forEach((pickup) => {
       if (!this.pickupSprites.has(pickup.id)) {
-        const coin = this.add.image(pickup.x, pickup.y, ensureCoinTexture(this));
-        coin.setDepth(4);
-        // Coin spin: squash the width in a few hard steps, like a flipbook.
-        this.tweens.add({
-          targets: coin,
-          scaleX: 0.25,
-          duration: 520,
-          yoyo: true,
-          repeat: -1,
-          ease: "Stepped",
-          easeParams: [3],
-        });
-        this.pickupSprites.set(pickup.id, coin);
+        const key =
+          pickup.kind === "repair"
+            ? ensureRepairTexture(this)
+            : pickup.kind === "rapidFire"
+              ? ensureRapidFireTexture(this)
+              : ensureCoinTexture(this);
+        const sprite = this.add.image(pickup.x, pickup.y, key);
+        sprite.setDepth(4);
+        // Coins spin like a flipbook; power-ups bob in two hard steps.
+        this.tweens.add(
+          pickup.kind === "coin"
+            ? { targets: sprite, scaleX: 0.25, duration: 520, yoyo: true, repeat: -1, ease: "Stepped", easeParams: [3] }
+            : { targets: sprite, y: pickup.y - 6, duration: 420, yoyo: true, repeat: -1, ease: "Stepped", easeParams: [2] },
+        );
+        this.pickupSprites.set(pickup.id, sprite);
       }
 
       const sprite = this.pickupSprites.get(pickup.id);
 
-      if (sprite) {
+      if (sprite && pickup.kind === "coin") {
         sprite.setPosition(pickup.x, pickup.y);
       }
     });
@@ -309,6 +312,7 @@ export class BattleScene extends Phaser.Scene {
       { label: "Credits", value: `$${hud.credits}` },
       { label: "Enemies", value: `${hud.enemiesRemaining}` },
       { label: "Time", value: formatTime(this.currentSnapshot.elapsedMs) },
+      ...(hud.rapidFireSeconds > 0 ? [{ label: "Rapid Fire", value: `${hud.rapidFireSeconds}s` }] : []),
     ];
     const viewModel = {
       layout: "active" as const,
@@ -404,8 +408,13 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Ground and indestructible walls are baked into one pixel-art image per level. */
-  private drawBattlefield(levelId: string, walls: BattleSnapshot["indestructibleWalls"]): void {
-    const key = ensureBattlefieldTexture(this, levelId, gameConfig.worldWidth, gameConfig.worldHeight, walls);
+  private drawBattlefield(
+    levelId: string,
+    worldWidth: number,
+    worldHeight: number,
+    walls: BattleSnapshot["indestructibleWalls"],
+  ): void {
+    const key = ensureBattlefieldTexture(this, levelId, worldWidth, worldHeight, walls);
     this.add.image(0, 0, key).setOrigin(0).setDepth(0);
   }
 
@@ -428,44 +437,98 @@ function formatTime(elapsedMs: number): string {
 
 const playerPalette: TankArtPalette = {
   name: "player",
-  hull: worldTheme.playerHull,
-  turret: worldTheme.playerTurret,
+  hull: tankTheme.playerHull,
+  turret: tankTheme.playerTurret,
+  accent: tankTheme.playerTurret,
   width: 16,
   length: 18,
+  treadWidth: 4,
+  hullStyle: "standard",
+  turretStyle: "dome",
   domeRadius: 4,
   barrelLength: 9,
+  barrelCount: 1,
 };
 
+/**
+ * One look per enemy type: colour first, then silhouette.
+ * Raider: red, cross stripe. Skirmisher: teal, small, arrow chevron.
+ * Bulwark: slate, wide with armour skirts, square twin-barrel turret.
+ * Lancer: purple, long hull and long barrel. Warden: black and gold, triple barrel.
+ */
 const enemyPalettes: Record<NonNullable<TankSnapshot["archetype"]>, TankArtPalette> = {
-  chaser: {
-    name: "chaser",
-    hull: worldTheme.enemyHull,
-    turret: worldTheme.accentSoft,
+  raider: {
+    name: "raider",
+    hull: tankTheme.raiderHull,
+    turret: tankTheme.raiderTurret,
+    accent: tankTheme.raiderAccent,
     width: 14,
     length: 16,
+    treadWidth: 4,
+    hullStyle: "standard",
+    turretStyle: "dome",
     domeRadius: 4,
     barrelLength: 8,
+    barrelCount: 1,
   },
-  heavy: {
-    name: "heavy",
-    hull: 0x6f6d60,
-    turret: 0xf0d58a,
-    width: 18,
-    length: 20,
-    domeRadius: 5,
-    barrelLength: 9,
-  },
-  flanker: {
-    name: "flanker",
-    hull: 0x4c6f82,
-    turret: 0xc8e0ef,
+  skirmisher: {
+    name: "skirmisher",
+    hull: tankTheme.skirmisherHull,
+    turret: tankTheme.skirmisherTurret,
+    accent: tankTheme.skirmisherAccent,
     width: 12,
-    length: 14,
+    length: 13,
+    treadWidth: 3,
+    hullStyle: "light",
+    turretStyle: "dome",
     domeRadius: 3,
+    barrelLength: 7,
+    barrelCount: 1,
+  },
+  bulwark: {
+    name: "bulwark",
+    hull: tankTheme.bulwarkHull,
+    turret: tankTheme.bulwarkTurret,
+    accent: tankTheme.bulwarkAccent,
+    width: 18,
+    length: 18,
+    treadWidth: 5,
+    hullStyle: "armoured",
+    turretStyle: "square",
+    domeRadius: 5,
     barrelLength: 8,
+    barrelCount: 2,
+  },
+  lancer: {
+    name: "lancer",
+    hull: tankTheme.lancerHull,
+    turret: tankTheme.lancerTurret,
+    accent: tankTheme.lancerAccent,
+    width: 12,
+    length: 18,
+    treadWidth: 3,
+    hullStyle: "long",
+    turretStyle: "dome",
+    domeRadius: 3,
+    barrelLength: 14,
+    barrelCount: 1,
+  },
+  warden: {
+    name: "warden",
+    hull: tankTheme.wardenHull,
+    turret: tankTheme.wardenTurret,
+    accent: tankTheme.wardenAccent,
+    width: 22,
+    length: 22,
+    treadWidth: 5,
+    hullStyle: "fortress",
+    turretStyle: "square",
+    domeRadius: 6,
+    barrelLength: 10,
+    barrelCount: 3,
   },
 };
 
 function getEnemyPalette(enemy: TankSnapshot): TankArtPalette {
-  return enemyPalettes[enemy.archetype ?? "chaser"];
+  return enemyPalettes[enemy.archetype ?? "raider"];
 }

@@ -1,0 +1,35 @@
+import { compileTileLevel } from "./tileMap";
+
+export const coinCellarLevel = compileTileLevel({
+  id: "coin-cellar",
+  name: "Coin Cellar",
+  tier: "bonus",
+  tagline: "Bonus room: gold crates everywhere.",
+  briefing: "An old bank cellar stacked with gold crates. Only a few skirmishers guard it. Grab the rapid-fire charge and cash in.",
+  rooms: [
+    { kind: "staging", label: "Stairwell" },
+    { kind: "vault", label: "Strongroom" },
+    { kind: "vault", label: "Counting Hall" },
+    { kind: "skirmish", label: "Back Vault" },
+  ],
+  map: [
+    "##########################",
+    "#.....#..........#.......#",
+    "#..P..#..$.$.$...#..$.$..#",
+    "#.....b..........b.......#",
+    "#.....b...s......b...O...#",
+    "#.....#..$.$.$...#..$.$..#",
+    "#..!..#..........#.......#",
+    "###..########..###########",
+    "#........................#",
+    "#..$c......o..o......c$..#",
+    "#..c$................$c..#",
+    "#.........s....s.........#",
+    "#..o..................o..#",
+    "#######bb######bb#########",
+    "#........................#",
+    "#..c.$.c..o..o...c.$.c...#",
+    "#........................#",
+    "##########################",
+  ],
+});

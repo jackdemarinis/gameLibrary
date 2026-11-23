@@ -1,7 +1,9 @@
 import { battleConfig } from "../../config/battleConfig";
 import type { EnemyArchetype } from "../../content/levelTypes";
 import type { BattleLevelData } from "../../content/levelTypes";
+import { gameConfig } from "../../config/gameConfig";
 import type { SaveData } from "../state";
+import { createNavGrid } from "./navigation";
 import { buildBattleHudSnapshot } from "./systems/hudSystem";
 import { createBreakableObstacles, rebuildObstacleRects } from "./systems/destructibleSystem";
 import { runEnemyLogicSystem } from "./systems/enemyLogicSystem";
@@ -68,6 +70,7 @@ export class BattleSimulation {
     const deltaSeconds = deltaMs / 1000;
 
     this.state.elapsedMs += deltaMs;
+    this.state.rapidFireRemainingMs = Math.max(0, this.state.rapidFireRemainingMs - deltaMs);
     tickCooldowns(this.state, deltaMs);
 
     if (this.state.status !== "lost") {
@@ -124,6 +127,10 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
         playerUpgrades.fireRate * battleConfig.upgrades.fireRateReductionMsPerLevel,
     ),
     fireCooldownRemainingMs: 0,
+    shotCount: 1,
+    spreadRadians: 0,
+    navWaypoint: null,
+    navRefreshMs: 0,
     projectileSpeed: battleConfig.player.projectileSpeed,
     projectileDamage:
       battleConfig.player.projectileDamage +
@@ -151,14 +158,23 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
     alive: true,
   };
 
+  const worldWidth = level.width ?? gameConfig.worldWidth;
+  const worldHeight = level.height ?? gameConfig.worldHeight;
+  const visibilityRadiusTiles =
+    battleConfig.visibility.radiusTiles +
+    playerUpgrades.visibilityRadius * battleConfig.upgrades.visibilityRadiusTilesPerLevel;
   const state: BattleState = {
     level,
+    worldWidth,
+    worldHeight,
+    navGrid: createNavGrid(worldWidth, worldHeight, battleConfig.visibility.tileSize, []),
+    rapidFireRemainingMs: 0,
     obstacles: [],
     breakableObstacles,
     visibility: createBattleVisibilityState(player.position, [], {
-      radiusTiles:
-        battleConfig.visibility.radiusTiles +
-        playerUpgrades.visibilityRadius * battleConfig.upgrades.visibilityRadiusTilesPerLevel,
+      radiusTiles: visibilityRadiusTiles,
+      worldWidth,
+      worldHeight,
     }),
     player,
     enemies: level.enemySpawns.map((spawn) =>
@@ -188,9 +204,9 @@ function createBattleState(level: BattleLevelData, save: SaveData): BattleState 
 
   rebuildObstacleRects(state);
   state.visibility = createBattleVisibilityState(player.position, state.obstacles, {
-    radiusTiles:
-      battleConfig.visibility.radiusTiles +
-      playerUpgrades.visibilityRadius * battleConfig.upgrades.visibilityRadiusTilesPerLevel,
+    radiusTiles: visibilityRadiusTiles,
+    worldWidth,
+    worldHeight,
   });
   return state;
 }
@@ -239,6 +255,8 @@ function createBattleSnapshot(state: BattleState): BattleSnapshot {
       radius: pickup.radius,
       kind: pickup.kind,
     })),
+    worldWidth: state.worldWidth,
+    worldHeight: state.worldHeight,
     indestructibleWalls: state.level.indestructibleWalls,
     breakableObstacles: state.breakableObstacles
       .filter((obstacle) => obstacle.alive)
@@ -277,6 +295,7 @@ function createBreakableObstacleSnapshot(obstacle: BattleState["breakableObstacl
     height: obstacle.rect.height,
     health: obstacle.health,
     maxHealth: obstacle.maxHealth,
+    rewardCredits: obstacle.rewardCredits,
   };
 }
 
@@ -290,7 +309,7 @@ function createInitialPickups(level: BattleLevelData): PickupState[] {
     },
     radius: pickup.radius ?? battleConfig.pickup.radius,
     value: pickup.value,
-    scoreValue: pickup.value,
+    scoreValue: pickup.kind === "coin" ? pickup.value : 50,
   }));
 }
 
@@ -316,16 +335,20 @@ function createEnemyTank(
     position: { x, y },
     hullRotation: Math.PI,
     turretRotation: Math.PI,
-    radius: battleConfig.enemy.radius,
+    radius: profile.radius,
     health: maxHealth,
     maxHealth,
     moveSpeed: profile.moveSpeed,
     turretTurnSpeed: 0,
     fireCooldownMs,
     fireCooldownRemainingMs: 220 + (hashString(id) % 360),
+    shotCount: profile.shotCount,
+    spreadRadians: profile.spreadRadians,
+    navWaypoint: null,
+    navRefreshMs: 0,
     projectileSpeed: profile.projectileSpeed,
     projectileDamage,
-    muzzleOffset: battleConfig.enemy.muzzleOffset,
+    muzzleOffset: battleConfig.enemy.muzzleOffset + (profile.radius - battleConfig.enemy.radius),
     recoilKick: profile.recoilKick,
     recoilRecoveryPerSecond: profile.recoilRecoveryPerSecond,
     recoilOffset: 0,

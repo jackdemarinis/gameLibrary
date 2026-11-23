@@ -71,3 +71,29 @@ Prompt 2 should add fog-of-war exploration on top of the current combat sandbox 
 - Second game reachable from the start screen's Game Library card; Dustline Brigade flow is unchanged.
 - Same architecture rules: fixed-step pure simulation in `src/game/adventure/`, thin `AdventureScene`, DOM HUD via `SceneBridge.showHud`.
 - Scope: move, gather two resources, craft one upgrade, three shades, one boss. No persistence or randomness.
+
+## Grid maps, room flow, distinct tanks, pixel menus (2026-11-21)
+
+### Maps
+Levels are text maps on one 64px grid (`src/game/content/tileMap.ts`, legend at the
+top). Every wall, brick and crate is one square cell. Each map is a chain of rooms:
+staging → skirmish → chokepoint → optional vault (gold crates `$`, stashes `O`,
+repair `+`, rapid fire `!`, often behind bricks) → hard room → command room. The
+briefing screen shows that route; level select shows a tier badge.
+
+### Campaign order (levelCatalog.ts)
+1 Training Yard (easy, raiders) · 2 Relay Station (easy, skirmishers) · 3 Coin Cellar
+(bonus) · 4 Quarry Switchbacks (bulwarks) · 5 Signal Ridge (lancers) · 6 Supply Depot
+(bonus) · 7 Scrapyard Maze (hard) · 8 Iron Gauntlet (hardest) · 9 Dustline Citadel (Warden boss).
+
+### Enemy roster
+| Type | Colour | Look | Plays |
+| --- | --- | --- | --- |
+| Raider | red | cross stripe, dome | standard |
+| Skirmisher | teal | small, arrow chevron | fast, flanks |
+| Bulwark | slate | wide, armour skirts, square twin-barrel turret | slow, 2-shell volley |
+| Lancer | purple | long hull, long barrel | sniper, holds position |
+| Warden | black/gold | big, gold trim, triple barrel | boss, 3-shell spread |
+
+Enemies path around walls with a grid BFS (`simulation/battle/navigation.ts`)
+when they lose a straight line to their target.

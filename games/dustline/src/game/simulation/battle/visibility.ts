@@ -13,13 +13,16 @@ import { hasLineOfSight } from "./vision";
 export function createBattleVisibilityState(
   origin: Vector2,
   obstacles: readonly Rect[],
-  settingsOverride: Partial<Pick<BattleVisibilitySettings, "radiusTiles">> = {},
+  settingsOverride: Partial<Pick<BattleVisibilitySettings, "radiusTiles">> & {
+    worldWidth?: number;
+    worldHeight?: number;
+  } = {},
 ): BattleVisibilityState {
   const tileSize = battleConfig.visibility.tileSize;
   const settings = {
     tileSize,
-    columns: Math.ceil(battleConfig.visibility.worldWidth / tileSize),
-    rows: Math.ceil(battleConfig.visibility.worldHeight / tileSize),
+    columns: Math.ceil((settingsOverride.worldWidth ?? battleConfig.visibility.worldWidth) / tileSize),
+    rows: Math.ceil((settingsOverride.worldHeight ?? battleConfig.visibility.worldHeight) / tileSize),
     radiusTiles: settingsOverride.radiusTiles ?? battleConfig.visibility.radiusTiles,
     refreshDistance: battleConfig.visibility.refreshDistance,
   };

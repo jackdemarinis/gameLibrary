@@ -31,6 +31,8 @@ export class LevelSelectScene extends Phaser.Scene {
       levels: this.bridge.getLevelSequence().map((level, index) => ({
         number: index + 1,
         label: level.name,
+        tagline: level.tagline ?? "",
+        tier: level.tier ?? "",
         unlocked: save.unlockedLevelIds.includes(level.id),
         active: selectedLevelId === level.id,
         onPress: () => {

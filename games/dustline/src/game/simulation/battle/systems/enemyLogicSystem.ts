@@ -13,7 +13,13 @@ import type {
   TankState,
   Vector2,
 } from "../types";
+import { findNextWaypoint } from "../navigation";
 import { spawnProjectile } from "./projectileSystem";
+
+const navRefreshIntervalMs = 280;
+/** Slow, heavy tanks back off instead of circling. */
+const holdsGround = (enemy: TankState): boolean =>
+  enemy.archetype === "bulwark" || enemy.archetype === "lancer" || enemy.archetype === "warden";
 
 export function runEnemyLogicSystem(state: BattleState, deltaMs: number): SimulationEffect[] {
   const player = state.player;
@@ -42,7 +48,10 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
     const moveTarget = chooseMovementTarget(enemy, player, perception);
 
     if (moveTarget) {
-      moveEnemyTowards(enemy, moveTarget, deltaMs / 1000, state.obstacles);
+      const steerTarget = routeAroundWalls(state, enemy, moveTarget, deltaMs);
+      moveEnemyTowards(enemy, steerTarget, deltaMs / 1000, state.obstacles);
+    } else {
+      enemy.navWaypoint = null;
     }
 
     if (
@@ -55,6 +64,26 @@ export function runEnemyLogicSystem(state: BattleState, deltaMs: number): Simula
   });
 
   return effects;
+}
+
+/**
+ * Direct line to the target: drive straight at it. Otherwise follow the grid
+ * path one cell at a time, so enemies can find their way through doorways.
+ */
+function routeAroundWalls(state: BattleState, enemy: TankState, target: Vector2, deltaMs: number): Vector2 {
+  if (hasLineOfSight(enemy.position, target, state.obstacles)) {
+    enemy.navWaypoint = null;
+    return target;
+  }
+
+  enemy.navRefreshMs -= deltaMs;
+  const reachedWaypoint =
+    enemy.navWaypoint !== null && distanceBetween(enemy.position, enemy.navWaypoint) <= 10;
+  if (enemy.navWaypoint === null || reachedWaypoint || enemy.navRefreshMs <= 0) {
+    enemy.navWaypoint = findNextWaypoint(state.navGrid, enemy.position, target);
+    enemy.navRefreshMs = navRefreshIntervalMs;
+  }
+  return enemy.navWaypoint ?? target;
 }
 
 interface EnemyPerception {
@@ -197,11 +226,11 @@ function chooseEngageTarget(
     };
   }
 
-  if (enemy.archetype === "flanker" && perception.hasLineOfSight) {
+  if (enemy.archetype === "skirmisher" && perception.hasLineOfSight) {
     return buildLateralTarget(enemy, player.position, 1.08);
   }
 
-  if (enemy.archetype === "chaser" && !perception.hasLineOfSight) {
+  if (enemy.archetype === "raider" && !perception.hasLineOfSight) {
     return { ...player.position };
   }
 
@@ -370,11 +399,11 @@ function shouldStartReposition(enemy: TankState, perception: EnemyPerception): b
     return true;
   }
 
-  if (enemy.archetype === "heavy") {
+  if (holdsGround(enemy)) {
     return perception.distance < enemy.preferredRange * 0.58;
   }
 
-  if (enemy.archetype === "flanker") {
+  if (enemy.archetype === "skirmisher") {
     return enemy.aiStateElapsedMs >= 900 || perception.distance < enemy.preferredRange * 0.9;
   }
 
@@ -388,7 +417,7 @@ function buildRepositionTarget(enemy: TankState): Vector2 | null {
     return null;
   }
 
-  return enemy.archetype === "heavy"
+  return holdsGround(enemy)
     ? {
         x: enemy.position.x - normalizeVector({
           x: target.x - enemy.position.x,

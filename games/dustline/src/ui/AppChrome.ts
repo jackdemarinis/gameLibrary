@@ -51,6 +51,9 @@ export interface ShopViewModel {
 export interface LevelChoiceViewModel {
   number: number;
   label: string;
+  tagline: string;
+  /** Badge text, e.g. "Bonus" or "Boss". */
+  tier: string;
   unlocked: boolean;
   active: boolean;
   onPress: () => void;
@@ -68,6 +71,9 @@ export interface LevelIntroViewModel {
   eyebrow: string;
   title: string;
   briefing: string;
+  /** Rooms in the order the map flows. kind drives the chip colour. */
+  rooms: { kind: string; label: string }[];
+  tierLabel: string;
   difficultyLabel: string;
   totalScore: number;
   credits: number;
@@ -267,8 +273,15 @@ export class AppChrome {
           ${level.unlocked ? "" : "disabled"}
         >
           <span class="level-tile-number">${level.number}</span>
+          ${level.tier ? `<span class="levelTier levelTier-${level.tier}">${level.tier}</span>` : ""}
           <span class="level-tile-label">${level.label}</span>
-          ${level.unlocked ? "" : `<span class="level-tile-state">Locked · clear level ${level.number - 1}</span>`}
+          ${
+            level.unlocked
+              ? level.tagline
+                ? `<span class="levelTileTagline">${level.tagline}</span>`
+                : ""
+              : `<span class="level-tile-state">Locked · clear level ${level.number - 1}</span>`
+          }
         </button>
       `;
     };
@@ -305,9 +318,23 @@ export class AppChrome {
     this.root.innerHTML = `
       <section class="brief-screen">
         <article class="brief-panel arcade-card">
-          <p class="eyebrow">${model.eyebrow}</p>
+          <p class="eyebrow">${model.eyebrow}${
+            model.tierLabel ? ` <span class="levelTier levelTier-${model.tierLabel}">${model.tierLabel}</span>` : ""
+          }</p>
           <h1 class="brief-title">${model.title}</h1>
           <p class="brief-copy">${model.briefing}</p>
+          ${
+            model.rooms.length
+              ? `<ol class="briefRoute" aria-label="Map route">
+                  ${model.rooms
+                    .map(
+                      (room, index) =>
+                        `<li class="briefRoom briefRoom-${room.kind}"><span class="briefRoomStep">${index + 1}</span>${room.label}</li>`,
+                    )
+                    .join("")}
+                </ol>`
+              : ""
+          }
           <div class="brief-stat-row">
             <article class="brief-stat-card">
               <span class="brief-stat-label">Difficulty</span>

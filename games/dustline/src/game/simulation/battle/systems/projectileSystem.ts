@@ -7,6 +7,7 @@ import {
   findBreakableObstacleAtPoint,
 } from "./destructibleSystem";
 
+/** Fires one volley: shotCount shells fanned across spreadRadians. */
 export function spawnProjectile(
   state: BattleState,
   shooter: TankState,
@@ -16,38 +17,44 @@ export function spawnProjectile(
     return [];
   }
 
-  const firingRotation = shooter.turretRotation + rotationOffset;
-  const forward = forwardFromRotation(firingRotation);
-  const projectile: ProjectileState = {
-    id: `projectile-${state.nextProjectileId}`,
-    ownerId: shooter.id,
-    faction: shooter.faction,
-    position: {
-      x: shooter.position.x + forward.x * shooter.muzzleOffset,
-      y: shooter.position.y + forward.y * shooter.muzzleOffset,
-    },
-    velocity: {
-      x: forward.x * shooter.projectileSpeed,
-      y: forward.y * shooter.projectileSpeed,
-    },
-    radius: battleConfig.projectile.radius,
-    damage: shooter.projectileDamage,
-    ttlMs: battleConfig.projectile.ttlMs,
-  };
+  const baseRotation = shooter.turretRotation + rotationOffset;
+  const shots = Math.max(1, shooter.shotCount);
+  for (let shot = 0; shot < shots; shot += 1) {
+    const fan = shots === 1 ? 0 : (shot / (shots - 1) - 0.5) * shooter.spreadRadians;
+    const forward = forwardFromRotation(baseRotation + fan);
+    state.projectiles.push({
+      id: `projectile-${state.nextProjectileId}`,
+      ownerId: shooter.id,
+      faction: shooter.faction,
+      position: {
+        x: shooter.position.x + forward.x * shooter.muzzleOffset,
+        y: shooter.position.y + forward.y * shooter.muzzleOffset,
+      },
+      velocity: {
+        x: forward.x * shooter.projectileSpeed,
+        y: forward.y * shooter.projectileSpeed,
+      },
+      radius: battleConfig.projectile.radius,
+      damage: shooter.projectileDamage,
+      ttlMs: battleConfig.projectile.ttlMs,
+    });
+    state.nextProjectileId += 1;
+  }
 
-  state.projectiles.push(projectile);
-  shooter.fireCooldownRemainingMs = shooter.fireCooldownMs;
+  const rapidFire = shooter.faction === "player" && state.rapidFireRemainingMs > 0;
+  shooter.fireCooldownRemainingMs =
+    shooter.fireCooldownMs * (rapidFire ? battleConfig.pickup.rapidFireCooldownMultiplier : 1);
   shooter.recoilOffset = Math.min(shooter.recoilKick * 1.45, shooter.recoilOffset + shooter.recoilKick);
-  state.nextProjectileId += 1;
 
+  const muzzle = forwardFromRotation(baseRotation);
   return [
     {
       type: "muzzleFlash",
-      x: projectile.position.x,
-      y: projectile.position.y,
+      x: shooter.position.x + muzzle.x * shooter.muzzleOffset,
+      y: shooter.position.y + muzzle.y * shooter.muzzleOffset,
       color: 0xffe18a,
-      size: shooter.faction === "player" ? 22 : 18,
-      rotation: firingRotation,
+      size: shooter.faction === "player" ? 22 : 18 + (shots - 1) * 4,
+      rotation: baseRotation,
       lifetimeMs: 70,
     },
   ];

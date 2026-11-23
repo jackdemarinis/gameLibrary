@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { BreakableObstacleSnapshot } from "../../game/simulation/battle/types";
+import { reinforcedBrickHealth } from "../../game/content/tileMap";
 import { damageStage, ensureObstacleTexture } from "./dustlinePixelArt";
 
 export interface BreakableObstacleLayer {
@@ -26,7 +27,16 @@ export function createBreakableObstacleLayer(scene: Phaser.Scene): BreakableObst
 
       obstacles.forEach((obstacle) => {
         const stage = damageStage(obstacle.health, obstacle.maxHealth);
-        const key = ensureObstacleTexture(scene, obstacle.kind, obstacle.width, obstacle.height, stage);
+        const special =
+          obstacle.kind === "crate" ? obstacle.rewardCredits > 0 : obstacle.maxHealth >= reinforcedBrickHealth;
+        const key = ensureObstacleTexture(
+          scene,
+          obstacle.kind,
+          obstacle.width,
+          obstacle.height,
+          stage,
+          special ? "special" : "plain",
+        );
         let sprite = sprites.get(obstacle.id);
 
         if (!sprite) {

@@ -4,8 +4,10 @@ import { gameConfig } from "../../game/config/gameConfig";
 export function createCameraRig(
   camera: Phaser.Cameras.Scene2D.Camera,
   focus: Phaser.GameObjects.GameObject,
+  worldWidth: number = gameConfig.worldWidth,
+  worldHeight: number = gameConfig.worldHeight,
 ): void {
-  camera.setBounds(0, 0, gameConfig.worldWidth, gameConfig.worldHeight);
+  camera.setBounds(0, 0, worldWidth, worldHeight);
   camera.startFollow(focus, true, 0.08, 0.08);
   camera.setZoom(gameConfig.cameraZoom);
   // Whole-pixel scrolling keeps the pixel art from shimmering as the camera follows.

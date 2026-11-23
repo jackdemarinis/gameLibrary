@@ -134,6 +134,15 @@
   --dl-olive-bevel: inset 0 3px 0 #71874a, inset 0 -4px 0 #2c3a1c;
   --dl-olive-bevel-press: inset 0 3px 0 #2c3a1c;
   --dl-drop: 0 6px 0 #0e2a12;
+  --dl-scrim: rgba(8, 12, 6, 0.72);
+  --dl-red: #c4482f;
+  --dl-red-bevel: inset 0 3px 0 #e0775a, inset 0 -4px 0 #7a2618;
+  --dl-teal: #2b9a9c;
+  --dl-slate: #4f5d78;
+  --dl-purple: #7a4aa8;
+  --dl-health: #8fe07a;
+  --dl-health-dark: #3a7a34;
+  --dl-meter-back: #0e140b;
 
   /* Play-screen stage: the 16:9 game window, framed in riveted olive steel,
      centred on a calm dark field. */

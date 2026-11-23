@@ -1,0 +1,36 @@
+import { compileTileLevel } from "./tileMap";
+
+export const signalRidgeLevel = compileTileLevel({
+  id: "signal-ridge",
+  name: "Signal Ridge",
+  tier: "medium",
+  tagline: "Lancers: long-range snipers. Use cover.",
+  briefing: "Long open halls watched by lancers. Their shells hit hard but come slowly. Hop between crates and close the distance.",
+  rooms: [
+    { kind: "staging", label: "Ridge Bunker" },
+    { kind: "chokepoint", label: "Sniper Hall" },
+    { kind: "skirmish", label: "Mast Yard" },
+    { kind: "hard", label: "Long Gallery" },
+    { kind: "command", label: "Signal Tower" },
+  ],
+  map: [
+    "##################################",
+    "#......#.........................#",
+    "#..P...#....c.......c.......l....#",
+    "#..........................c.....#",
+    "#......#....c.......c............#",
+    "#......#.........................#",
+    "#####..#################bb########",
+    "#............#...................#",
+    "#...r........#.....c......s......#",
+    "#............#...................#",
+    "#.....s........cc........c.......#",
+    "#............#...................#",
+    "#........+...#..........r........#",
+    "#..######################..#######",
+    "#................................#",
+    "#.l.......c.......c........l...O.#",
+    "#................................#",
+    "##################################",
+  ],
+});

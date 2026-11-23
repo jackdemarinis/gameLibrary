@@ -8,6 +8,7 @@ import type {
   SimulationEffect,
   Vector2,
 } from "../types";
+import { rebuildNavGrid } from "../navigation";
 import { refreshBattleVisibility } from "../visibility";
 
 const CRATE_DEBRIS_COLOR = 0xcf8d3d;
@@ -25,6 +26,7 @@ export function rebuildObstacleRects(state: BattleState): void {
     ...state.level.indestructibleWalls,
     ...state.breakableObstacles.filter((obstacle) => obstacle.alive).map((obstacle) => obstacle.rect),
   ];
+  rebuildNavGrid(state.navGrid, state.obstacles);
 }
 
 export function findBreakableObstacleAtPoint(

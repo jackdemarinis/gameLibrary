@@ -11,7 +11,7 @@ const openTestLevel: BattleLevelData = {
   name: "Open Test",
   briefing: "Clear the open lane.",
   playerSpawn: { x: 120, y: 120 },
-  enemySpawns: [{ id: "enemy-1", x: 120, y: 240, archetype: "chaser" }],
+  enemySpawns: [{ id: "enemy-1", x: 120, y: 240, archetype: "raider" }],
   indestructibleWalls: [],
   weakWalls: [],
   crates: [],
@@ -35,7 +35,7 @@ const enemyWallTestLevel: BattleLevelData = {
   name: "Enemy Wall Test",
   briefing: "Enemy should not drive into the wall column.",
   playerSpawn: { x: 80, y: 420 },
-  enemySpawns: [{ id: "enemy-1", x: 220, y: 120, archetype: "chaser" }],
+  enemySpawns: [{ id: "enemy-1", x: 220, y: 120, archetype: "raider" }],
   indestructibleWalls: [{ x: 140, y: 60, width: 40, height: 220 }],
   weakWalls: [],
   crates: [],
@@ -47,7 +47,7 @@ const destructibleTestLevel: BattleLevelData = {
   name: "Destructible Test",
   briefing: "Destroy cover and sweep the rewards.",
   playerSpawn: { x: 120, y: 120 },
-  enemySpawns: [{ id: "enemy-1", x: 900, y: 900, archetype: "heavy" }],
+  enemySpawns: [{ id: "enemy-1", x: 900, y: 900, archetype: "bulwark" }],
   indestructibleWalls: [],
   weakWalls: [{ id: "wall-1", x: 176, y: 72, width: 48, height: 96, maxHealth: 68 }],
   crates: [{ id: "crate-1", x: 288, y: 88, width: 64, height: 64, maxHealth: 34, rewardCredits: 55 }],
@@ -60,9 +60,9 @@ const archetypeTestLevel: BattleLevelData = {
   briefing: "Different enemy tanks should feel and behave differently.",
   playerSpawn: { x: 120, y: 120 },
   enemySpawns: [
-    { id: "chaser-1", x: 520, y: 120, archetype: "chaser" },
-    { id: "heavy-1", x: 520, y: 220, archetype: "heavy" },
-    { id: "flanker-1", x: 520, y: 320, archetype: "flanker" },
+    { id: "raider-1", x: 520, y: 120, archetype: "raider" },
+    { id: "bulwark-1", x: 520, y: 220, archetype: "bulwark" },
+    { id: "skirmisher-1", x: 520, y: 320, archetype: "skirmisher" },
   ],
   indestructibleWalls: [],
   weakWalls: [],
@@ -232,8 +232,8 @@ describe("BattleSimulation", () => {
     const simulation = new BattleSimulation(archetypeTestLevel, createInitialSave());
     const initialEnemies = indexEnemies(simulation.getSnapshot().enemies);
 
-    expect(initialEnemies["heavy-1"].maxHealth).toBeGreaterThan(initialEnemies["chaser-1"].maxHealth);
-    expect(initialEnemies["chaser-1"].maxHealth).toBeGreaterThan(initialEnemies["flanker-1"].maxHealth);
+    expect(initialEnemies["bulwark-1"].maxHealth).toBeGreaterThan(initialEnemies["raider-1"].maxHealth);
+    expect(initialEnemies["raider-1"].maxHealth).toBeGreaterThan(initialEnemies["skirmisher-1"].maxHealth);
 
     advanceFor(simulation, 1000, {
       movementX: 0,
@@ -243,13 +243,13 @@ describe("BattleSimulation", () => {
     });
 
     const nextEnemies = indexEnemies(simulation.getSnapshot().enemies);
-    const heavyTravel = distanceTravelled(initialEnemies["heavy-1"], nextEnemies["heavy-1"]);
-    const flankerTravel = distanceTravelled(initialEnemies["flanker-1"], nextEnemies["flanker-1"]);
+    const bulwarkTravel = distanceTravelled(initialEnemies["bulwark-1"], nextEnemies["bulwark-1"]);
+    const skirmisherTravel = distanceTravelled(initialEnemies["skirmisher-1"], nextEnemies["skirmisher-1"]);
 
-    expect(nextEnemies["chaser-1"].aiState).toBe("engage");
-    expect(nextEnemies["heavy-1"].aiState).toBe("engage");
-    expect(nextEnemies["flanker-1"].aiState).not.toBe("idle");
-    expect(flankerTravel).toBeGreaterThan(heavyTravel);
+    expect(nextEnemies["raider-1"].aiState).toBe("engage");
+    expect(nextEnemies["bulwark-1"].aiState).toBe("engage");
+    expect(nextEnemies["skirmisher-1"].aiState).not.toBe("idle");
+    expect(skirmisherTravel).toBeGreaterThan(bulwarkTravel);
   });
 
   it("applies saved upgrades and difficulty to the very next level", () => {
@@ -312,6 +312,68 @@ describe("BattleSimulation", () => {
     expect(upgraded.getSnapshot().player.turretRotation).toBeGreaterThan(
       baseline.getSnapshot().player.turretRotation,
     );
+  });
+
+  it("heals with a repair kit and doubles fire rate with a rapid-fire charge", () => {
+    const supplyLevel: BattleLevelData = {
+      ...openTestLevel,
+      id: "test-supply",
+      enemySpawns: [{ id: "enemy-far", x: 1500, y: 900, archetype: "raider" }],
+      pickups: [
+        { id: "repair", kind: "repair", x: 120, y: 120, value: 0 },
+        { id: "rapid", kind: "rapidFire", x: 120, y: 120, value: 0 },
+      ],
+    };
+    const simulation = new BattleSimulation(supplyLevel, createInitialSave());
+    const state = (simulation as unknown as { state: { player: { health: number; maxHealth: number } } }).state;
+    state.player.health = 20;
+    const idle = { movementX: 0, movementY: 0, aim: { x: 400, y: 120 }, firing: false };
+    simulation.advance(20, idle);
+    expect(state.player.health).toBeGreaterThan(20);
+    expect(simulation.getHudSnapshot().rapidFireSeconds).toBeGreaterThan(0);
+
+    let shots = 0;
+    let lastCount = 0;
+    for (let frame = 0; frame < 120; frame += 1) {
+      const count = simulation.advance(16, { ...idle, firing: true }).snapshot.projectiles.length;
+      if (count > lastCount) shots += count - lastCount;
+      lastCount = count;
+    }
+    const normal = new BattleSimulation({ ...supplyLevel, pickups: [] }, createInitialSave());
+    let normalShots = 0;
+    lastCount = 0;
+    for (let frame = 0; frame < 120; frame += 1) {
+      const count = normal.advance(16, { ...idle, firing: true }).snapshot.projectiles.length;
+      if (count > lastCount) normalShots += count - lastCount;
+      lastCount = count;
+    }
+    expect(shots).toBeGreaterThan(normalShots);
+  });
+
+  it("gives the bulwark a twin volley and the warden a three-shell spread", () => {
+    const volleyLevel: BattleLevelData = {
+      ...openTestLevel,
+      id: "test-volley",
+      enemySpawns: [
+        { id: "bulwark-1", x: 120, y: 360, archetype: "bulwark" },
+        { id: "warden-1", x: 360, y: 120, archetype: "warden" },
+      ],
+    };
+    const simulation = new BattleSimulation(volleyLevel, createInitialSave());
+    const owners = new Map<string, number>();
+    const seen = new Set<string>();
+    for (let frame = 0; frame < 120; frame += 1) {
+      const state = (simulation as unknown as { state: { projectiles: { id: string; ownerId: string }[] } }).state;
+      simulation.advance(16, { movementX: 0, movementY: 0, aim: { x: 120, y: 400 }, firing: false });
+      state.projectiles.forEach((projectile) => {
+        if (seen.has(projectile.id)) return;
+        seen.add(projectile.id);
+        owners.set(projectile.ownerId, (owners.get(projectile.ownerId) ?? 0) + 1);
+      });
+    }
+    expect((owners.get("bulwark-1") ?? 0) % 2).toBe(0);
+    expect(owners.get("bulwark-1") ?? 0).toBeGreaterThanOrEqual(2);
+    expect(owners.get("warden-1") ?? 0).toBeGreaterThanOrEqual(3);
   });
 });
 

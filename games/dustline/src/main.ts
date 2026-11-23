@@ -3,6 +3,7 @@ import "./jackGames.css";
 import "./styles.css";
 import "./themeAdapter.css";
 import "./dustlineMenu.css";
+import "./dustlinePixelMenus.css";
 import "./stage.css";
 import { applyThemeVariables } from "./game/config/theme";
 import { createSaveStore } from "./game/simulation/saveStore";

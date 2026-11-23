@@ -74,6 +74,41 @@ export const pixelTheme = {
   coinDark: 0xa86d12,
   healthBack: 0x1c1410,
   white: 0xfff6cc,
+  reinforcedBand: 0x5d6266,
+  reinforcedBandLight: 0x9aa0a2,
+  goldFace: 0xe7b53a,
+  goldLight: 0xfff0a0,
+  goldDark: 0x8a5a10,
+  repairFace: 0xe9efe2,
+  repairCross: 0x3fae4a,
+  repairEdge: 0x2a4a2c,
+  boltFace: 0xff7a3d,
+  boltLight: 0xffd36b,
+  boltEdge: 0x6e2410,
+} as const;
+
+/**
+ * Tank colours. Every enemy type has its own body colour and accent so they can
+ * be told apart at a glance; the player keeps the olive green.
+ */
+export const tankTheme = {
+  playerHull: 0x74a74e,
+  playerTurret: 0xc7d57a,
+  raiderHull: 0xa8432f,
+  raiderTurret: 0xe2c79a,
+  raiderAccent: 0xf3e6c4,
+  skirmisherHull: 0x2b9a9c,
+  skirmisherTurret: 0xbfeee6,
+  skirmisherAccent: 0xffe066,
+  bulwarkHull: 0x4f5d78,
+  bulwarkTurret: 0x93a1bd,
+  bulwarkAccent: 0xf0a030,
+  lancerHull: 0x7a4aa8,
+  lancerTurret: 0xd9c2f0,
+  lancerAccent: 0xff5f8a,
+  wardenHull: 0x2c2a2e,
+  wardenTurret: 0x5a565e,
+  wardenAccent: 0xe8b43a,
 } as const;
 
 export function applyThemeVariables(root: HTMLElement): void {

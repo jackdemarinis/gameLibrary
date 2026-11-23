@@ -5,10 +5,9 @@ import { battleLevelOrder, getNextBattleLevelId } from "./levelCatalog";
 import type { Point, Rect } from "./levelTypes";
 
 const tankRadius = Math.max(battleConfig.player.radius, battleConfig.enemy.radius);
+const radiusOf = (archetype: keyof typeof battleConfig.enemy.archetypes): number =>
+  battleConfig.enemy.archetypes[archetype].radius;
 
-// Pre-existing live levels whose spawns/patrols graze a wall by a few pixels. Left
-// untouched on purpose; remove an id once its layout is nudged clear.
-const legacyOverlapLevelIds = new Set(["training-yard", "relay-station"]);
 
 function circleHitsRect(point: Point, radius: number, rect: Rect): boolean {
   const nearestX = Math.max(rect.x, Math.min(point.x, rect.x + rect.width));
@@ -50,22 +49,41 @@ describe("level catalog", () => {
       for (const rect of solids) {
         expect(rect.x).toBeGreaterThanOrEqual(0);
         expect(rect.y).toBeGreaterThanOrEqual(0);
-        expect(rect.x + rect.width).toBeLessThanOrEqual(gameConfig.worldWidth);
-        expect(rect.y + rect.height).toBeLessThanOrEqual(gameConfig.worldHeight);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(level.width ?? gameConfig.worldWidth);
+        expect(rect.y + rect.height).toBeLessThanOrEqual(level.height ?? gameConfig.worldHeight);
       }
     });
 
-    const strictIt = legacyOverlapLevelIds.has(level.id) ? it.skip : it;
+    it("puts every barrier on the grid as whole square cells", () => {
+      const cell = gameConfig.gridSize;
+      for (const rect of solids) {
+        expect(rect.x % cell, `${rect.x},${rect.y}`).toBe(0);
+        expect(rect.y % cell, `${rect.x},${rect.y}`).toBe(0);
+        expect(rect.width % cell).toBe(0);
+        expect(rect.height % cell).toBe(0);
+      }
+      for (const breakable of [...level.weakWalls, ...level.crates]) {
+        expect([breakable.width, breakable.height]).toEqual([cell, cell]);
+      }
+    });
 
-    strictIt("spawns the player and enemies clear of walls and crates", () => {
-      const spawns = [level.playerSpawn, ...level.enemySpawns];
+    it("describes its room flow", () => {
+      expect(level.rooms?.length ?? 0).toBeGreaterThanOrEqual(3);
+      expect(level.tagline).toBeTruthy();
+    });
+
+    it("spawns the player and enemies clear of walls and crates", () => {
+      const spawns = [
+        { ...level.playerSpawn, radius: battleConfig.player.radius },
+        ...level.enemySpawns.map((enemy) => ({ x: enemy.x, y: enemy.y, radius: radiusOf(enemy.archetype) })),
+      ];
       for (const spawn of spawns) {
-        const blocker = solids.find((rect) => circleHitsRect(spawn, tankRadius, rect));
+        const blocker = solids.find((rect) => circleHitsRect(spawn, spawn.radius, rect));
         expect(blocker, `spawn at ${spawn.x},${spawn.y}`).toBeUndefined();
       }
     });
 
-    strictIt("keeps patrol routes clear of solid cover", () => {
+    it("keeps patrol routes clear of solid cover", () => {
       for (const enemy of level.enemySpawns) {
         const route = enemy.patrol ?? [];
         for (let index = 1; index < route.length; index += 1) {

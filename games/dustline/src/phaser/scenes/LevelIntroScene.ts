@@ -28,6 +28,8 @@ export class LevelIntroScene extends Phaser.Scene {
       eyebrow: "Mission Briefing",
       title: level.name,
       briefing: level.briefing,
+      rooms: level.rooms ?? [],
+      tierLabel: level.tier ?? "",
       difficultyLabel: getDifficultyLabel(save.difficulty),
       totalScore: save.totalScore,
       credits: save.credits,

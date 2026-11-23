@@ -1,0 +1,486 @@
+/* Dustline menus and HUD: the same pixel military-arcade skin as the title screen
+   (dustlineMenu.css). Square notched plates, hard 3px ink borders, inset bevels,
+   Silkscreen headings over Pixelify text. No rounding, blur or gradients.
+   Every colour is a --dl-* token from jackGames.css. Selectors are scoped to each
+   screen so they win over the older styles.css / themeAdapter.css rules. */
+
+.shop-screen,
+.level-screen,
+.brief-screen,
+.hud-result-screen,
+.hud-bar-screen {
+  --dlNotch: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  --dlNotchSmall: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  font-family: var(--font-pixel);
+  color: var(--dl-khaki);
+}
+
+.shop-screen,
+.level-screen,
+.brief-screen {
+  background-color: var(--dl-camo);
+  image-rendering: pixelated;
+}
+
+/* ---------- big plates ---------- */
+.shop-screen .shop-panel,
+.level-screen .level-panel,
+.brief-screen .brief-panel,
+.hud-result-screen .hud-result-card,
+.hud-bar-screen .hud-modal-card,
+.shop-screen .difficulty-modal {
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-plate);
+  box-shadow: var(--dl-plate-bevel);
+  clip-path: var(--dlNotch);
+}
+
+.shop-screen .shop-shell::before {
+  display: none;
+}
+
+/* ---------- inner cards ---------- */
+.shop-screen .shop-board,
+.shop-screen .shop-side-card,
+.shop-screen .shop-upgrade-card,
+.shop-screen .shop-credit-pill,
+.brief-screen .brief-stat-card,
+.hud-result-screen .hud-kpi {
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-olive-dark);
+  box-shadow: var(--dl-olive-bevel);
+  clip-path: var(--dlNotchSmall);
+}
+
+.shop-screen .shop-upgrade-card {
+  background: var(--dl-olive);
+}
+
+.shop-screen .shop-upgrade-card-maxed {
+  background: var(--dl-olive-dark);
+}
+
+.shop-screen .shop-credit-pill {
+  background: var(--dl-ink);
+  box-shadow: none;
+}
+
+.shop-screen .shop-credit-pill::before,
+.shop-screen .shop-credit-pill::after {
+  border-radius: 0;
+  background: var(--dl-gold);
+  box-shadow: none;
+}
+
+/* ---------- type ---------- */
+.shop-screen .shop-board-title,
+.level-screen .level-title,
+.brief-screen .brief-title,
+.shop-screen .difficulty-modal-title,
+.hud-result-screen .hud-card-title,
+.hud-bar-screen .hud-card-title {
+  font-family: var(--font-pixel-display);
+  font-weight: 700;
+  color: var(--dl-gold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-shadow: var(--dl-text-outline);
+}
+
+.level-screen .eyebrow,
+.brief-screen .eyebrow,
+.hud-result-screen .eyebrow,
+.hud-bar-screen .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  width: fit-content;
+  margin: 0;
+  padding: 6px 10px 5px;
+  background: var(--dl-ink);
+  color: var(--dl-gold);
+  font-family: var(--font-pixel-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  clip-path: var(--dlNotchSmall);
+}
+
+.shop-screen .shop-board-copy,
+.level-screen .level-meta,
+.brief-screen .brief-copy,
+.hud-result-screen .hud-copy,
+.hud-bar-screen .hud-copy,
+.hud-bar-screen .hud-sidebar-list,
+.shop-screen .shop-upgrade-summary,
+.shop-screen .shop-credit-subvalue {
+  color: var(--dl-khaki-dim);
+  font-family: var(--font-pixel);
+}
+
+.shop-screen .shop-upgrade-tag,
+.shop-screen .shop-side-label,
+.shop-screen .shop-credit-label,
+.shop-screen .shop-board-status-label,
+.brief-screen .brief-stat-label,
+.hud-bar-screen .hud-bar-kpi-label {
+  color: var(--dl-khaki-dim);
+  font-family: var(--font-pixel-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.shop-screen .shop-upgrade-title {
+  font-family: var(--font-pixel-display);
+  color: var(--dl-khaki);
+  text-shadow: var(--dl-text-outline);
+}
+
+.shop-screen .shop-upgrade-bonus {
+  color: var(--dl-gold-light);
+}
+
+.shop-screen .shop-credit-value,
+.shop-screen .shop-upgrade-price,
+.brief-screen .brief-stat-value,
+.level-screen .level-score,
+.hud-result-screen .hud-kpi-value,
+.hud-bar-screen .hud-bar-kpi-value {
+  font-family: var(--font-pixel-display);
+  font-weight: 700;
+  color: var(--dl-gold);
+  text-shadow: var(--dl-text-outline);
+}
+
+/* ---------- small badges / pips ---------- */
+.shop-screen .shop-upgrade-badge,
+.shop-screen .shop-board-status,
+.shop-screen .shop-weapon-pill {
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-ink);
+  color: var(--dl-gold);
+  font-family: var(--font-pixel-display);
+  box-shadow: none;
+}
+
+.shop-screen .shop-upgrade-pip {
+  border: 2px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-meter-back);
+  box-shadow: none;
+}
+
+.shop-screen .shop-upgrade-pip-active {
+  background: var(--dl-gold);
+  border-color: var(--dl-ink);
+}
+
+/* ---------- buttons (same as the title screen) ---------- */
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button {
+  padding: 11px 18px 13px;
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  font-family: var(--font-pixel-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  clip-path: var(--dlNotch);
+  transition: none;
+  filter: none;
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: none;
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-primary,
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-primary:hover:not(:disabled) {
+  background: var(--dl-gold);
+  color: var(--dl-ink);
+  box-shadow: var(--dl-gold-bevel);
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-primary:active:not(:disabled) {
+  box-shadow: var(--dl-gold-bevel-press);
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-secondary,
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-secondary:hover:not(:disabled) {
+  background: var(--dl-olive);
+  color: var(--dl-khaki);
+  box-shadow: var(--dl-olive-bevel);
+  text-shadow: var(--dl-text-outline);
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-danger,
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button-danger:hover:not(:disabled) {
+  background: var(--dl-red);
+  color: var(--dl-khaki);
+  box-shadow: var(--dl-red-bevel);
+  text-shadow: var(--dl-text-outline);
+}
+
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button:disabled {
+  background: var(--dl-plate-dark);
+  color: var(--dl-khaki-dim);
+  box-shadow: none;
+  text-shadow: none;
+  opacity: 1;
+}
+
+/* clip-path hides outlines, so focus is drawn inside the button. */
+:is(.shop-screen, .level-screen, .brief-screen, .hud-result-screen, .hud-bar-screen) .chrome-button:focus-visible,
+.level-screen .level-tile:focus-visible,
+.shop-screen .difficulty-choice:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 4px var(--dl-ember);
+}
+
+/* ---------- difficulty modal ---------- */
+.shop-screen .difficulty-modal-backdrop,
+.hud-bar-screen .hud-modal-backdrop {
+  background: var(--dl-scrim);
+  backdrop-filter: none;
+}
+
+.shop-screen .difficulty-choice {
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-olive);
+  color: var(--dl-khaki);
+  font-family: var(--font-pixel-display);
+  box-shadow: var(--dl-olive-bevel);
+  clip-path: var(--dlNotchSmall);
+}
+
+.shop-screen .difficulty-choice small {
+  color: var(--dl-khaki-dim);
+  font-family: var(--font-pixel);
+}
+
+.shop-screen .difficulty-choice-active {
+  background: var(--dl-gold);
+  color: var(--dl-ink);
+  box-shadow: var(--dl-gold-bevel);
+}
+
+.shop-screen .difficulty-choice-active small {
+  color: var(--dl-ink);
+}
+
+/* ---------- level select ---------- */
+.level-screen .level-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.level-screen .level-tile {
+  position: relative;
+  min-height: 0;
+  padding: 10px 12px 12px;
+  gap: 4px;
+  justify-items: start;
+  text-align: left;
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-olive);
+  color: var(--dl-khaki);
+  box-shadow: var(--dl-olive-bevel);
+  clip-path: var(--dlNotchSmall);
+  font-family: var(--font-pixel);
+}
+
+.level-screen .level-tile:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.level-screen .level-tile-number {
+  font-family: var(--font-pixel-display);
+  font-size: 1.6rem;
+  color: var(--dl-gold);
+  text-shadow: var(--dl-text-outline);
+}
+
+.level-screen .level-tile-label {
+  font-family: var(--font-pixel-display);
+  font-size: 0.8rem;
+  color: var(--dl-khaki);
+}
+
+.levelTileTagline,
+.level-screen .level-tile-state {
+  margin: 0;
+  color: var(--dl-khaki-dim);
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.2;
+}
+
+.level-screen .level-tile-active {
+  background: var(--dl-gold);
+  box-shadow: var(--dl-gold-bevel);
+}
+
+.level-screen .level-tile-active .level-tile-label,
+.level-screen .level-tile-active .levelTileTagline {
+  color: var(--dl-ink);
+}
+
+.level-screen .level-tile-active .level-tile-number {
+  color: var(--dl-khaki);
+}
+
+.level-screen .level-tile-locked {
+  background: var(--dl-plate-dark);
+  box-shadow: none;
+  opacity: 1;
+}
+
+.level-screen .level-tile-locked .level-tile-number,
+.level-screen .level-tile-locked .level-tile-label {
+  color: var(--dl-khaki-dim);
+}
+
+/* Tier badge: one colour per kind of map. */
+.levelTier {
+  display: inline-block;
+  padding: 3px 6px 2px;
+  border: 2px solid var(--dl-ink);
+  background: var(--dl-olive-light);
+  color: var(--dl-ink);
+  font-family: var(--font-pixel-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.level-tile .levelTier {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.levelTier-medium {
+  background: var(--dl-teal);
+  color: var(--dl-khaki);
+}
+
+.levelTier-bonus {
+  background: var(--dl-gold);
+}
+
+.levelTier-hard {
+  background: var(--dl-ember);
+}
+
+.levelTier-boss {
+  background: var(--dl-red);
+  color: var(--dl-khaki);
+}
+
+/* ---------- briefing: the room-by-room route ---------- */
+.briefRoute {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.briefRoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px 5px 5px;
+  border: 3px solid var(--dl-ink);
+  background: var(--dl-olive);
+  color: var(--dl-khaki);
+  font-size: 0.85rem;
+  clip-path: var(--dlNotchSmall);
+}
+
+.briefRoom + .briefRoom::before {
+  content: "";
+}
+
+.briefRoomStep {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  background: var(--dl-ink);
+  color: var(--dl-gold);
+  font-family: var(--font-pixel-display);
+  font-size: 0.7rem;
+}
+
+.briefRoom-vault {
+  background: var(--dl-gold);
+  color: var(--dl-ink);
+}
+
+.briefRoom-chokepoint {
+  background: var(--dl-slate);
+}
+
+.briefRoom-hard {
+  background: var(--dl-ember);
+  color: var(--dl-ink);
+}
+
+.briefRoom-command {
+  background: var(--dl-red);
+}
+
+/* ---------- in-battle HUD bar ---------- */
+.hud-bar-screen .hud-bar {
+  border: 3px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-plate);
+  box-shadow: var(--dl-plate-bevel);
+  clip-path: var(--dlNotch);
+}
+
+.hud-bar-screen .hud-bar-kpis {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.hud-bar-screen .hud-bar-kpi {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hud-bar-screen .hud-bar-kpi-meter-track {
+  border: 2px solid var(--dl-ink);
+  border-radius: 0;
+  background: var(--dl-meter-back);
+  box-shadow: none;
+}
+
+.hud-bar-screen .hud-bar-kpi-meter-fill {
+  border-radius: 0;
+  background: var(--dl-health);
+  box-shadow: inset 0 -3px 0 var(--dl-health-dark);
+}
+
+.hud-bar-screen .hud-help-button {
+  min-width: 0;
+  padding: 6px 12px 8px;
+}

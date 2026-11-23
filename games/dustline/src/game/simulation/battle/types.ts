@@ -1,4 +1,5 @@
-import type { EnemyArchetype, Rect, BattleLevelData } from "../../content/levelTypes";
+import type { EnemyArchetype, PickupKind, Rect, BattleLevelData } from "../../content/levelTypes";
+import type { NavGrid } from "./navigation";
 
 export type BattleStatus = "active" | "won" | "lost";
 export type TankFaction = "player" | "enemy";
@@ -64,6 +65,12 @@ export interface TankState {
   moveSpeed: number;
   turretTurnSpeed: number;
   fireCooldownMs: number;
+  /** Shells per volley and the fan they spread across. */
+  shotCount: number;
+  spreadRadians: number;
+  /** Next grid waypoint when chasing around corners, and when to recompute it. */
+  navWaypoint: Vector2 | null;
+  navRefreshMs: number;
   fireCooldownRemainingMs: number;
   projectileSpeed: number;
   projectileDamage: number;
@@ -114,7 +121,7 @@ export interface ProjectileState {
 
 export interface PickupState {
   id: string;
-  kind: "coin";
+  kind: PickupKind;
   position: Vector2;
   radius: number;
   value: number;
@@ -143,6 +150,11 @@ export interface BattleInput {
 
 export interface BattleState {
   level: BattleLevelData;
+  worldWidth: number;
+  worldHeight: number;
+  navGrid: NavGrid;
+  /** Time left on the player's rapid-fire charge. */
+  rapidFireRemainingMs: number;
   obstacles: Rect[];
   breakableObstacles: BreakableObstacleState[];
   visibility: BattleVisibilityState;
@@ -184,6 +196,8 @@ export interface BreakableObstacleSnapshot extends Rect {
   kind: BreakableObstacleKind;
   health: number;
   maxHealth: number;
+  /** Gold crates pay out; the renderer paints them differently. */
+  rewardCredits: number;
 }
 
 export interface ProjectileSnapshot {
@@ -199,7 +213,7 @@ export interface PickupSnapshot {
   x: number;
   y: number;
   radius: number;
-  kind: "coin";
+  kind: PickupKind;
 }
 
 export interface BattleSnapshot {
@@ -209,6 +223,8 @@ export interface BattleSnapshot {
   enemies: TankSnapshot[];
   projectiles: ProjectileSnapshot[];
   pickups: PickupSnapshot[];
+  worldWidth: number;
+  worldHeight: number;
   indestructibleWalls: readonly Rect[];
   breakableObstacles: readonly BreakableObstacleSnapshot[];
   credits: number;
@@ -225,6 +241,8 @@ export interface BattleHudSnapshot {
   credits: number;
   totalScore: number;
   enemiesRemaining: number;
+  /** Whole seconds of rapid fire left (0 = none). */
+  rapidFireSeconds: number;
   controls: string[];
 }
 

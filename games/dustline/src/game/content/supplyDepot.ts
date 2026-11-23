@@ -1,0 +1,35 @@
+import { compileTileLevel } from "./tileMap";
+
+export const supplyDepotLevel = compileTileLevel({
+  id: "supply-depot",
+  name: "Supply Depot",
+  tier: "bonus",
+  tagline: "Bonus room: repairs, rapid fire and loot.",
+  briefing: "A breather. The depot is lightly guarded and full of supplies. Patch up, pick up rapid fire, and empty the gold crates.",
+  rooms: [
+    { kind: "staging", label: "Gatehouse" },
+    { kind: "vault", label: "Parts Store" },
+    { kind: "skirmish", label: "Yard" },
+    { kind: "vault", label: "Paymaster's Office" },
+  ],
+  map: [
+    "############################",
+    "#......#.........#.........#",
+    "#..P...#..+...+..#..$...$..#",
+    "#......b.........b.........#",
+    "#......b....!....b....O....#",
+    "#......#.........#..$...$..#",
+    "#......#.........#.........#",
+    "###..#####....#######bb#####",
+    "#..........................#",
+    "#....r......c.......s......#",
+    "#..........................#",
+    "#....c..............c......#",
+    "#..........r...............#",
+    "#######..#######..##########",
+    "#.......#.......#..........#",
+    "#..$.$..#...o...b...$..$...#",
+    "#.......#.......b..........#",
+    "############################",
+  ],
+});

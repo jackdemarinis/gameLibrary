@@ -12,6 +12,7 @@ export function buildBattleHudSnapshot(state: BattleState): BattleHudSnapshot {
     credits: state.credits,
     totalScore: state.totalScore,
     enemiesRemaining,
+    rapidFireSeconds: Math.ceil(state.rapidFireRemainingMs / 1000),
     controls: [
       "WASD or arrow keys to move",
       "Mouse to aim the turret",
