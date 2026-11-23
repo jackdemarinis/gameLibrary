@@ -9,6 +9,8 @@ export interface SaveData {
   heartContainers: number;
   flags: string[];
   playSeconds: number;
+  /** The last hint the game gave, for the quest journal. */
+  lastHint?: string;
 }
 
 export const saveKey = "lanternwake3d.save.v1";
@@ -30,6 +32,7 @@ export function parseSave(raw: string | null): SaveData | null {
       heartContainers: Number.isFinite(value.heartContainers) ? Math.max(0, Math.floor(Number(value.heartContainers))) : 0,
       flags: Array.isArray(value.flags) ? value.flags.filter((flag): flag is string => typeof flag === "string") : [],
       playSeconds: Number.isFinite(value.playSeconds) ? Math.max(0, Number(value.playSeconds)) : 0,
+      lastHint: typeof value.lastHint === "string" ? value.lastHint.slice(0, 300) : undefined,
     };
   } catch {
     return null;

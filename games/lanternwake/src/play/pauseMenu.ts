@@ -2,6 +2,8 @@
 // mouse feel, and audio volumes. DOM only; the Game feeds it data and applies the
 // settings it hands back.
 import { bindLabels, bindOrder, defaultBindings, keyName, rebind, reservedKeys, type BindAction, type Settings } from "../game/rules/settings";
+import { chapterTitle } from "../game/content/mainQuest";
+import type { QuestLog } from "../game/rules/quests";
 import { libraryHomeUrl } from "../shared/libraryNav";
 import { drawMap, type MapSnapshot } from "./mapView";
 
@@ -28,6 +30,9 @@ export interface PauseStatus {
   lanternsLit: number;
   chestsOpened: number;
   items: PauseItem[];
+  quests: QuestLog;
+  lastHint: string;
+  lastHintArea: string;
 }
 
 export interface PauseCallbacks {
@@ -38,8 +43,9 @@ export interface PauseCallbacks {
   previewSound(): void;
 }
 
-type Tab = "status" | "map" | "controls" | "audio";
+type Tab = "quests" | "status" | "map" | "controls" | "audio";
 const tabs: Array<[Tab, string]> = [
+  ["quests", "Quests"],
   ["status", "Status"],
   ["map", "Map"],
   ["controls", "Controls"],
@@ -93,7 +99,7 @@ export class PauseMenu {
   private readonly root: HTMLDivElement;
   private readonly tabBar: HTMLDivElement;
   private readonly body: HTMLDivElement;
-  private tab: Tab = "status";
+  private tab: Tab = "quests";
   private status: PauseStatus | null = null;
   private map: (() => MapSnapshot) | null = null;
   private settings: Settings | null = null;
@@ -123,7 +129,7 @@ export class PauseMenu {
     const quit = element("button", "lwMenuButton", foot, "Return to title");
     quit.type = "button";
     quit.addEventListener("click", () => this.callbacks.quitToTitle());
-    element("div", "lwPauseHint", foot, "Esc resume · ← → switch tabs");
+    element("div", "lwPauseHint", foot, "Esc resume · ← → tabs · ↑ ↓ scroll");
     const home = element("a", "lwMenuHome", foot, "← JackGames library");
     home.href = libraryHomeUrl();
   }
@@ -157,6 +163,10 @@ export class PauseMenu {
       this.show(tabs[(index + tabs.length - 1) % tabs.length][0]);
       return true;
     }
+    if (event.code === "ArrowDown" || event.code === "ArrowUp") {
+      this.body.scrollBy({ top: (event.code === "ArrowDown" ? 1 : -1) * this.body.clientHeight * 0.4, behavior: "smooth" });
+      return true;
+    }
     if (event.code === "Escape" || event.code === "KeyP") {
       this.callbacks.resume();
       return true;
@@ -170,10 +180,77 @@ export class PauseMenu {
     this.tabBar.querySelectorAll<HTMLButtonElement>(".lwTab").forEach((button) => button.classList.toggle("isActive", button.dataset.tab === tab));
     this.body.innerHTML = "";
     this.body.dataset.tab = tab;
-    if (tab === "status") this.renderStatus();
+    if (tab === "quests") this.renderQuests();
+    else if (tab === "status") this.renderStatus();
     else if (tab === "map") this.renderMap();
     else if (tab === "controls") this.renderControls();
     else this.renderAudio();
+  }
+
+  // ------------------------------------------------------------ quests
+
+  private renderQuests(): void {
+    const status = this.status;
+    const log = status?.quests;
+    if (!status || !log) return;
+    const columns = element("div", "lwStatusColumns", this.body);
+    const left = element("div", "lwQuestColumn", columns);
+    const right = element("div", "lwQuestColumn", columns);
+
+    // Current mission, with where to go and a hint.
+    const now = element("div", "lwPanel", left);
+    element("div", "lwPanelTitle", now, chapterTitle);
+    const current = log.current;
+    const card = element("div", "lwNextStep", now);
+    if (current) {
+      element("div", "lwNextLabel", card, `Current mission ${current.number} · ${current.where}`);
+      element("div", "lwNextTitle", card, current.title);
+      element("div", "lwNextText", card, current.text);
+      if (current.hint) {
+        const hint = element("div", "lwMissionHint", now);
+        element("span", "lwHintLabel", hint, "Hint ");
+        element("span", "", hint, current.hint);
+      }
+    } else {
+      element("div", "lwNextLabel", card, "Chapter complete");
+      element("div", "lwNextText", card, log.nextStep);
+    }
+    if (log.hiddenCount > 0) element("div", "lwQuestText", now, `${log.hiddenCount} more mission${log.hiddenCount > 1 ? "s" : ""} to discover in this chapter.`);
+
+    // The last thing the game hinted at.
+    const latest = element("div", "lwPanel", left);
+    element("div", "lwPanelTitle", latest, "Latest hint");
+    element("div", "lwQuestText", latest, status.lastHint ? `“${status.lastHint}”` : "No hints yet. Explore, and the world will tell you things.");
+    if (status.lastHint && status.lastHintArea) element("div", "lwHintWhere", latest, status.lastHintArea);
+
+    // Side quests, with what's left and where.
+    const side = element("div", "lwPanel", right);
+    element("div", "lwPanelTitle", side, "Side quests");
+    for (const task of log.side) {
+      const finished = task.done >= task.total;
+      const row = element("div", `lwSideTask${finished ? " isDone" : ""}`, side);
+      const head = element("div", "lwSideHead", row);
+      element("span", "lwQuestTitle", head, task.title);
+      element("span", "lwSideCount", head, `${task.done} / ${task.total}`);
+      const bar = element("div", "lwXpBar lwSideBar", row);
+      element("div", "lwXpFill", bar).style.width = `${task.total ? (task.done / task.total) * 100 : 0}%`;
+      element("div", "lwQuestText", row, task.detail);
+      element("div", "lwHintWhere", row, finished ? "Complete!" : task.remaining.join(" · "));
+    }
+
+    // Completed missions, newest first.
+    const done = element("div", "lwPanel", right);
+    element("div", "lwPanelTitle", done, `Completed missions · ${log.completed.length}`);
+    if (log.completed.length === 0) element("div", "lwQuestText", done, "Nothing yet. Your story starts in Wickmoor.");
+    const list = element("ol", "lwQuestSteps", done);
+    for (const mission of log.completed) {
+      const item = element("li", "lwQuestStep is-done", list);
+      element("span", "lwQuestMark", item, "✓");
+      const text = element("div", "", item);
+      element("div", "lwQuestTitle", text, `${mission.number}. ${mission.title}`);
+      element("div", "lwHintWhere", text, mission.where);
+      element("div", "lwQuestText", text, mission.text);
+    }
   }
 
   // ------------------------------------------------------------ status

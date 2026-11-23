@@ -4,13 +4,10 @@
 import { hash2 } from "../../engine/rng";
 import type { AreaDef, DialogueDef, PropPlacement, TileKind } from "./areaTypes";
 import { boxDistance, circleDistance, corridorDistance, valleyHeight } from "./terrainShapes";
+import { currentObjective } from "../rules/quests";
 
 export function chapterObjective(flags: ReadonlySet<string>): string {
-  if (!flags.has("elderBlessing")) return "Speak with Elder Maren by the village well.";
-  if (!flags.has("plateSolved")) return "Take the east road into the Gloamwood and find a way past the barred gate.";
-  if (!flags.has("braziersLit")) return "Light all three braziers with a lantern flare before they gutter out.";
-  if (!flags.has("bossDefeated")) return "Enter the Sunken Shrine and relight its great lantern.";
-  return "The shrine burns bright again. Chapter One complete.";
+  return currentObjective(flags);
 }
 
 function isNear(x: number, z: number, points: Array<[number, number]>, radius: number): boolean {

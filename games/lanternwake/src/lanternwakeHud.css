@@ -446,8 +446,8 @@
 .lwPauseCard {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: 90%;
-  height: 88%;
+  position: absolute;
+  inset: 6% 5%;
   padding: 1em 1.3em;
   border: 3px solid var(--lw-wood-edge);
   background: var(--lw-wood);
@@ -495,8 +495,9 @@
 
 .lwPauseBody {
   min-height: 0;
-  padding: 0.9em 0;
+  padding: 0.9em 0.4em 0.9em 0;
   overflow: auto;
+  scrollbar-color: var(--lw-wood-light) var(--lw-slot-empty);
 }
 
 .lwPauseFoot {
@@ -824,4 +825,117 @@
 
 .lwAudioPanel {
   max-width: 60%;
+}
+
+/* quests */
+.lwNextStep {
+  padding: 0.45em 0.7em;
+  background: var(--lw-parchment);
+  color: var(--lw-ink);
+  text-shadow: none;
+}
+
+.lwNextLabel {
+  color: var(--lw-wood);
+  font-size: 0.95em;
+}
+
+.lwNextText {
+  font-size: 1.25em;
+  line-height: 1.2;
+}
+
+.lwQuestSteps {
+  display: grid;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lwQuestStep {
+  display: flex;
+  gap: 0.6em;
+}
+
+.lwQuestMark {
+  width: 1.2em;
+  flex: none;
+  color: var(--lw-ember);
+  font-size: 1.2em;
+  text-align: center;
+}
+
+.lwQuestTitle {
+  font-size: 1.2em;
+}
+
+.lwQuestText {
+  color: var(--lw-parchment-2);
+  line-height: 1.25;
+}
+
+.lwQuestStep.is-done .lwQuestTitle {
+  color: var(--lw-parchment);
+}
+
+.lwQuestStep.is-current .lwQuestTitle {
+  color: var(--lw-ember);
+}
+
+.lwQuestStep.is-locked {
+  opacity: 0.55;
+}
+
+.lwSideTask {
+  display: grid;
+  gap: 0.25em;
+  margin-bottom: 0.4em;
+}
+
+.lwSideHead {
+  display: flex;
+  justify-content: space-between;
+}
+
+.lwSideCount {
+  color: var(--lw-ember);
+  font-size: 1.15em;
+}
+
+.lwSideTask.isDone .lwSideCount::after {
+  content: " ✓";
+}
+
+.lwSideBar {
+  width: 100%;
+}
+
+.lwQuestColumn {
+  display: grid;
+  gap: 0.8em;
+  align-content: start;
+}
+
+.lwNextTitle {
+  color: var(--lw-wood);
+  font-family: var(--lw-font-title);
+  font-size: 1.7em;
+  line-height: 1;
+}
+
+.lwMissionHint {
+  padding: 0.35em 0.6em;
+  border-left: 3px solid var(--lw-ember);
+  background: var(--lw-slot-empty);
+  line-height: 1.25;
+}
+
+.lwHintLabel {
+  color: var(--lw-ember);
+}
+
+.lwHintWhere {
+  color: var(--lw-xp);
+  font-size: 0.95em;
 }

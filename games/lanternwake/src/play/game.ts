@@ -15,6 +15,7 @@ import type { DialogueDef, PickupKind } from "../game/content/areaTypes";
 import { foeXp, levelForXp, statsFor } from "../game/rules/progression";
 import { ExploreGrid, clearExplored, loadExplored, writeExplored } from "../game/rules/exploration";
 import { clearSave, loadSave, newSave, writeSave, type SaveData } from "../game/rules/saveData";
+import { questLog } from "../game/rules/quests";
 import { keyName, loadSettings, writeSettings, type Settings } from "../game/rules/settings";
 import { moodPresets } from "../world/artPalette";
 import { Sky } from "../world/sky";
@@ -72,6 +73,7 @@ export class Game {
   private exploreGrid: ExploreGrid | null = null;
   private exploreDirty = false;
   private exploreWriteTimer = 0;
+  private lastHintArea = "";
   private readonly pipeline: RetroPipeline;
   private readonly scene = new THREE.Scene();
   private readonly input: Input;
@@ -188,7 +190,7 @@ export class Game {
       addXp: (amount) => this.addXp(amount),
       spawnPickup: (kind, at) => this.spawnPickup(kind, at, true),
       banner: (title, subtitle) => this.hud.showBanner(title, subtitle),
-      toast: (text) => this.hud.toast(text),
+      toast: (text) => this.hint(text),
       setFlag: (flag) => this.flags.add(flag),
       clearFlag: (flag) => this.flags.delete(flag),
       hittables: () => this.hittables(),
@@ -551,7 +553,7 @@ export class Game {
     const playerOnPlate = area.plates.find((plate) => plate.test([this.player.position.clone().setY(this.player.position.y + 0.5)]) && !plate.pressed);
     if (playerOnPlate && !this.flags.has("plateTooLightShown")) {
       this.flags.add("plateTooLightShown");
-      this.hud.toast("The plate barely shifts under you. It wants something heavier.");
+      this.hint("The plate barely shifts under you. It wants something heavier.");
     }
     for (const plate of area.plates) {
       const pressed = plate.test(weights);
@@ -568,7 +570,7 @@ export class Game {
         this.hud.toast("Somewhere, a gate grinds open.");
       } else if (event.type === "memberOut" && event.memberId) {
         area.braziers.find((brazier) => brazier.id === event.memberId)?.setLit(false, null);
-        this.hud.toast("A brazier gutters out. Light them all before the flames die.");
+        this.hint("A brazier gutters out. Light them all before the flames die.");
       }
     }
     for (const brazier of area.braziers) if (brazier.lit && !brazier.alwaysLit) brazier.setLit(true, area.puzzles.burnLeft(brazier.id, this.time));
@@ -696,7 +698,7 @@ export class Game {
       if (Math.hypot(this.player.position.x - trigger.x, this.player.position.z - trigger.z) > trigger.radius) continue;
       if (trigger.kind === "hint") {
         this.flags.add(trigger.onceFlag);
-        if (trigger.text) this.hud.toast(trigger.text);
+        if (trigger.text) this.hint(trigger.text);
       } else if (trigger.kind === "bossArena") {
         const warden = area.warden;
         if (this.flags.has("bossDefeated") || !warden) continue;
@@ -851,6 +853,13 @@ export class Game {
     this.hud.setContinueKey(key(bindings.interact));
   }
 
+  /** Show a toast and remember it as the latest hint for the quest journal. */
+  private hint(text: string): void {
+    this.hud.toast(text);
+    this.save.lastHint = text;
+    this.lastHintArea = this.area?.def.name ?? "";
+  }
+
   private get interactKey(): string {
     return keyName(this.settings.bindings.interact);
   }
@@ -910,6 +919,9 @@ export class Game {
       lanternsLit: flags.filter((flag) => flag.startsWith("lit:")).length,
       chestsOpened: flags.filter((flag) => flag.startsWith("opened:") && chestIds.has(flag.slice(7))).length,
       items,
+      quests: questLog(this.flags, Object.values(areas)),
+      lastHint: this.save.lastHint ?? "",
+      lastHintArea: this.lastHintArea,
     };
   }
 

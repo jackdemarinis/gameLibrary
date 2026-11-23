@@ -59,3 +59,27 @@ describe("exploration map", () => {
     expect(new ExploreGrid(128, "%%%").fraction()).toBe(0);
   });
 });
+
+describe("quest journal", () => {
+  it("splits missions into completed (newest first), current and hidden", async () => {
+    const { questLog, currentObjective } = await import("./quests");
+    const { areas } = await import("../content/areas");
+    const flags = new Set(["elderBlessing", "plateSolved", "lit:wickmoorLantern"]);
+    const log = questLog(flags, Object.values(areas));
+    expect(log.completed.map((mission) => mission.number)).toEqual([2, 1]);
+    expect(log.current?.number).toBe(3);
+    expect(log.current?.hint).toBeTruthy();
+    expect(log.hiddenCount).toBe(1);
+    expect(log.nextStep).toBe(currentObjective(flags));
+    expect(log.side[0]).toMatchObject({ done: 1, total: 4 });
+    expect(log.side[0].remaining.join()).toContain("Gloamwood");
+  });
+
+  it("reports the chapter complete when every mission is done", async () => {
+    const { questLog } = await import("./quests");
+    const log = questLog(new Set(["elderBlessing", "plateSolved", "braziersLit", "bossDefeated"]), []);
+    expect(log.current).toBeNull();
+    expect(log.completed).toHaveLength(4);
+    expect(log.nextStep).toContain("complete");
+  });
+});
