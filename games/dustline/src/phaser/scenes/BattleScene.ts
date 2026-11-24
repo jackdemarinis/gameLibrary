@@ -10,6 +10,7 @@ import type {
   TankSnapshot,
 } from "../../game/simulation/battle/types";
 import { SceneBridge } from "../adapters/sceneBridge";
+import { gameConfig } from "../../game/config/gameConfig";
 import { createCameraRig } from "../view/createCameraRig";
 import {
   createBreakableObstacleLayer,
@@ -93,6 +94,8 @@ export class BattleScene extends Phaser.Scene {
     this.fogLayer = createFogOfWarLayer(this);
     this.syncSnapshot(snapshot);
     createCameraRig(this.cameras.main, this.playerSprite.container, snapshot.worldWidth, snapshot.worldHeight);
+    // The HUD strip owns the bottom of the screen, so the battlefield is drawn only above it.
+    this.cameras.main.setViewport(0, 0, gameConfig.width, gameConfig.height - gameConfig.hudDockHeight);
 
     this.lastSavedTotalScore = snapshot.totalScore;
     this.bridge.persistRunProgress({ totalScore: snapshot.totalScore });
@@ -385,9 +388,9 @@ export class BattleScene extends Phaser.Scene {
           onPress: () => this.scene.restart(),
         },
         {
-          label: "Main Menu",
+          label: "Quit To Levels",
           tone: "danger" as const,
-          onPress: () => this.scene.start("menu"),
+          onPress: () => this.scene.start("level-select"),
         },
       ],
     };

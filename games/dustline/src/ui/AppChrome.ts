@@ -1,3 +1,4 @@
+import { gameConfig } from "../game/config/gameConfig";
 import { getDustlineIcon } from "./dustlineIcons";
 import { getDustlineMenuArt } from "./dustlineMenuArt";
 
@@ -70,6 +71,8 @@ export interface LevelChoiceViewModel {
 
 export interface LevelSelectViewModel {
   title: string;
+  /** Present until the player has picked a difficulty; shown as a modal over the levels. */
+  difficultyOptions?: DifficultyChoiceViewModel[];
   difficultyLabel: string;
   totalScore: number;
   levels: LevelChoiceViewModel[];
@@ -335,7 +338,30 @@ export class AppChrome {
   }
 
   renderLevelSelect(model: LevelSelectViewModel): void {
-    const actionMap = new Map<string, UiAction | LevelChoiceViewModel>();
+    const actionMap = new Map<string, UiAction | LevelChoiceViewModel | DifficultyChoiceViewModel>();
+    const difficultyModal = model.difficultyOptions
+      ? `
+        <div class="difficulty-modal-backdrop">
+          <article class="difficulty-modal arcade-card">
+            <p class="difficulty-modal-title">Select Difficulty</p>
+            <div class="difficulty-choice-stack">
+              ${model.difficultyOptions
+                .map((choice, index) => {
+                  actionMap.set(`difficulty-choice-${index}`, choice);
+                  return `
+                    <button class="difficulty-choice" data-action-id="difficulty-choice-${index}">
+                      <span>${choice.label}</span>
+                      <strong>${choice.stars}</strong>
+                      <small>${choice.caption}</small>
+                    </button>
+                  `;
+                })
+                .join("")}
+            </div>
+          </article>
+        </div>
+      `
+      : "";
     const registerLevel = (id: string, level: LevelChoiceViewModel): string => {
       actionMap.set(id, level);
       return `
@@ -378,6 +404,7 @@ export class AppChrome {
               .join("")}
           </div>
         </article>
+        ${difficultyModal}
       </section>
     `;
 
@@ -478,7 +505,10 @@ export class AppChrome {
           data-action-id="hud-settings"
           aria-label="Settings (Esc)"
           title="Settings (Esc)"
-        >${gearIcon}</button>
+        >${(() => {
+          const gear = getDustlineIcon("settings");
+          return gear ? `<img class="dlIcon hudGearIcon" src="${gear}" alt="" />` : gearIcon;
+        })()}</button>
       `
       : "";
 
@@ -494,6 +524,8 @@ export class AppChrome {
                       class="hudWeaponSlot hudWeaponSlot-${weapon.kind}${weapon.active ? " hudWeaponSlotActive" : ""}"
                       data-weapon-slot="${weapon.slot}"
                       aria-pressed="${weapon.active}"
+                      aria-label="${weapon.slot}: ${weapon.label}"
+                      title="${weapon.label} (${weapon.slot})"
                     >
                       <span class="hudWeaponKey">${weapon.slot}</span>
                       ${(() => {
@@ -511,17 +543,19 @@ export class AppChrome {
             </nav>
           `
         : "";
+      // One strip under the battlefield: stats, then cannons, then settings.
+      const dockShare = (gameConfig.hudDockHeight / gameConfig.height) * 100;
       const mainHud = `
-            <article class="hud-bar">
+            <article class="hudDock" style="--hudDockShare: ${dockShare}%">
               <div class="hud-bar-kpis">
                 ${model.kpis.map((kpi) => renderActiveKpi(kpi)).join("")}
               </div>
+              ${inventory}
               ${settingsButton}
             </article>
           `;
       this.root.innerHTML = `
         <section class="hud-bar-screen">
-          ${inventory}
           ${mainHud}
           ${model.settingsOpen && model.settings ? this.renderSettings(model, actionMap) : ""}
         </section>

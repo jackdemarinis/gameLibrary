@@ -18,7 +18,8 @@ export type DustlineIconKey =
   | "scattergun"
   | "ricochet"
   | "laser"
-  | "missile";
+  | "missile"
+  | "settings";
 
 const size = 32;
 const rect = (x0: number, y0: number, x1: number, y1: number) => polygon([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
@@ -193,6 +194,22 @@ function paintMissile(canvas: PixelCanvas): void {
   );
 }
 
+/** An eight-tooth steel gear with a brass hub, for the settings button. */
+function paintSettings(canvas: PixelCanvas): void {
+  const teeth = Array.from({ length: 8 }, (_, index) => {
+    const angle = (index * Math.PI) / 4;
+    const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
+    return segment(16 + dx * 9, 16 + dy * 9, 16 + dx * 13, 16 + dy * 13, 2.6);
+  });
+  const ring = circle(16, 16, 10.6);
+  canvas.fill(union(ring, ...teeth), verticalRamp(ink.steel, 3, 29));
+  // Pressed groove between the rim and the hub.
+  canvas.fill(circle(16, 16, 7.2), verticalRamp(ink.darkSteel, 9, 23));
+  canvas.fill(circle(16, 16, 5.4), verticalRamp(ink.steel, 11, 21), null);
+  canvas.fill(circle(16, 16, 3.6), verticalRamp(ink.brass, 12, 20));
+  canvas.fill(circle(16, 16, 1.2), () => ink.hub, null);
+}
+
 const painters: Record<DustlineIconKey, (canvas: PixelCanvas) => void> = {
   maxHealth: paintMaxHealth,
   movementSpeed: paintMovementSpeed,
@@ -205,6 +222,7 @@ const painters: Record<DustlineIconKey, (canvas: PixelCanvas) => void> = {
   ricochet: paintRicochet,
   laser: paintLaser,
   missile: paintMissile,
+  settings: paintSettings,
 };
 
 const cache = new Map<string, string>();

@@ -3,6 +3,7 @@ import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
 import { startMusic } from "../audio/dustlineMusic";
+import { difficultyChoices, getDifficultyLabel } from "./difficultyChoices";
 
 export class LevelSelectScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -17,9 +18,11 @@ export class LevelSelectScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome();
-    this.input.keyboard?.on("keydown-ESC", () => this.scene.start("shop"));
+    this.input.keyboard?.on("keydown-ESC", () => this.scene.start("menu"));
     // Enter jumps straight to the highlighted (latest) level's briefing.
-    this.input.keyboard?.on("keydown-ENTER", () => this.scene.start("level-intro"));
+    this.input.keyboard?.on("keydown-ENTER", () => {
+      if (this.bridge.loadOrCreateSave().hasSelectedDifficulty) this.scene.start("level-intro");
+    });
   }
 
   private renderChrome(): void {
@@ -28,7 +31,19 @@ export class LevelSelectScene extends Phaser.Scene {
 
     this.bridge.showLevelSelect({
       title: "Select Level",
-      difficultyLabel: getDifficultyLabel(save.difficulty),
+      difficultyLabel: save.hasSelectedDifficulty ? getDifficultyLabel(save.difficulty) : "Choose one",
+      // First visit: pick a difficulty before any mission (it can't be changed later).
+      difficultyOptions: save.hasSelectedDifficulty
+        ? undefined
+        : difficultyChoices.map((choice) => ({
+            label: choice.label,
+            stars: choice.stars,
+            caption: choice.caption,
+            onPress: () => {
+              this.bridge.updateDifficulty(choice.key);
+              this.renderChrome();
+            },
+          })),
       totalScore: save.totalScore,
       levels: this.bridge.getLevelSequence().map((level, index) => ({
         number: index + 1,
@@ -44,8 +59,13 @@ export class LevelSelectScene extends Phaser.Scene {
       })),
       actions: [
         {
-          label: "Back To Upgrades",
+          label: "Menu",
           tone: "secondary",
+          onPress: () => this.scene.start("menu"),
+        },
+        {
+          label: "Shop",
+          tone: "primary",
           onPress: () => this.scene.start("shop"),
         },
       ],
@@ -62,17 +82,5 @@ export class LevelSelectScene extends Phaser.Scene {
       0.95,
     );
     graphics.fillRect(0, 0, gameConfig.width, gameConfig.height);
-  }
-}
-
-function getDifficultyLabel(value: "rookie" | "normal" | "ace"): string {
-  switch (value) {
-    case "rookie":
-      return "Easy";
-    case "ace":
-      return "Hard";
-    case "normal":
-    default:
-      return "Medium";
   }
 }

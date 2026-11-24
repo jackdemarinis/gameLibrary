@@ -137,6 +137,8 @@
   --dl-icon-shop: 64px;
   --dl-icon-badge: 70px;
   --dl-icon-hud: 32px;
+  /* Battle HUD strip share of the screen height; mirrors gameConfig.hudDockHeight (72 of 720). */
+  --dl-hud-dock: 10%;
   --dl-olive: #4a5b30;
   --dl-olive-light: #71874a;
   --dl-olive-dark: #2c3a1c;

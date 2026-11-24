@@ -31,7 +31,7 @@ export class ResultsScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome(data);
-    this.input.keyboard?.on("keydown-ESC", () => this.scene.start("menu"));
+    this.input.keyboard?.on("keydown-ESC", () => this.scene.start("level-select"));
   }
 
   private renderChrome(data: ResultsSceneData): void {
@@ -41,7 +41,7 @@ export class ResultsScene extends Phaser.Scene {
         layout: "result",
         title: "Level Complete",
         banner: { text: "Level Complete", tone: "won" },
-        copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector. Spend your coins on new cannons in the garage.`,
+        copy: `${data.result.levelName} is secure. The crew logged a clean armored push through the sector. Your coins are banked: spend them in the shop from the level screen.`,
         objective: data.flow.loopedCampaign
           ? "Campaign loop complete. The motor pool has cycled back to the opening yard."
           : `Next contract staged: ${data.flow.nextLevel.name}.`,
@@ -55,14 +55,9 @@ export class ResultsScene extends Phaser.Scene {
         notes: [],
         actions: [
           {
-            label: "Continue To Shop",
+            label: "Continue To Levels",
             tone: "primary",
-            onPress: () => this.scene.start("shop"),
-          },
-          {
-            label: "Back To Menu",
-            tone: "secondary",
-            onPress: () => this.scene.start("menu"),
+            onPress: () => this.scene.start("level-select"),
           },
         ],
       });
@@ -74,7 +69,7 @@ export class ResultsScene extends Phaser.Scene {
       title: "Mission Failed",
       banner: { text: "Mission Failed", tone: "lost" },
       copy: `Your tank was destroyed. ${data.result.levelName} was not secured, and the coins you picked up were lost with it.`,
-      objective: "Re-arm, restart the encounter, or return to the main menu.",
+      objective: "Restart the encounter, or head back to the levels (and the shop) to re-arm.",
       kpis: [
         { label: "Points Earned", value: `${data.result.pointsEarned}` },
         { label: "Coins Lost", value: `$${data.result.creditsEarned}` },
@@ -90,9 +85,9 @@ export class ResultsScene extends Phaser.Scene {
           onPress: () => this.scene.start("battle"),
         },
         {
-          label: "Back To Menu",
+          label: "Back To Levels",
           tone: "secondary",
-          onPress: () => this.scene.start("menu"),
+          onPress: () => this.scene.start("level-select"),
         },
       ],
     });

@@ -38,6 +38,20 @@ describe("SceneBridge", () => {
     expect(bridge.loadOrCreateSave().credits).toBe(120);
   });
 
+  it("won't start a level until the one before it is cleared", () => {
+    let save = createInitialSave();
+    const bridge = new SceneBridge({
+      chrome: createChromeStub(),
+      saveStore: createMemorySaveStore(() => save, (nextSave) => {
+        save = nextSave;
+      }),
+    });
+
+    expect(bridge.loadOrCreateSave().unlockedLevelIds).toEqual(["training-yard"]);
+    expect(bridge.selectLevel("relay-station").currentLevelId).toBe("training-yard");
+    expect(bridge.selectLevel("dustline-citadel").currentLevelId).toBe("training-yard");
+  });
+
   it("banks no coins from a failed run", () => {
     let save = { ...createInitialSave(), credits: 50 };
     const bridge = new SceneBridge({

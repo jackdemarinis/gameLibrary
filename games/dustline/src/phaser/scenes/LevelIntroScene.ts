@@ -3,6 +3,7 @@ import { gameConfig } from "../../game/config/gameConfig";
 import { worldTheme } from "../../game/config/theme";
 import { SceneBridge } from "../adapters/sceneBridge";
 import { startMusic } from "../audio/dustlineMusic";
+import { getDifficultyLabel } from "./difficultyChoices";
 
 export class LevelIntroScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -46,11 +47,6 @@ export class LevelIntroScene extends Phaser.Scene {
           tone: "secondary",
           onPress: () => this.scene.start("level-select"),
         },
-        {
-          label: "Back To Upgrades",
-          tone: "secondary",
-          onPress: () => this.scene.start("shop"),
-        },
       ],
     });
   }
@@ -68,17 +64,5 @@ export class LevelIntroScene extends Phaser.Scene {
 
     graphics.fillStyle(0xf4bf41, 0.08);
     graphics.fillTriangle(880, 80, 1230, 230, 960, 460);
-  }
-}
-
-function getDifficultyLabel(value: "rookie" | "normal" | "ace"): string {
-  switch (value) {
-    case "rookie":
-      return "Easy";
-    case "ace":
-      return "Hard";
-    case "normal":
-    default:
-      return "Medium";
   }
 }

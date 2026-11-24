@@ -23,7 +23,7 @@ export class MenuScene extends Phaser.Scene {
 
   private startRun(): void {
     this.bridge.loadOrCreateSave();
-    this.scene.start("shop");
+    this.scene.start("level-select");
   }
 
   private renderChrome(): void {

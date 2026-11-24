@@ -138,13 +138,16 @@ renders at 480 lines with bloom and a colour-grade, bleed, grain and dither pass
 ### Dustline Brigade
 
 Top-down tank campaign:
-- Buy upgrades in the garage, then pick a level.
+- Play goes to the level screen. Pick a level (each unlocks once you clear the
+  one before it), or open the shop from there to buy upgrades and cannons.
+  After a mission you come back to the level screen. New players pick a
+  difficulty on their first visit.
 - WASD to drive, the mouse to aim, click to fire (hold for the autocannon).
 - Six cannons: Field Cannon, Autocannon, Scattergun, Rebound Cannon (bounces
   off up to 5 walls), Beam Laser (pierces a line of tanks) and Seeker Missile
   (steers itself into the nearest enemy). Buy them and level up their damage on
   the garage's Armory tab. In battle, switch with 1-6, the mouse wheel, or a
-  click on the inventory above the HUD.
+  click on the cannon tiles in the HUD strip under the battlefield.
 - Every enemy type carries one of those cannons: raiders the Field Cannon,
   skirmishers the Autocannon, bulwarks the Scattergun, lancers the Beam Laser,
   hunters the Seeker Missile, and the Warden boss the Rebound Cannon.
@@ -153,7 +156,7 @@ Top-down tank campaign:
 - Power-ups (repair, rapid fire, freeze) are hidden in crates you break.
 - Enter moves you forward through the menus, and Esc takes you back.
 - Esc (or the gear button) opens settings: music and effects volume, key
-  rebinding, restart, and back to the main menu. M mutes by default.
+  rebinding, restart, and quit to the level screen. M mutes by default.
 - Music and sound effects are synthesized in code (`games/dustline/src/phaser/audio/`):
   `dustlineMusic.ts` sequences an original menu track and battle track, and
   `dustlineSound.ts` plays the effects. There are no audio files.

@@ -14,27 +14,8 @@ import {
 } from "../../game/simulation/shop";
 import { SceneBridge } from "../adapters/sceneBridge";
 import { startMusic } from "../audio/dustlineMusic";
+import { difficultyChoices, getDifficultyLabel } from "./difficultyChoices";
 
-const shopDifficultyChoices = [
-  {
-    key: "rookie" as const,
-    label: "Easy",
-    stars: "*",
-    caption: "Softer enemy armor and safer fights.",
-  },
-  {
-    key: "normal" as const,
-    label: "Medium",
-    stars: "**",
-    caption: "Balanced campaign pressure.",
-  },
-  {
-    key: "ace" as const,
-    label: "Hard",
-    stars: "***",
-    caption: "Harder hits, tougher clears.",
-  },
-];
 
 export class ShopScene extends Phaser.Scene {
   private readonly bridge: SceneBridge;
@@ -50,10 +31,9 @@ export class ShopScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(worldTheme.background);
     this.drawBackdrop();
     this.renderChrome();
-    this.input.keyboard?.on("keydown-ESC", () => this.scene.start("menu"));
-    this.input.keyboard?.on("keydown-ENTER", () => {
-      if (this.bridge.loadOrCreateSave().hasSelectedDifficulty) this.scene.start("level-select");
-    });
+    // The garage is a side trip from the level screen, so every way out leads back there.
+    this.input.keyboard?.on("keydown-ESC", () => this.scene.start("level-select"));
+    this.input.keyboard?.on("keydown-ENTER", () => this.scene.start("level-select"));
   }
 
   private renderChrome(): void {
@@ -62,12 +42,12 @@ export class ShopScene extends Phaser.Scene {
 
     this.bridge.showShop({
       title: "Upgrade Garage",
-      subtitle: "Buy permanent upgrades, then head into the next mission.",
+      subtitle: "Buy permanent upgrades, then head back to pick a mission.",
       credits: save.credits,
       totalScore: save.totalScore,
       difficultyLabel: difficultyLocked ? "Choose one" : getDifficultyLabel(save.difficulty),
       difficultyLocked,
-      difficultyOptions: shopDifficultyChoices.map((choice) => ({
+      difficultyOptions: difficultyChoices.map((choice) => ({
         label: choice.label,
         stars: choice.stars,
         caption: choice.caption,
@@ -124,15 +104,8 @@ export class ShopScene extends Phaser.Scene {
       })),
       actions: [
         {
-          label: "Menu",
-          tone: "secondary",
-          disabled: difficultyLocked,
-          onPress: () => this.scene.start("menu"),
-        },
-        {
-          label: "Play",
+          label: "Back To Levels",
           tone: "primary",
-          disabled: difficultyLocked,
           onPress: () => this.scene.start("level-select"),
         },
       ],
@@ -211,17 +184,5 @@ export class ShopScene extends Phaser.Scene {
         Phaser.Math.Between(30, 110),
       );
     }
-  }
-}
-
-function getDifficultyLabel(value: "rookie" | "normal" | "ace"): string {
-  switch (value) {
-    case "rookie":
-      return "Easy";
-    case "ace":
-      return "Hard";
-    case "normal":
-    default:
-      return "Medium";
   }
 }
